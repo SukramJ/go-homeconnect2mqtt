@@ -1,0 +1,144 @@
+// SPDX-License-Identifier: MIT
+// Copyright (C) 2026 SukramJ
+
+package main
+
+import (
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"sort"
+	"time"
+
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
+)
+
+// connectTimeout bounds a connection test (docs/03 §5).
+const connectTimeout = 20 * time.Second
+
+// parseCmd parses a profile ZIP into cached description JSON files and
+// prints a devices.yaml snippet for the operator to complete.
+func parseCmd(args []string, stdout, stderr io.Writer) error {
+	fs := flag.NewFlagSet("parse", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	out := fs.String("out", "./profiles", "output directory for parsed descriptions")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	zipPath := fs.Arg(0)
+	if zipPath == "" {
+		return errors.New("parse: missing <profile.zip>")
+	}
+	logger := slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{}))
+	profiles, err := profile.ParseArchiveFile(zipPath, logger)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(*out, 0o755); err != nil { //nolint:gosec // operator dir
+		return fmt.Errorf("parse: mkdir %s: %w", *out, err)
+	}
+
+	fmt.Fprintln(stdout, "# Add these entries to devices.yaml (secrets included — keep local):")
+	fmt.Fprintln(stdout, "devices:")
+	for _, p := range profiles {
+		descPath := filepath.Join(*out, p.HaID+".json")
+		if err := profile.SaveDescriptionJSON(descPath, p.Description); err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "  - name: %s\n", p.HaID)
+		fmt.Fprintf(stdout, "    host: \"\"            # %s (mDNS) or set a manual IP\n", p.DefaultHost())
+		fmt.Fprintf(stdout, "    connection_type: %s\n", p.ConnectionType)
+		fmt.Fprintf(stdout, "    psk64: %q\n", p.PSK64)
+		if p.ConnectionType == profile.ConnectionAES {
+			fmt.Fprintf(stdout, "    iv64: %q\n", p.IV64)
+		}
+		fmt.Fprintf(stdout, "    description: %s\n", descPath)
+	}
+	fmt.Fprintf(stderr, "parsed %d device(s) into %s\n", len(profiles), *out)
+	return nil
+}
+
+// dumpCmd lists every feature of a parsed description.
+func dumpCmd(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		return errors.New("dump: missing <device.json>")
+	}
+	desc, err := profile.LoadDescriptionJSON(args[0], slog.New(slog.NewTextHandler(stderr, nil)))
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "# %s %s %s (version %d)\n", desc.Info.Brand, desc.Info.Type, desc.Info.Model, desc.Info.Version)
+	fmt.Fprintf(stdout, "%-6s  %-10s  %-10s  %-9s  %s\n", "UID", "KIND", "PROTOCOL", "ACCESS", "NAME")
+	entries := append([]*profile.Entry(nil), desc.Entries...)
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
+	for _, e := range entries {
+		fmt.Fprintf(stdout, "0x%04X  %-10s  %-10s  %-9s  %s\n", e.UID, e.Kind, e.ProtocolType, e.Access, e.Name)
+	}
+	fmt.Fprintf(stderr, "%d feature(s)\n", len(entries))
+	return nil
+}
+
+// connTestCmd connects to each device in a devices file and reports the
+// outcome with a categorized error and a manual-IP hint on failure (FK-7).
+func connTestCmd(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		return errors.New("connection-test: missing <devices.yaml>")
+	}
+	devices, err := profile.LoadDevices(args[0])
+	if err != nil {
+		return err
+	}
+	logger := slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{}))
+	var failures int
+	for _, dc := range devices {
+		if err := testOne(dc, logger, stdout); err != nil {
+			failures++
+			fmt.Fprintf(stdout, "✗ %s: %v\n", dc.Name, err)
+			fmt.Fprintf(stdout, "    hint: verify the device is on and reachable; set a manual IP in host:\n")
+		} else {
+			fmt.Fprintf(stdout, "✓ %s: connected\n", dc.Name)
+		}
+	}
+	if failures > 0 {
+		return fmt.Errorf("connection-test: %d/%d device(s) failed", failures, len(devices))
+	}
+	return nil
+}
+
+func testOne(dc profile.DeviceConfig, logger *slog.Logger, _ io.Writer) error {
+	if dc.Host == "" {
+		return errors.New("no host configured")
+	}
+	if dc.ConnectionType != profile.ConnectionAES {
+		return fmt.Errorf("connection type %s not supported by this build", dc.ConnectionType)
+	}
+	psk, err := homeconnect.DecodeKey(dc.PSK64)
+	if err != nil {
+		return fmt.Errorf("bad psk64: %w", err)
+	}
+	iv, err := homeconnect.DecodeKey(dc.IV64)
+	if err != nil {
+		return fmt.Errorf("bad iv64: %w", err)
+	}
+	sock, err := homeconnect.NewAESSocket(dc.Host, psk, iv)
+	if err != nil {
+		return err
+	}
+	sess := homeconnect.NewSession(sock, homeconnect.SessionConfig{
+		HandshakeTimeout: connectTimeout, SendTimeout: connectTimeout, Logger: logger,
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), connectTimeout)
+	defer cancel()
+	if err := sess.Connect(ctx); err != nil {
+		_ = sess.Close()
+		return err
+	}
+	_ = sess.Close()
+	return nil
+}

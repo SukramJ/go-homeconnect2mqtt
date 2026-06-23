@@ -24,7 +24,7 @@
 | P6 | Bridge + MQTT publish (read-only E2E) | `[x]` | ✅ | P4, P5 |
 | P7 | Command topics (writing) | `[x]` | ✅ | P6 |
 | P8 | Home Assistant discovery | `[x]` | ✅ | P6 |
-| P9 | Enrichment (`mapping.yaml`) + `hc-util` | `[ ]` | `[ ]` | P5, P6 |
+| P9 | Enrichment (`mapping.yaml`) + `hc-util` | `[x]` | ✅ | P5, P6 |
 | P10 | TLS-PSK (older appliances) | `[ ]` | `[ ]` | P2 |
 | P11 | Optional web UI + state cache | `[ ]` | `[ ]` | P6 |
 | P12 | Hardening, docs & release | `[ ]` | `[ ]` | all |

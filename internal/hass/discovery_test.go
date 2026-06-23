@@ -177,6 +177,38 @@ func TestPublishDevice(t *testing.T) {
 	}
 }
 
+type fakeEnricher struct{}
+
+func (fakeEnricher) DeviceClass(feature string) (string, bool) {
+	if feature == "BSH.Common.Status.Temp" {
+		return "custom_class", true
+	}
+	return "", false
+}
+func (fakeEnricher) Unit(feature string) (string, bool) {
+	if feature == "BSH.Common.Status.Temp" {
+		return "K", true
+	}
+	return "", false
+}
+
+func TestEnrichmentOverride(t *testing.T) {
+	app, entities := buildEntities(t)
+	pub := newStubPub()
+	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), nil)
+	d.SetEnricher(fakeEnricher{})
+	d.PublishDevice(context.Background(), "dw", app.Info(), entities)
+	raw := pub.pubs["homeassistant/sensor/dw/bsh_common_status_temp/config"]
+	if raw == "" {
+		t.Fatal("missing temp sensor config")
+	}
+	var p map[string]any
+	_ = json.Unmarshal([]byte(raw), &p)
+	if p["device_class"] != "custom_class" || p["unit_of_measurement"] != "K" {
+		t.Errorf("enrichment override not applied: class=%v unit=%v", p["device_class"], p["unit_of_measurement"])
+	}
+}
+
 func TestBirthTopic(t *testing.T) {
 	d := New(newStubPub(), "homeassistant", "homeconnect", mqtt.QoS(1), nil)
 	if d.BirthTopic() != "homeassistant/status" {

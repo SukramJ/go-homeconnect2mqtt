@@ -21,6 +21,7 @@ import (
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/bridge"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/mapping"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mqtt"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/version"
@@ -69,7 +70,6 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	}
 	logger := slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: level}))
 	logger.Info("starting", slog.String("version", version.Version))
-	_ = mappingPath // enrichment is wired in P9
 
 	specs, err := loadDeviceSpecs(devicesPath, logger)
 	if err != nil {
@@ -113,6 +113,12 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	var disc *hass.Discovery
 	if cfg.HASSEnable {
 		disc = hass.New(client, cfg.HASSBaseTopic, cfg.MQTTTopic, mqtt.QoS(cfg.MQTTQoS), logger)
+		if cat, err := mapping.Load(mappingPath); err != nil {
+			logger.Warn("mapping.load", slog.String("err", err.Error()))
+		} else {
+			disc.SetEnricher(cat)
+			logger.Info("mapping.loaded", slog.Int("features", cat.Len()))
+		}
 	}
 
 	br, err := bridge.New(bridge.Deps{Config: cfg, MQTT: client, Logger: logger, Devices: specs, HASS: disc})

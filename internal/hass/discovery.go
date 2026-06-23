@@ -20,6 +20,13 @@ type Publisher interface {
 	Publish(ctx context.Context, topic string, payload []byte, qos mqtt.QoS, retain bool) error
 }
 
+// Enricher supplies operator-configured device_class/unit overrides per
+// feature (implemented by mapping.Catalog).
+type Enricher interface {
+	DeviceClass(feature string) (string, bool)
+	Unit(feature string) (string, bool)
+}
+
 // Discovery publishes Home Assistant MQTT discovery config payloads.
 type Discovery struct {
 	mqtt      Publisher
@@ -27,7 +34,12 @@ type Discovery struct {
 	rootTopic string // bridge MQTT root, e.g. "homeconnect"
 	qos       mqtt.QoS
 	logger    *slog.Logger
+	enrich    Enricher
 }
+
+// SetEnricher installs an optional enrichment source consulted for
+// device_class/unit overrides.
+func (d *Discovery) SetEnricher(e Enricher) { d.enrich = e }
 
 // New builds a Discovery publisher.
 func New(pub Publisher, baseTopic, rootTopic string, qos mqtt.QoS, logger *slog.Logger) *Discovery {
@@ -94,6 +106,19 @@ func (d *Discovery) deviceBlockFor(device string, info profile.DeviceInfo) devic
 	}
 }
 
+// applyEnrichment overrides derived device_class/unit with operator values.
+func (d *Discovery) applyEnrichment(e *homeconnect.Entity, payload map[string]any) {
+	if d.enrich == nil || e.Name() == "" {
+		return
+	}
+	if dc, ok := d.enrich.DeviceClass(e.Name()); ok {
+		payload["device_class"] = dc
+	}
+	if unit, ok := d.enrich.Unit(e.Name()); ok {
+		payload["unit_of_measurement"] = unit
+	}
+}
+
 func (d *Discovery) configTopic(platform, device string, e *homeconnect.Entity) string {
 	return d.baseTopic + "/" + platform + "/" + sanitize(device) + "/" + featureKey(e) + "/config"
 }
@@ -108,6 +133,7 @@ func (d *Discovery) PublishDevice(ctx context.Context, device string, info profi
 			continue
 		}
 		payload := payloadFor(e, platform, d.topicsFor(device, e), dev)
+		d.applyEnrichment(e, payload)
 		b, err := json.Marshal(payload)
 		if err != nil {
 			d.logger.Warn("hass.marshal", slog.String("feature", e.Name()), slog.String("err", err.Error()))

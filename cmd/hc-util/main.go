@@ -31,15 +31,26 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "help", "--help", "-h":
 		usage(stdout)
 		return 0
-	case "parse", "dump", "connection-test":
-		// Implemented in phase P9.
-		fmt.Fprintf(stderr, "hc-util: subcommand %q is not implemented yet\n", args[0])
-		return 1
+	case "parse":
+		return cmdExit(parseCmd(args[1:], stdout, stderr), stderr)
+	case "dump":
+		return cmdExit(dumpCmd(args[1:], stdout, stderr), stderr)
+	case "connection-test":
+		return cmdExit(connTestCmd(args[1:], stdout, stderr), stderr)
 	default:
 		fmt.Fprintf(stderr, "hc-util: unknown subcommand %q\n", args[0])
 		usage(stderr)
 		return 2
 	}
+}
+
+// cmdExit maps a subcommand error to an exit code.
+func cmdExit(err error, stderr io.Writer) int {
+	if err != nil {
+		fmt.Fprintln(stderr, "hc-util:", err)
+		return 1
+	}
+	return 0
 }
 
 func usage(w io.Writer) {
