@@ -20,19 +20,19 @@ type stubDispatch struct{ err error }
 
 func (s stubDispatch) Dispatch(context.Context, string, string, any) error { return s.err }
 
-func newTestServer(t *testing.T, disp Dispatcher, mqttUp bool) (*httptest.Server, *state.Store) {
+func newTestServer(t *testing.T, disp Dispatcher, mqttUp bool) (ts *httptest.Server, store *state.Store) {
 	t.Helper()
-	st := state.New(nil)
-	st.RegisterDevice("dw", "HA-1", "BOSCH", "Dishwasher", "SMV6", map[string]any{"brand": "BOSCH"})
-	st.SetConnectionState("dw", "connected", true)
-	st.UpdateFeature("dw", state.Feature{Feature: "BSH.Common.Status.OperationState", UID: 1, Value: "Run", Access: "read"})
-	srv := New(Config{}, st, disp, VersionInfo{Version: "0.1.0", Commit: "abc"}, func() bool { return mqttUp }, nil)
-	ts := httptest.NewServer(srv.Handler())
+	store = state.New(nil)
+	store.RegisterDevice("dw", "HA-1", "BOSCH", "Dishwasher", "SMV6", map[string]any{"brand": "BOSCH"})
+	store.SetConnectionState("dw", "connected", true)
+	store.UpdateFeature("dw", state.Feature{Feature: "BSH.Common.Status.OperationState", UID: 1, Value: "Run", Access: "read"})
+	srv := New(Config{}, store, disp, VersionInfo{Version: "0.1.0", Commit: "abc"}, func() bool { return mqttUp }, nil)
+	ts = httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
-	return ts, st
+	return ts, store
 }
 
-func getJSON(t *testing.T, url string) (int, map[string]any) {
+func getJSON(t *testing.T, url string) (status int, body map[string]any) {
 	t.Helper()
 	resp, err := http.Get(url) //nolint:noctx,gosec // test
 	if err != nil {
@@ -47,7 +47,7 @@ func getJSON(t *testing.T, url string) (int, map[string]any) {
 func TestStatusEndpoint(t *testing.T) {
 	ts, _ := newTestServer(t, stubDispatch{}, true)
 	code, m := getJSON(t, ts.URL+"/api/status")
-	if code != 200 {
+	if code != http.StatusOK {
 		t.Fatalf("status code = %d", code)
 	}
 	if m["version"] != "0.1.0" {
@@ -77,13 +77,13 @@ func TestHealthDegradedWhenMQTTDown(t *testing.T) {
 
 func TestDeviceEndpoints(t *testing.T) {
 	ts, _ := newTestServer(t, stubDispatch{}, true)
-	if code, _ := getJSON(t, ts.URL+"/api/devices/dw"); code != 200 {
+	if code, _ := getJSON(t, ts.URL+"/api/devices/dw"); code != http.StatusOK {
 		t.Errorf("device = %d", code)
 	}
 	if code, _ := getJSON(t, ts.URL+"/api/devices/nope"); code != 404 {
 		t.Errorf("unknown device = %d, want 404", code)
 	}
-	if code, _ := getJSON(t, ts.URL+"/api/devices/dw/features/BSH.Common.Status.OperationState"); code != 200 {
+	if code, _ := getJSON(t, ts.URL+"/api/devices/dw/features/BSH.Common.Status.OperationState"); code != http.StatusOK {
 		t.Errorf("feature = %d", code)
 	}
 	if code, _ := getJSON(t, ts.URL+"/api/devices/dw/features/Nope"); code != 404 {
@@ -108,7 +108,7 @@ func TestSetDispatch(t *testing.T) {
 	for _, tc := range cases {
 		ts, _ := newTestServer(t, stubDispatch{err: tc.err}, true)
 		body := strings.NewReader(`{"feature":"BSH.Common.Setting.PowerState","value":"On"}`)
-		resp, err := http.Post(ts.URL+"/api/devices/dw/set", "application/json", body) //nolint:noctx
+		resp, err := http.Post(ts.URL+"/api/devices/dw/set", "application/json", body) //nolint:noctx // test client
 		if err != nil {
 			t.Fatalf("%s: POST: %v", tc.name, err)
 		}
@@ -126,8 +126,8 @@ func TestSetDispatch(t *testing.T) {
 
 func TestSetBadRequest(t *testing.T) {
 	ts, _ := newTestServer(t, stubDispatch{}, true)
-	resp, _ := http.Post(ts.URL+"/api/devices/dw/set", "application/json", strings.NewReader("not json")) //nolint:noctx
-	if resp.StatusCode != 400 {
+	resp, _ := http.Post(ts.URL+"/api/devices/dw/set", "application/json", strings.NewReader("not json")) //nolint:noctx // test client
+	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("bad body status = %d, want 400", resp.StatusCode)
 	}
 	_ = resp.Body.Close()
@@ -140,17 +140,17 @@ func TestBasicAuth(t *testing.T) {
 	defer ts.Close()
 
 	// No credentials -> 401.
-	resp, _ := http.Get(ts.URL + "/api/status") //nolint:noctx
-	if resp.StatusCode != 401 {
+	resp, _ := http.Get(ts.URL + "/api/status") //nolint:noctx // test client
+	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("no-auth status = %d, want 401", resp.StatusCode)
 	}
 	_ = resp.Body.Close()
 
 	// Correct credentials -> 200.
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/api/status", nil) //nolint:noctx
+	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/api/status", http.NoBody) //nolint:noctx // test client
 	req.SetBasicAuth("u", "p")
 	resp2, _ := http.DefaultClient.Do(req)
-	if resp2.StatusCode != 200 {
+	if resp2.StatusCode != http.StatusOK {
 		t.Errorf("auth status = %d, want 200", resp2.StatusCode)
 	}
 	_ = resp2.Body.Close()
@@ -166,7 +166,7 @@ func TestVersionEndpoint(t *testing.T) {
 
 func TestSSESnapshot(t *testing.T) {
 	ts, _ := newTestServer(t, stubDispatch{}, true)
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/api/events", nil) //nolint:noctx
+	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/api/events", http.NoBody) //nolint:noctx // test client
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("SSE GET: %v", err)

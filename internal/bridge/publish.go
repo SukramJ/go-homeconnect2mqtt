@@ -8,13 +8,11 @@
 package bridge
 
 import (
-	"context"
 	"encoding/json"
 	"strconv"
 	"strings"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/mqtt"
 )
 
 // availability payload values.
@@ -71,9 +69,4 @@ func payloadFor(e *homeconnect.Entity) string {
 		}
 		return ""
 	}
-}
-
-// publisher is the subset of the MQTT client the publish path needs.
-type publisher interface {
-	Publish(ctx context.Context, topic string, payload []byte, qos mqtt.QoS, retain bool) error
 }

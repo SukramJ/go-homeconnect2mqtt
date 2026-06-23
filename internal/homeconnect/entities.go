@@ -116,11 +116,25 @@ func (e *Entity) Value() any {
 	return e.valueRaw
 }
 
-// MinMaxStep returns the current numeric bounds, each with a presence flag.
-func (e *Entity) MinMaxStep() (minV float64, hasMin bool, maxV float64, hasMax bool, step float64, hasStep bool) {
+// Bounds carries the numeric bounds of an entity, each with a presence flag.
+type Bounds struct {
+	Min     float64
+	HasMin  bool
+	Max     float64
+	HasMax  bool
+	Step    float64
+	HasStep bool
+}
+
+// Bounds returns the current numeric bounds.
+func (e *Entity) Bounds() Bounds {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	return e.min, e.hasMin, e.max, e.hasMax, e.stepSize, e.hasStep
+	return Bounds{
+		Min: e.min, HasMin: e.hasMin,
+		Max: e.max, HasMax: e.hasMax,
+		Step: e.stepSize, HasStep: e.hasStep,
+	}
 }
 
 // update applies a NOTIFY/RESPONSE data item. mirrors entities.py update().

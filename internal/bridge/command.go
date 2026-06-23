@@ -23,7 +23,7 @@ func (b *Bridge) subscribeCommands(ctx context.Context) error {
 		dev := d
 		filter := dev.topics.base + "/#"
 		if err := b.mqtt.Subscribe(ctx, filter, b.qos, func(topic string, payload []byte) {
-			b.handleSet(dev, topic, payload)
+			b.handleSet(ctx, dev, topic, payload)
 		}); err != nil {
 			return err
 		}
@@ -40,7 +40,7 @@ func (b *Bridge) subscribeBirth(ctx context.Context) error {
 	return b.mqtt.Subscribe(ctx, b.hass.BirthTopic(), b.qos, func(_ string, payload []byte) {
 		if strings.EqualFold(strings.TrimSpace(string(payload)), "online") {
 			for _, d := range b.devices {
-				b.publishDiscovery(d)
+				b.publishDiscovery(ctx, d)
 			}
 		}
 	})
@@ -49,7 +49,7 @@ func (b *Bridge) subscribeBirth(ctx context.Context) error {
 // handleSet resolves an incoming "/set" command to a feature and applies
 // it, choosing the device-specific program-start path where applicable
 // (FK-4) and gating writes on the dynamic access window (FK-5).
-func (b *Bridge) handleSet(d *Device, topic string, payload []byte) {
+func (b *Bridge) handleSet(parent context.Context, d *Device, topic string, payload []byte) {
 	if !strings.HasSuffix(topic, "/set") {
 		return // a state/availability publish echoed back, ignore
 	}
@@ -63,7 +63,7 @@ func (b *Bridge) handleSet(d *Device, topic string, payload []byte) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), b.cfg.SendTimeoutDuration()+b.cmdRetryDelay*time.Duration(b.cmdRetries+1))
+	ctx, cancel := context.WithTimeout(parent, b.cfg.SendTimeoutDuration()+b.cmdRetryDelay*time.Duration(b.cmdRetries+1))
 	defer cancel()
 
 	switch entity.Desc.Kind {

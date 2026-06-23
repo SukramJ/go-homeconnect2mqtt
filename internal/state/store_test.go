@@ -98,7 +98,7 @@ func TestSubscribeLatestWins(t *testing.T) {
 	ch, cancel := s.Subscribe()
 	defer cancel()
 	// Publish several without reading; buffer cap 1 keeps the latest.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		s.UpdateFeature("dw", Feature{Feature: "x", UID: 1, Value: i})
 	}
 	ev := <-ch

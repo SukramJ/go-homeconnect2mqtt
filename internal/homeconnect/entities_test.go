@@ -68,9 +68,9 @@ func TestEntityUpdateExecutionLowercased(t *testing.T) {
 func TestEntityUpdateMinMaxStep(t *testing.T) {
 	e := newEntity(&profile.Entry{UID: 1, ProtocolType: profile.ProtocolFloat})
 	e.update(map[string]any{"min": float64(0), "max": float64(90), "stepSize": float64(10)})
-	minV, hasMin, maxV, hasMax, step, hasStep := e.MinMaxStep()
-	if !hasMin || minV != 0 || !hasMax || maxV != 90 || !hasStep || step != 10 {
-		t.Errorf("min/max/step = %v/%v/%v", minV, maxV, step)
+	b := e.Bounds()
+	if !b.HasMin || b.Min != 0 || !b.HasMax || b.Max != 90 || !b.HasStep || b.Step != 10 {
+		t.Errorf("min/max/step = %v/%v/%v", b.Min, b.Max, b.Step)
 	}
 }
 

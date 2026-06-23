@@ -4,6 +4,7 @@
 package config
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -91,7 +92,7 @@ func TestValidateAggregatesIssues(t *testing.T) {
 		t.Fatal("expected validation error for missing MQTT_SERVER")
 	}
 	var ve *ValidationError
-	if !asValidation(err, &ve) {
+	if !errors.As(err, &ve) {
 		t.Fatalf("error is not *ValidationError: %v", err)
 	}
 	if len(ve.Issues) == 0 {
@@ -114,7 +115,7 @@ func TestValidateMultipleIssues(t *testing.T) {
 	}
 	err := Validate(c)
 	var ve *ValidationError
-	if !asValidation(err, &ve) {
+	if !errors.As(err, &ve) {
 		t.Fatalf("want *ValidationError, got %v", err)
 	}
 	if len(ve.Issues) < 4 {
@@ -149,22 +150,4 @@ func TestDurationHelpers(t *testing.T) {
 	if c.HeartbeatDuration().Seconds() != 20 {
 		t.Error("HeartbeatDuration")
 	}
-}
-
-// asValidation is a tiny errors.As helper kept local to avoid an import
-// churn in the test.
-func asValidation(err error, target **ValidationError) bool {
-	for err != nil {
-		if ve, ok := err.(*ValidationError); ok {
-			*target = ve
-			return true
-		}
-		type unwrapper interface{ Unwrap() error }
-		if u, ok := err.(unwrapper); ok {
-			err = u.Unwrap()
-		} else {
-			return false
-		}
-	}
-	return false
 }

@@ -93,7 +93,10 @@ func NewAESSocket(host string, psk, iv []byte) (*AESSocket, error) {
 // Connect dials the WebSocket and resets the crypto chains so a reconnect
 // always starts from the static iv with zeroed HMAC chains.
 func (s *AESSocket) Connect(ctx context.Context) error {
-	conn, _, err := websocket.Dial(ctx, s.url, &websocket.DialOptions{})
+	conn, resp, err := websocket.Dial(ctx, s.url, &websocket.DialOptions{})
+	if resp != nil && resp.Body != nil {
+		_ = resp.Body.Close()
+	}
 	if err != nil {
 		return fmt.Errorf("homeconnect: dial %s: %w", s.url, err)
 	}

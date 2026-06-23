@@ -190,6 +190,7 @@ func flattenStatus(lists []xmlStatusList) []xmlElement {
 	}
 	return out
 }
+
 func flattenSetting(lists []xmlSettingList) []xmlElement {
 	var out []xmlElement
 	for _, l := range lists {
@@ -198,6 +199,7 @@ func flattenSetting(lists []xmlSettingList) []xmlElement {
 	}
 	return out
 }
+
 func flattenEvent(lists []xmlEventList) []xmlElement {
 	var out []xmlElement
 	for _, l := range lists {
@@ -206,6 +208,7 @@ func flattenEvent(lists []xmlEventList) []xmlElement {
 	}
 	return out
 }
+
 func flattenCommand(lists []xmlCommandList) []xmlElement {
 	var out []xmlElement
 	for _, l := range lists {
@@ -214,6 +217,7 @@ func flattenCommand(lists []xmlCommandList) []xmlElement {
 	}
 	return out
 }
+
 func flattenOption(lists []xmlOptionList) []xmlElement {
 	var out []xmlElement
 	for _, l := range lists {
@@ -222,6 +226,7 @@ func flattenOption(lists []xmlOptionList) []xmlElement {
 	}
 	return out
 }
+
 func flattenProgram(groups []xmlProgramGroup) []xmlProgram {
 	var out []xmlProgram
 	for _, g := range groups {
@@ -262,7 +267,8 @@ func ParseDescription(descriptionXML, featureMappingXML []byte, logger *slog.Log
 	d.Enumerations = fm.enum
 
 	addElems := func(elems []xmlElement, kind EntryKind) {
-		for _, x := range elems {
+		for i := range elems {
+			x := &elems[i]
 			e, err := convertElement(x, kind, fm)
 			if err != nil {
 				logger.Debug("profile.element_skip", slog.String("kind", string(kind)),
@@ -278,7 +284,9 @@ func ParseDescription(descriptionXML, featureMappingXML []byte, logger *slog.Log
 	addElems(flattenCommand(dev.CommandList), KindCommand)
 	addElems(flattenOption(dev.OptionList), KindOption)
 
-	for _, p := range flattenProgram(dev.Programs) {
+	programs := flattenProgram(dev.Programs)
+	for i := range programs {
+		p := &programs[i]
 		e, err := convertProgram(p, fm)
 		if err != nil {
 			logger.Debug("profile.program_skip", slog.String("uid", p.UID), slog.String("err", err.Error()))
@@ -287,18 +295,20 @@ func ParseDescription(descriptionXML, featureMappingXML []byte, logger *slog.Log
 		d.add(e)
 	}
 
-	for _, single := range []struct {
+	singles := []struct {
 		x    xmlElement
 		kind EntryKind
 	}{
 		{dev.Active, KindActiveProgram},
 		{dev.Selected, KindSelectedProgram},
 		{dev.Protection, KindProtectionPort},
-	} {
+	}
+	for i := range singles {
+		single := &singles[i]
 		if single.x.UID == "" {
 			continue
 		}
-		if e, err := convertElement(single.x, single.kind, fm); err == nil {
+		if e, err := convertElement(&single.x, single.kind, fm); err == nil {
 			d.add(e)
 		} else {
 			logger.Debug("profile.single_skip", slog.String("kind", string(single.kind)), slog.String("err", err.Error()))
@@ -341,7 +351,7 @@ func resolveEnumSubsets(types []xmlEnumType, fm *featureMapping, logger *slog.Lo
 
 // convertElement turns an XML element into an *Entry, joining the
 // FeatureMapping name and the refCID type tables.
-func convertElement(x xmlElement, kind EntryKind, fm *featureMapping) (*Entry, error) {
+func convertElement(x *xmlElement, kind EntryKind, fm *featureMapping) (*Entry, error) {
 	uid, err := parseHex(x.UID)
 	if err != nil {
 		return nil, fmt.Errorf("bad uid %q: %w", x.UID, err)
@@ -387,7 +397,7 @@ func convertElement(x xmlElement, kind EntryKind, fm *featureMapping) (*Entry, e
 	return e, nil
 }
 
-func convertProgram(p xmlProgram, fm *featureMapping) (*Entry, error) {
+func convertProgram(p *xmlProgram, fm *featureMapping) (*Entry, error) {
 	uid, err := parseHex(p.UID)
 	if err != nil {
 		return nil, fmt.Errorf("bad program uid %q: %w", p.UID, err)

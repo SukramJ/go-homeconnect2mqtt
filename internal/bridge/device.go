@@ -124,16 +124,15 @@ func (b *Bridge) featureView(d *Device, e *homeconnect.Entity) state.Feature {
 			f.Options = append(f.Options, name)
 		}
 	}
-	if minV, hasMin, maxV, hasMax, step, hasStep := e.MinMaxStep(); hasMin || hasMax || hasStep {
-		if hasMin {
-			f.Min = &minV
-		}
-		if hasMax {
-			f.Max = &maxV
-		}
-		if hasStep {
-			f.Step = &step
-		}
+	bd := e.Bounds()
+	if bd.HasMin {
+		f.Min = &bd.Min
+	}
+	if bd.HasMax {
+		f.Max = &bd.Max
+	}
+	if bd.HasStep {
+		f.Step = &bd.Step
 	}
 	return f
 }
@@ -145,7 +144,7 @@ func (b *Bridge) onState(d *Device, s homeconnect.ConnectionState) {
 	avail := availOffline
 	if s == homeconnect.StateConnected {
 		avail = availOnline
-		b.publishDiscovery(d)
+		b.publishDiscovery(context.Background(), d)
 	}
 	b.publish(d.topics.availability(), []byte(avail))
 	if b.state != nil {
@@ -155,11 +154,11 @@ func (b *Bridge) onState(d *Device, s homeconnect.ConnectionState) {
 
 // publishDiscovery emits Home Assistant discovery configs for a device, if
 // discovery is enabled.
-func (b *Bridge) publishDiscovery(d *Device) {
+func (b *Bridge) publishDiscovery(parent context.Context, d *Device) {
 	if b.hass == nil {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), publishTimeout)
+	ctx, cancel := context.WithTimeout(parent, publishTimeout)
 	defer cancel()
 	b.hass.PublishDevice(ctx, d.name, d.app.Info(), d.app.Entities())
 }

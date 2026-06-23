@@ -72,7 +72,8 @@ func buildEntities(t *testing.T) (*homeconnect.Appliance, []*homeconnect.Entity)
 	sock, _ := homeconnect.NewAESSocket("h", make([]byte, 32), make([]byte, 16))
 	sess := homeconnect.NewSession(sock, homeconnect.SessionConfig{})
 	app := homeconnect.NewAppliance(sess, d, nil)
-	return app, app.Entities()
+	entities := app.Entities()
+	return app, entities
 }
 
 func classifyByName(t *testing.T, app *homeconnect.Appliance, name string) (string, bool) {
@@ -185,6 +186,7 @@ func (fakeEnricher) DeviceClass(feature string) (string, bool) {
 	}
 	return "", false
 }
+
 func (fakeEnricher) Unit(feature string) (string, bool) {
 	if feature == "BSH.Common.Status.Temp" {
 		return "K", true

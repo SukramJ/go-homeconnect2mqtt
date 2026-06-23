@@ -22,6 +22,10 @@ import (
 // connectTimeout bounds a connection test (docs/03 §5).
 const connectTimeout = 20 * time.Second
 
+// fprintf / fprintln centralise the ignored-error CLI writes.
+func fprintf(w io.Writer, format string, a ...any) { _, _ = fmt.Fprintf(w, format, a...) }
+func fprintln(w io.Writer, a ...any)               { _, _ = fmt.Fprintln(w, a...) }
+
 // parseCmd parses a profile ZIP into cached description JSON files and
 // prints a devices.yaml snippet for the operator to complete.
 func parseCmd(args []string, stdout, stderr io.Writer) error {
@@ -44,23 +48,23 @@ func parseCmd(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("parse: mkdir %s: %w", *out, err)
 	}
 
-	fmt.Fprintln(stdout, "# Add these entries to devices.yaml (secrets included — keep local):")
-	fmt.Fprintln(stdout, "devices:")
+	fprintln(stdout, "# Add these entries to devices.yaml (secrets included — keep local):")
+	fprintln(stdout, "devices:")
 	for _, p := range profiles {
 		descPath := filepath.Join(*out, p.HaID+".json")
 		if err := profile.SaveDescriptionJSON(descPath, p.Description); err != nil {
 			return err
 		}
-		fmt.Fprintf(stdout, "  - name: %s\n", p.HaID)
-		fmt.Fprintf(stdout, "    host: \"\"            # %s (mDNS) or set a manual IP\n", p.DefaultHost())
-		fmt.Fprintf(stdout, "    connection_type: %s\n", p.ConnectionType)
-		fmt.Fprintf(stdout, "    psk64: %q\n", p.PSK64)
+		fprintf(stdout, "  - name: %s\n", p.HaID)
+		fprintf(stdout, "    host: \"\"            # %s (mDNS) or set a manual IP\n", p.DefaultHost())
+		fprintf(stdout, "    connection_type: %s\n", p.ConnectionType)
+		fprintf(stdout, "    psk64: %q\n", p.PSK64)
 		if p.ConnectionType == profile.ConnectionAES {
-			fmt.Fprintf(stdout, "    iv64: %q\n", p.IV64)
+			fprintf(stdout, "    iv64: %q\n", p.IV64)
 		}
-		fmt.Fprintf(stdout, "    description: %s\n", descPath)
+		fprintf(stdout, "    description: %s\n", descPath)
 	}
-	fmt.Fprintf(stderr, "parsed %d device(s) into %s\n", len(profiles), *out)
+	fprintf(stderr, "parsed %d device(s) into %s\n", len(profiles), *out)
 	return nil
 }
 
@@ -73,14 +77,14 @@ func dumpCmd(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "# %s %s %s (version %d)\n", desc.Info.Brand, desc.Info.Type, desc.Info.Model, desc.Info.Version)
-	fmt.Fprintf(stdout, "%-6s  %-10s  %-10s  %-9s  %s\n", "UID", "KIND", "PROTOCOL", "ACCESS", "NAME")
+	fprintf(stdout, "# %s %s %s (version %d)\n", desc.Info.Brand, desc.Info.Type, desc.Info.Model, desc.Info.Version)
+	fprintf(stdout, "%-6s  %-10s  %-10s  %-9s  %s\n", "UID", "KIND", "PROTOCOL", "ACCESS", "NAME")
 	entries := append([]*profile.Entry(nil), desc.Entries...)
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
 	for _, e := range entries {
-		fmt.Fprintf(stdout, "0x%04X  %-10s  %-10s  %-9s  %s\n", e.UID, e.Kind, e.ProtocolType, e.Access, e.Name)
+		fprintf(stdout, "0x%04X  %-10s  %-10s  %-9s  %s\n", e.UID, e.Kind, e.ProtocolType, e.Access, e.Name)
 	}
-	fmt.Fprintf(stderr, "%d feature(s)\n", len(entries))
+	fprintf(stderr, "%d feature(s)\n", len(entries))
 	return nil
 }
 
@@ -99,10 +103,10 @@ func connTestCmd(args []string, stdout, stderr io.Writer) error {
 	for _, dc := range devices {
 		if err := testOne(dc, logger, stdout); err != nil {
 			failures++
-			fmt.Fprintf(stdout, "✗ %s: %v\n", dc.Name, err)
-			fmt.Fprintf(stdout, "    hint: verify the device is on and reachable; set a manual IP in host:\n")
+			fprintf(stdout, "✗ %s: %v\n", dc.Name, err)
+			fprintf(stdout, "    hint: verify the device is on and reachable; set a manual IP in host:\n")
 		} else {
-			fmt.Fprintf(stdout, "✓ %s: connected\n", dc.Name)
+			fprintf(stdout, "✓ %s: connected\n", dc.Name)
 		}
 	}
 	if failures > 0 {

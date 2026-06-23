@@ -37,6 +37,8 @@ func classify(e *homeconnect.Entity) (platform string, ok bool) {
 		return platformSensor, true
 	case profile.KindProgram, profile.KindProtectionPort:
 		return "", false
+	default:
+		// status / setting / option are classified by type below.
 	}
 
 	writable := e.Desc.Writable()
@@ -121,16 +123,15 @@ func payloadFor(e *homeconnect.Entity, platform string, t entityTopics, dev devi
 	case platformSelect:
 		p["options"] = enumOptions(e)
 	case platformNumber:
-		if minV, hasMin, maxV, hasMax, step, hasStep := e.MinMaxStep(); hasMin || hasMax || hasStep {
-			if hasMin {
-				p["min"] = minV
-			}
-			if hasMax {
-				p["max"] = maxV
-			}
-			if hasStep {
-				p["step"] = step
-			}
+		b := e.Bounds()
+		if b.HasMin {
+			p["min"] = b.Min
+		}
+		if b.HasMax {
+			p["max"] = b.Max
+		}
+		if b.HasStep {
+			p["step"] = b.Step
 		}
 	}
 	if deviceClass != "" {

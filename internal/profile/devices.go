@@ -86,7 +86,7 @@ func LoadDescriptionJSON(path string, logger *slog.Logger) (*Description, error)
 	}
 	var d Description
 	if err := json.Unmarshal(data, &d); err != nil {
-		return nil, fmt.Errorf("%w: %s: %v", ErrParser, path, err)
+		return nil, fmt.Errorf("%w: %s: %w", ErrParser, path, err)
 	}
 	d.rebuildIndex()
 	_ = logger

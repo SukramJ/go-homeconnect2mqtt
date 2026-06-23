@@ -33,7 +33,7 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	ch, cancel := s.store.Subscribe()
 	defer cancel()
 
-	fmt.Fprint(w, "retry: 5000\n\n")
+	_, _ = fmt.Fprint(w, "retry: 5000\n\n")
 	s.writeEvent(w, state.EventSnapshot, map[string]any{
 		"devices": s.store.Snapshot().Devices,
 		"mqtt":    map[string]any{"connected": s.mqttUp()},
@@ -48,7 +48,7 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-ticker.C:
-			fmt.Fprint(w, ":\n\n") // heartbeat comment
+			_, _ = fmt.Fprint(w, ":\n\n") // heartbeat comment
 			flusher.Flush()
 		case ev, ok := <-ch:
 			if !ok {
@@ -68,7 +68,7 @@ func (s *Server) writeEvent(w http.ResponseWriter, typ state.EventType, data any
 	if err != nil {
 		return
 	}
-	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", typ, b)
+	_, _ = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", typ, b)
 }
 
 // eventMatchesDevice reports whether an event concerns the named device.

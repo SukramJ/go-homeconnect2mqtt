@@ -6,10 +6,9 @@ package web
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
-
-	"log/slog"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/bridge"
 )
@@ -75,9 +74,9 @@ func (s *Server) handleFeature(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	feature := r.PathValue("feature")
-	for _, f := range detail.Features {
-		if f.Feature == feature {
-			writeJSON(w, http.StatusOK, f)
+	for i := range detail.Features {
+		if detail.Features[i].Feature == feature {
+			writeJSON(w, http.StatusOK, detail.Features[i])
 			return
 		}
 	}

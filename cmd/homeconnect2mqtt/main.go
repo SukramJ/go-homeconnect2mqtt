@@ -48,7 +48,7 @@ func run(args []string, stderr io.Writer) int {
 		return 2
 	}
 	if *showVersion {
-		fmt.Fprintln(stderr, version.String())
+		_, _ = fmt.Fprintln(stderr, version.String())
 		return 0
 	}
 
@@ -56,7 +56,7 @@ func run(args []string, stderr io.Writer) int {
 		if errors.Is(err, context.Canceled) {
 			return 0 // graceful shutdown
 		}
-		fmt.Fprintln(stderr, "fatal:", err)
+		_, _ = fmt.Fprintln(stderr, "fatal:", err)
 		return 1
 	}
 	return 0

@@ -9,8 +9,10 @@ import (
 )
 
 func TestEncodeCompact(t *testing.T) {
-	m := &Message{SID: 1, MsgID: 2, Resource: "/ro/values", Version: 1, Action: ActionPost,
-		Data: []map[string]any{{"uid": 256, "value": 7}}}
+	m := &Message{
+		SID: 1, MsgID: 2, Resource: "/ro/values", Version: 1, Action: ActionPost,
+		Data: []map[string]any{{"uid": 256, "value": 7}},
+	}
 	b, err := m.Encode()
 	if err != nil {
 		t.Fatalf("Encode: %v", err)

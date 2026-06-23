@@ -8,7 +8,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"os"
 
@@ -26,7 +25,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	switch args[0] {
 	case "version", "--version", "-v":
-		fmt.Fprintln(stdout, version.String())
+		fprintln(stdout, version.String())
 		return 0
 	case "help", "--help", "-h":
 		usage(stdout)
@@ -38,7 +37,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "connection-test":
 		return cmdExit(connTestCmd(args[1:], stdout, stderr), stderr)
 	default:
-		fmt.Fprintf(stderr, "hc-util: unknown subcommand %q\n", args[0])
+		fprintf(stderr, "hc-util: unknown subcommand %q\n", args[0])
 		usage(stderr)
 		return 2
 	}
@@ -47,14 +46,14 @@ func run(args []string, stdout, stderr io.Writer) int {
 // cmdExit maps a subcommand error to an exit code.
 func cmdExit(err error, stderr io.Writer) int {
 	if err != nil {
-		fmt.Fprintln(stderr, "hc-util:", err)
+		fprintln(stderr, "hc-util:", err)
 		return 1
 	}
 	return 0
 }
 
 func usage(w io.Writer) {
-	fmt.Fprintln(w, `hc-util — go-homeconnect2mqtt operator CLI
+	fprintln(w, `hc-util — go-homeconnect2mqtt operator CLI
 
 usage:
   hc-util parse <profile.zip> [--out <dir>]   parse a profile archive into device descriptions

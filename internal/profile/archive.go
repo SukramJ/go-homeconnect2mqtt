@@ -25,9 +25,9 @@ var (
 	ErrApplianceNotInProfile = errors.New("appliance_not_in_profile_file")
 )
 
-// ProfileJSON is the per-device index file from the archive
+// DeviceIndex is the per-device index file from the archive
 // (docs/03-profil-format.md §3).
-type ProfileJSON struct {
+type DeviceIndex struct {
 	HaID                      string `json:"haId"`
 	DeviceDescriptionFileName string `json:"deviceDescriptionFileName"`
 	FeatureMappingFileName    string `json:"featureMappingFileName"`
@@ -78,7 +78,7 @@ func (p *DeviceProfile) DefaultHost() string {
 func ParseArchiveFile(zipPath string, logger *slog.Logger) ([]*DeviceProfile, error) {
 	data, err := os.ReadFile(zipPath) //nolint:gosec // operator-supplied path
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrInvalidProfile, err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidProfile, err)
 	}
 	return ParseArchiveBytes(data, logger)
 }
@@ -92,18 +92,18 @@ func ParseArchiveBytes(data []byte, logger *slog.Logger) ([]*DeviceProfile, erro
 	}
 	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrInvalidProfile, err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidProfile, err)
 	}
 	files := map[string][]byte{}
 	for _, f := range zr.File {
 		rc, err := f.Open()
 		if err != nil {
-			return nil, fmt.Errorf("%w: open %s: %v", ErrInvalidProfile, f.Name, err)
+			return nil, fmt.Errorf("%w: open %s: %w", ErrInvalidProfile, f.Name, err)
 		}
 		b, err := io.ReadAll(rc)
 		_ = rc.Close()
 		if err != nil {
-			return nil, fmt.Errorf("%w: read %s: %v", ErrInvalidProfile, f.Name, err)
+			return nil, fmt.Errorf("%w: read %s: %w", ErrInvalidProfile, f.Name, err)
 		}
 		files[f.Name] = b
 	}
@@ -124,9 +124,9 @@ func parseFileSet(files map[string][]byte, logger *slog.Logger) ([]*DeviceProfil
 		return nil, fmt.Errorf("%w: no .json index in archive", ErrInvalidProfile)
 	}
 	for _, name := range jsonNames {
-		var pj ProfileJSON
+		var pj DeviceIndex
 		if err := json.Unmarshal(files[name], &pj); err != nil {
-			return nil, fmt.Errorf("%w: %s: %v", ErrInvalidProfile, name, err)
+			return nil, fmt.Errorf("%w: %s: %w", ErrInvalidProfile, name, err)
 		}
 		descXML, ok := lookupFile(files, pj.DeviceDescriptionFileName, name)
 		if !ok {
@@ -138,7 +138,7 @@ func parseFileSet(files map[string][]byte, logger *slog.Logger) ([]*DeviceProfil
 		}
 		desc, err := ParseDescription(descXML, fmXML, logger)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrParser, err)
+			return nil, fmt.Errorf("%w: %w", ErrParser, err)
 		}
 		profiles = append(profiles, &DeviceProfile{
 			HaID:           pj.HaID,

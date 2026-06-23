@@ -27,7 +27,7 @@
 | P9 | Enrichment (`mapping.yaml`) + `hc-util` | `[x]` | ✅ | P5, P6 |
 | P10 | TLS-PSK (older appliances) | `[x]` | ✅ | P2 |
 | P11 | Optional web UI + state cache | `[x]` | ✅ | P6 |
-| P12 | Hardening, docs & release | `[ ]` | `[ ]` | all |
+| P12 | Hardening, docs & release | `[x]` | ✅ | all |
 
 **Critical path:** P0 → P1 → P2 → P4/P5 → P6 → P7. P3 runs in parallel with P1/P2.
 P8–P11 are additive; P10/P11 are optional.

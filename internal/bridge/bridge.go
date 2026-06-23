@@ -69,7 +69,7 @@ func New(deps Deps) (*Bridge, error) {
 		cfg:           deps.Config,
 		mqtt:          deps.MQTT,
 		logger:        logger,
-		qos:           mqtt.QoS(deps.Config.MQTTQoS),
+		qos:           mqtt.QoS(deps.Config.MQTTQoS), //nolint:gosec // MQTT_QOS is validated to 0..1
 		retain:        deps.Config.RetainEnabled(),
 		hass:          deps.HASS,
 		state:         deps.State,

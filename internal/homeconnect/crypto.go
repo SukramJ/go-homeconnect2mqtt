@@ -107,8 +107,8 @@ func (c *AESCrypto) Reset() {
 // Encrypt pads + CBC-encrypts clear (continuing the TX stream), appends
 // the rolling truncated HMAC and returns the wire frame (ct‖mac).
 // mirrors AesSocket.send.
-func (c *AESCrypto) Encrypt(clear []byte) ([]byte, error) {
-	return c.seal(encryptDirection, clear)
+func (c *AESCrypto) Encrypt(clearMsg []byte) ([]byte, error) {
+	return c.seal(encryptDirection, clearMsg)
 }
 
 // Decrypt verifies the rolling HMAC (constant time), advances the chain
@@ -122,8 +122,8 @@ func (c *AESCrypto) Decrypt(buf []byte) ([]byte, error) {
 // seal is the direction-parameterised encrypt path. Production code uses
 // encryptDirection; tests reuse it with decryptDirection to play the
 // server side of the conversation.
-func (c *AESCrypto) seal(dir byte, clear []byte) ([]byte, error) {
-	padded, err := c.pad(clear)
+func (c *AESCrypto) seal(dir byte, clearMsg []byte) ([]byte, error) {
+	padded, err := c.pad(clearMsg)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,11 @@ func (c *AESCrypto) seal(dir byte, clear []byte) ([]byte, error) {
 
 	mac := c.chainHMAC(dir, c.lastTXHMAC, ct)
 	c.lastTXHMAC = mac
-	return append(ct, mac...), nil
+
+	frame := make([]byte, 0, len(ct)+len(mac))
+	frame = append(frame, ct...)
+	frame = append(frame, mac...)
+	return frame, nil
 }
 
 // open is the direction-parameterised decrypt path.
@@ -178,13 +182,13 @@ func (c *AESCrypto) chainHMAC(dir byte, last, ct []byte) []byte {
 // last byte is the pad length, the middle is random. A pad length of 1 is
 // bumped by 16 so there are always at least two pad bytes.
 // mirrors AesSocket.send padding.
-func (c *AESCrypto) pad(clear []byte) ([]byte, error) {
-	padLen := aes.BlockSize - (len(clear) % aes.BlockSize)
+func (c *AESCrypto) pad(clearMsg []byte) ([]byte, error) {
+	padLen := aes.BlockSize - (len(clearMsg) % aes.BlockSize)
 	if padLen == 1 {
 		padLen += aes.BlockSize
 	}
-	out := make([]byte, 0, len(clear)+padLen)
-	out = append(out, clear...)
+	out := make([]byte, 0, len(clearMsg)+padLen)
+	out = append(out, clearMsg...)
 	out = append(out, 0x00)
 	mid := make([]byte, padLen-2)
 	if _, err := io.ReadFull(c.rand, mid); err != nil {

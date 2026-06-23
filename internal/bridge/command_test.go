@@ -168,7 +168,7 @@ func TestHandleSetWritesScalar(t *testing.T) {
 	b := testBridge()
 	dev, sock := connectedDevice(t, "Dishwasher")
 	// Mark the setting writable (post-init left it from the static parse).
-	b.handleSet(dev, "homeconnect/d/BSH/Common/Setting/PowerState/set", []byte("true"))
+	b.handleSet(context.Background(), dev, "homeconnect/d/BSH/Common/Setting/PowerState/set", []byte("true"))
 	writes := sock.sentTo("/ro/values")
 	if len(writes) != 1 {
 		t.Fatalf("expected 1 /ro/values write, got %d", len(writes))
@@ -193,7 +193,7 @@ func dataInt(v any) int {
 func TestHandleSetStartProgramStandard(t *testing.T) {
 	b := testBridge()
 	dev, sock := connectedDevice(t, "Dishwasher")
-	b.handleSet(dev, "homeconnect/d/Dishcare/Dishwasher/Program/Eco50/set", []byte("start"))
+	b.handleSet(context.Background(), dev, "homeconnect/d/Dishcare/Dishwasher/Program/Eco50/set", []byte("start"))
 	if len(sock.sentTo("/ro/activeProgram")) != 1 {
 		t.Errorf("expected standard activeProgram start, sent: %v", sock.sentTo("/ro/activeProgram"))
 	}
@@ -202,7 +202,7 @@ func TestHandleSetStartProgramStandard(t *testing.T) {
 func TestHandleSetStartProgramHob(t *testing.T) {
 	b := testBridge()
 	dev, sock := connectedDevice(t, "Hob")
-	b.handleSet(dev, "homeconnect/d/Dishcare/Dishwasher/Program/Eco50/set", []byte("start"))
+	b.handleSet(context.Background(), dev, "homeconnect/d/Dishcare/Dishwasher/Program/Eco50/set", []byte("start"))
 	// Hob uses the direct selectedProgram path.
 	if len(sock.sentTo("/ro/selectedProgram")) != 1 || len(sock.sentTo("/ro/activeProgram")) != 0 {
 		t.Errorf("hob should start via selectedProgram; selected=%d active=%d",
@@ -213,7 +213,7 @@ func TestHandleSetStartProgramHob(t *testing.T) {
 func TestHandleSetSelectProgramByName(t *testing.T) {
 	b := testBridge()
 	dev, sock := connectedDevice(t, "Dishwasher")
-	b.handleSet(dev, "homeconnect/d/BSH/Common/Root/SelectedProgram/set", []byte("Dishcare.Dishwasher.Program.Eco50"))
+	b.handleSet(context.Background(), dev, "homeconnect/d/BSH/Common/Root/SelectedProgram/set", []byte("Dishcare.Dishwasher.Program.Eco50"))
 	sel := sock.sentTo("/ro/selectedProgram")
 	if len(sel) != 1 || dataInt(sel[0].Data[0]["program"]) != 0x1015 {
 		t.Errorf("select-by-name wrong: %+v", sel)
@@ -223,7 +223,7 @@ func TestHandleSetSelectProgramByName(t *testing.T) {
 func TestHandleSetActiveProgramOffDeletes(t *testing.T) {
 	b := testBridge()
 	dev, sock := connectedDevice(t, "Dishwasher")
-	b.handleSet(dev, "homeconnect/d/BSH/Common/Root/ActiveProgram/set", []byte("off"))
+	b.handleSet(context.Background(), dev, "homeconnect/d/BSH/Common/Root/ActiveProgram/set", []byte("off"))
 	del := sock.sentTo("/ro/activeProgram")
 	if len(del) != 1 || del[0].Action != homeconnect.ActionDelete {
 		t.Errorf("active off should DELETE activeProgram: %+v", del)
@@ -236,7 +236,7 @@ func TestHandleSetUnknownFeature(t *testing.T) {
 	sock.mu.Lock()
 	before := len(sock.sent)
 	sock.mu.Unlock()
-	b.handleSet(dev, "homeconnect/d/Nope/Missing/set", []byte("x"))
+	b.handleSet(context.Background(), dev, "homeconnect/d/Nope/Missing/set", []byte("x"))
 	sock.mu.Lock()
 	after := len(sock.sent)
 	sock.mu.Unlock()
@@ -249,7 +249,7 @@ func TestHandleSetIgnoresNonSet(t *testing.T) {
 	b := testBridge()
 	dev, _ := connectedDevice(t, "Dishwasher")
 	// Should be a no-op (no panic) for a non-/set topic.
-	b.handleSet(dev, "homeconnect/d/BSH/Common/Setting/PowerState/state", []byte("x"))
+	b.handleSet(context.Background(), dev, "homeconnect/d/BSH/Common/Setting/PowerState/state", []byte("x"))
 }
 
 func TestWriteWindowRetryThenSucceed(t *testing.T) {
@@ -263,7 +263,7 @@ func TestWriteWindowRetryThenSucceed(t *testing.T) {
 		}
 		return nil, false
 	}
-	b.handleSet(dev, "homeconnect/d/BSH/Common/Setting/PowerState/set", []byte("true"))
+	b.handleSet(context.Background(), dev, "homeconnect/d/BSH/Common/Setting/PowerState/set", []byte("true"))
 	if n := len(sock.sentTo("/ro/values")); n < 2 {
 		t.Errorf("expected a retry after 541, got %d writes", n)
 	}

@@ -28,7 +28,7 @@ func (f *fakeSession) Connect(context.Context) error {
 	return f.connectErr
 }
 
-func (f *fakeSession) PostConnectInit(context.Context) (*Message, *Message, error) {
+func (f *fakeSession) PostConnectInit(context.Context) (descChanges, mandatory *Message, err error) {
 	return f.descResp, f.mandResp, f.postErr
 }
 func (f *fakeSession) Close() error                  { return nil }
@@ -91,8 +91,10 @@ func TestApplianceBuildsEntities(t *testing.T) {
 
 func TestApplianceConnectAppliesMandatory(t *testing.T) {
 	fs := &fakeSession{
-		mandResp: &Message{Resource: "/ro/allMandatoryValues", Action: ActionResponse,
-			Data: []map[string]any{{"uid": 0x1002, "value": 3}, {"uid": 0x1005, "value": true}}},
+		mandResp: &Message{
+			Resource: "/ro/allMandatoryValues", Action: ActionResponse,
+			Data: []map[string]any{{"uid": 0x1002, "value": 3}, {"uid": 0x1005, "value": true}},
+		},
 	}
 	a := NewAppliance(fs, testDescription(t), nil)
 	if err := a.Connect(context.Background()); err != nil {
@@ -123,8 +125,10 @@ func TestApplianceNotifyRouting(t *testing.T) {
 	_ = a.Connect(context.Background())
 
 	// Simulate a NOTIFY /ro/values from the device.
-	fs.notify(&Message{Resource: "/ro/values", Action: ActionNotify,
-		Data: []map[string]any{{"uid": 0x1002, "value": 3}}})
+	fs.notify(&Message{
+		Resource: "/ro/values", Action: ActionNotify,
+		Data: []map[string]any{{"uid": 0x1002, "value": 3}},
+	})
 	if op, _ := a.Entity(0x1002); op.Value() != "Run" {
 		t.Errorf("notify not applied: %v", op.Value())
 	}

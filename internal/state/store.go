@@ -138,8 +138,8 @@ func (s *Store) Device(nameOrHaID string) (DeviceDetail, bool) {
 		return DeviceDetail{}, false
 	}
 	feats := make([]Feature, 0, len(d.features))
-	for _, f := range d.features {
-		feats = append(feats, f)
+	for k := range d.features {
+		feats = append(feats, d.features[k])
 	}
 	sort.Slice(feats, func(i, j int) bool { return feats[i].Feature < feats[j].Feature })
 	return DeviceDetail{Device: s.summaryLocked(d), Info: d.info, Features: feats}, true
@@ -187,7 +187,7 @@ func (s *Store) isStale(d *deviceState, sum DeviceSummary) bool {
 // Subscribe registers an SSE subscriber. The returned channel is buffered
 // (cap 1, latest-wins): a slow consumer drops intermediate events rather
 // than blocking the publish path. Call cancel to unsubscribe.
-func (s *Store) Subscribe() (<-chan Event, func()) {
+func (s *Store) Subscribe() (events <-chan Event, cancel func()) {
 	ch := make(chan Event, 1)
 	s.subMu.Lock()
 	id := s.nextS

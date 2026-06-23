@@ -102,14 +102,14 @@ func respondOK(req *Message, data []map[string]any) *Message {
 // applianceScript builds a server that completes the handshake. ciVersion
 // controls whether the authentication branch is exercised; services lists
 // the advertised services.
-func applianceScript(ciVersion int, services []map[string]any) (func() []*Message, func(*Message) []*Message) {
-	onConnect := func() []*Message {
+func applianceScript(ciVersion int, services []map[string]any) (onConnect func() []*Message, responder func(*Message) []*Message) {
+	onConnect = func() []*Message {
 		return []*Message{{
 			SID: 42, MsgID: 1000, Resource: "/ei/initialValues", Version: 2, Action: ActionPost,
 			Data: []map[string]any{{"edMsgID": 500}},
 		}}
 	}
-	responder := func(req *Message) []*Message {
+	responder = func(req *Message) []*Message {
 		switch req.Resource {
 		case "/ei/initialValues":
 			return nil // client RESPONSE, no reply
