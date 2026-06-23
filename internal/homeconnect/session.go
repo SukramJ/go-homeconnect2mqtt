@@ -308,6 +308,18 @@ func tolerableInit(err error) bool {
 	return errors.As(err, &ce) && ce.Code >= 500
 }
 
+// WriteValues issues a POST /ro/values with the given data items and
+// returns the correlated response (docs/01-protokoll.md §7).
+func (s *Session) WriteValues(ctx context.Context, data []map[string]any) (*Message, error) {
+	return s.sendSync(ctx, &Message{Resource: "/ro/values", Action: ActionPost, Data: data})
+}
+
+// SendRaw issues an arbitrary request and returns the correlated response;
+// used by the command layer for program-start paths (P7).
+func (s *Session) SendRaw(ctx context.Context, m *Message) (*Message, error) {
+	return s.sendSync(ctx, m)
+}
+
 // send resolves defaults for zero-valued fields and writes the message.
 func (s *Session) send(ctx context.Context, m *Message) error {
 	s.resolveDefaults(m, true)
