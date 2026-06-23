@@ -21,7 +21,7 @@
 | P3 | Profile import & XML parser | `[x]` | ✅ | P0 |
 | P4 | Reconnect state machine | `[x]` | ✅ | P2 |
 | P5 | Entities + appliance (high-level) | `[x]` | ✅ | P2, P3 |
-| P6 | Bridge + MQTT publish (read-only E2E) | `[ ]` | `[ ]` | P4, P5 |
+| P6 | Bridge + MQTT publish (read-only E2E) | `[x]` | ✅ | P4, P5 |
 | P7 | Command topics (writing) | `[ ]` | `[ ]` | P6 |
 | P8 | Home Assistant discovery | `[ ]` | `[ ]` | P6 |
 | P9 | Enrichment (`mapping.yaml`) + `hc-util` | `[ ]` | `[ ]` | P5, P6 |

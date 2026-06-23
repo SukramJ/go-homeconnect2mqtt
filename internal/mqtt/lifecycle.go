@@ -50,6 +50,7 @@ type Lifecycle struct {
 	started   bool
 	cancel    context.CancelFunc
 	onConnect []func(context.Context)
+	loopDone  chan struct{}
 }
 
 // NewLifecycle constructs a lifecycle around connector.
@@ -97,7 +98,14 @@ func (l *Lifecycle) Start(ctx context.Context) error {
 		l.mu.Unlock()
 		return err
 	}
-	go l.loop(runCtx)
+	done := make(chan struct{})
+	l.mu.Lock()
+	l.loopDone = done
+	l.mu.Unlock()
+	go func() {
+		defer close(done)
+		l.loop(runCtx)
+	}()
 	return nil
 }
 
@@ -105,11 +113,21 @@ func (l *Lifecycle) Start(ctx context.Context) error {
 func (l *Lifecycle) Stop(ctx context.Context) error {
 	l.mu.Lock()
 	cancel := l.cancel
+	done := l.loopDone
 	l.started = false
 	l.cancel = nil
+	l.loopDone = nil
 	l.mu.Unlock()
 	if cancel != nil {
 		cancel()
+	}
+	// Wait for the reconnect loop to exit before disconnecting so a
+	// concurrent connectOnce can't race the connector teardown.
+	if done != nil {
+		select {
+		case <-done:
+		case <-ctx.Done():
+		}
 	}
 	if l.connector != nil {
 		return l.connector.Disconnect(ctx)

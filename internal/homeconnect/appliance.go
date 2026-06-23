@@ -136,6 +136,15 @@ func (a *Appliance) Close() error { return a.session.Close() }
 // reconnect manager can react (FK-1).
 func (a *Appliance) Disconnected() <-chan struct{} { return a.session.Disconnected() }
 
+// ApplyValues applies a batch of update items directly (used for replay,
+// diagnostics and tests). Each item is routed to its entity exactly like a
+// NOTIFY would be.
+func (a *Appliance) ApplyValues(items []map[string]any) {
+	for _, item := range items {
+		a.applyItem(item)
+	}
+}
+
 // handleNotify routes value/description updates to entities.
 func (a *Appliance) handleNotify(msg *Message) {
 	switch msg.Resource {

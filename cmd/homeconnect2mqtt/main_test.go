@@ -26,10 +26,11 @@ func TestRunBadFlag(t *testing.T) {
 	}
 }
 
-func TestRunStartsAndExits(t *testing.T) {
-	// Until the bridge is wired (P6) the daemon logs and returns 0.
+func TestRunNoConfig(t *testing.T) {
+	// With no config file found, the daemon fails fast with a non-zero code.
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	var errBuf bytes.Buffer
-	if code := run(nil, &errBuf); code != 0 {
-		t.Fatalf("exit code = %d, want 0", code)
+	if code := run([]string{"--config", "/nonexistent/config.yaml"}, &errBuf); code == 0 {
+		t.Fatalf("expected non-zero exit for missing config")
 	}
 }
