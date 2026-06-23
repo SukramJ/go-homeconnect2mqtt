@@ -37,6 +37,7 @@ type sessionAPI interface {
 	Connect(ctx context.Context) error
 	PostConnectInit(ctx context.Context) (descChanges, mandatory *Message, err error)
 	Close() error
+	Disconnected() <-chan struct{}
 	WriteValues(ctx context.Context, data []map[string]any) (*Message, error)
 }
 
@@ -130,6 +131,10 @@ func (a *Appliance) Connect(ctx context.Context) error {
 
 // Close tears down the underlying session.
 func (a *Appliance) Close() error { return a.session.Close() }
+
+// Disconnected returns a channel closed when the connection drops, so the
+// reconnect manager can react (FK-1).
+func (a *Appliance) Disconnected() <-chan struct{} { return a.session.Disconnected() }
 
 // handleNotify routes value/description updates to entities.
 func (a *Appliance) handleNotify(msg *Message) {

@@ -30,7 +30,8 @@ func (f *fakeSession) Connect(context.Context) error {
 func (f *fakeSession) PostConnectInit(context.Context) (*Message, *Message, error) {
 	return f.descResp, f.mandResp, f.postErr
 }
-func (f *fakeSession) Close() error { return nil }
+func (f *fakeSession) Close() error                  { return nil }
+func (f *fakeSession) Disconnected() <-chan struct{} { return make(chan struct{}) }
 func (f *fakeSession) WriteValues(_ context.Context, data []map[string]any) (*Message, error) {
 	f.written = append(f.written, data)
 	return f.writeResp, f.writeErr

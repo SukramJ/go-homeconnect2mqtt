@@ -42,6 +42,7 @@ type Session struct {
 
 	initCh  chan *Message
 	recvErr chan error
+	dropped chan struct{}
 
 	notifyMu      sync.RWMutex
 	notifyHandler func(*Message)
@@ -118,11 +119,35 @@ func (s *Session) resetState() {
 
 	s.initCh = make(chan *Message, 1)
 	s.recvErr = make(chan error, 1)
+	s.mu.Lock()
+	s.dropped = make(chan struct{})
+	s.mu.Unlock()
+}
+
+// Disconnected returns a channel closed when the current connection's
+// receive loop terminates (drop or context cancel). Valid for the
+// connection established by the most recent Connect.
+func (s *Session) Disconnected() <-chan struct{} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.dropped
+}
+
+func (s *Session) signalDropped() {
+	s.mu.Lock()
+	ch := s.dropped
+	s.mu.Unlock()
+	select {
+	case <-ch:
+	default:
+		close(ch)
+	}
 }
 
 // receiveLoop reads frames and dispatches them until the socket errors or
 // the context is cancelled.
 func (s *Session) receiveLoop(ctx context.Context) {
+	defer s.signalDropped()
 	for {
 		text, err := s.socket.Receive(ctx)
 		if err != nil {

@@ -19,7 +19,7 @@
 | P1 | ⭐ Crypto + AES transport | `[x]` | ✅ | P0 |
 | P2 | ⭐ Message + session + handshake | `[x]` | ✅ | P1 |
 | P3 | Profile import & XML parser | `[x]` | ✅ | P0 |
-| P4 | Reconnect state machine | `[ ]` | `[ ]` | P2 |
+| P4 | Reconnect state machine | `[x]` | ✅ | P2 |
 | P5 | Entities + appliance (high-level) | `[x]` | ✅ | P2, P3 |
 | P6 | Bridge + MQTT publish (read-only E2E) | `[ ]` | `[ ]` | P4, P5 |
 | P7 | Command topics (writing) | `[ ]` | `[ ]` | P6 |
