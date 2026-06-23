@@ -20,6 +20,7 @@ import (
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/bridge"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mqtt"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/version"
@@ -109,7 +110,12 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 		_ = lc.Stop(stopCtx)
 	}()
 
-	br, err := bridge.New(bridge.Deps{Config: cfg, MQTT: client, Logger: logger, Devices: specs})
+	var disc *hass.Discovery
+	if cfg.HASSEnable {
+		disc = hass.New(client, cfg.HASSBaseTopic, cfg.MQTTTopic, mqtt.QoS(cfg.MQTTQoS), logger)
+	}
+
+	br, err := bridge.New(bridge.Deps{Config: cfg, MQTT: client, Logger: logger, Devices: specs, HASS: disc})
 	if err != nil {
 		return err
 	}

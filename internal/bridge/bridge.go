@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mqtt"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
@@ -28,6 +29,8 @@ type Deps struct {
 	MQTT    mqtt.Client
 	Logger  *slog.Logger
 	Devices []DeviceSpec
+	// HASS is the optional Home Assistant discovery publisher (nil disables).
+	HASS *hass.Discovery
 }
 
 // Bridge owns the per-device workers and the shared MQTT publish settings.
@@ -38,6 +41,7 @@ type Bridge struct {
 	qos     mqtt.QoS
 	retain  bool
 	devices []*Device
+	hass    *hass.Discovery
 
 	// Command write-window retry budget (FK-5).
 	cmdRetries    int
@@ -63,6 +67,7 @@ func New(deps Deps) (*Bridge, error) {
 		logger:        logger,
 		qos:           mqtt.QoS(deps.Config.MQTTQoS),
 		retain:        deps.Config.RetainEnabled(),
+		hass:          deps.HASS,
 		cmdRetries:    3,
 		cmdRetryDelay: time.Second,
 	}

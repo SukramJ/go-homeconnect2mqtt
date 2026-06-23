@@ -28,7 +28,22 @@ func (b *Bridge) subscribeCommands(ctx context.Context) error {
 			return err
 		}
 	}
-	return nil
+	return b.subscribeBirth(ctx)
+}
+
+// subscribeBirth watches the Home Assistant status topic and re-publishes
+// discovery for every device when HA comes back online (docs/04 §6.3).
+func (b *Bridge) subscribeBirth(ctx context.Context) error {
+	if b.hass == nil {
+		return nil
+	}
+	return b.mqtt.Subscribe(ctx, b.hass.BirthTopic(), b.qos, func(_ string, payload []byte) {
+		if strings.EqualFold(strings.TrimSpace(string(payload)), "online") {
+			for _, d := range b.devices {
+				b.publishDiscovery(d)
+			}
+		}
+	})
 }
 
 // handleSet resolves an incoming "/set" command to a feature and applies

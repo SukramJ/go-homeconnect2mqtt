@@ -104,14 +104,27 @@ func (b *Bridge) onUpdate(d *Device, e *homeconnect.Entity) {
 	b.publish(d.topics.state(e), []byte(payloadFor(e)))
 }
 
-// onState publishes the connection state and availability of a device.
+// onState publishes the connection state and availability of a device and,
+// on a fresh connection, (re)publishes Home Assistant discovery.
 func (b *Bridge) onState(d *Device, s homeconnect.ConnectionState) {
 	b.publish(d.topics.connectionState(), []byte(s))
 	avail := availOffline
 	if s == homeconnect.StateConnected {
 		avail = availOnline
+		b.publishDiscovery(d)
 	}
 	b.publish(d.topics.availability(), []byte(avail))
+}
+
+// publishDiscovery emits Home Assistant discovery configs for a device, if
+// discovery is enabled.
+func (b *Bridge) publishDiscovery(d *Device) {
+	if b.hass == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), publishTimeout)
+	defer cancel()
+	b.hass.PublishDevice(ctx, d.name, d.app.Info(), d.app.Entities())
 }
 
 // publish performs a single retained publish, logging (never failing) on
