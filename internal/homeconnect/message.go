@@ -20,6 +20,8 @@ const (
 	ActionPost     Action = "POST"
 	ActionResponse Action = "RESPONSE"
 	ActionNotify   Action = "NOTIFY"
+	// ActionDelete clears the active program (hood fan-off, #386).
+	ActionDelete Action = "DELETE"
 )
 
 // Message is one protocol frame, JSON-encoded over the WebSocket with

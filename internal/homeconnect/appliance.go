@@ -39,7 +39,22 @@ type sessionAPI interface {
 	Close() error
 	Disconnected() <-chan struct{}
 	WriteValues(ctx context.Context, data []map[string]any) (*Message, error)
+	SendRaw(ctx context.Context, m *Message) (*Message, error)
 }
+
+// ProgramStartStrategy selects how a program is started; the right one is
+// device-specific (FK-4, docs/05-resilienz.md).
+type ProgramStartStrategy int
+
+// Program start strategies.
+const (
+	// StartStandard posts to /ro/activeProgram (most appliances).
+	StartStandard ProgramStartStrategy = iota
+	// StartHob posts directly to /ro/selectedProgram (hobs, validate=false).
+	StartHob
+	// StartCommand executes BSH.Common.Command.StartProgram.
+	StartCommand
+)
 
 // NewAppliance builds an appliance over a session and parsed description.
 func NewAppliance(session sessionAPI, desc *profile.Description, logger *slog.Logger) *Appliance {
@@ -213,4 +228,42 @@ func (a *Appliance) WriteValue(ctx context.Context, uid int, value any) error {
 		e.mu.Unlock()
 	}
 	return nil
+}
+
+// SelectProgram posts the chosen program (without starting it) to
+// /ro/selectedProgram (docs/01-protokoll.md §7).
+func (a *Appliance) SelectProgram(ctx context.Context, programUID int, options []map[string]any) (*Message, error) {
+	data := map[string]any{"program": programUID}
+	if options != nil {
+		data["options"] = options
+	}
+	return a.session.SendRaw(ctx, &Message{Resource: "/ro/selectedProgram", Action: ActionPost, Data: []map[string]any{data}})
+}
+
+// StartProgram starts a program using the device-specific strategy (FK-4):
+// the standard /ro/activeProgram post, a direct /ro/selectedProgram post
+// for hobs, or the BSH.Common.Command.StartProgram command.
+func (a *Appliance) StartProgram(ctx context.Context, programUID int, options []map[string]any, strategy ProgramStartStrategy) (*Message, error) {
+	switch strategy {
+	case StartHob:
+		return a.SelectProgram(ctx, programUID, options)
+	case StartCommand:
+		cmd, ok := a.EntityByName("BSH.Common.Command.StartProgram")
+		if !ok {
+			return nil, fmt.Errorf("homeconnect: StartProgram command not available")
+		}
+		return a.session.WriteValues(ctx, []map[string]any{{"uid": cmd.UID(), "value": true}})
+	default:
+		data := map[string]any{"program": programUID}
+		if options != nil {
+			data["options"] = options
+		}
+		return a.session.SendRaw(ctx, &Message{Resource: "/ro/activeProgram", Action: ActionPost, Data: []map[string]any{data}})
+	}
+}
+
+// StopActiveProgram clears the active program via DELETE /ro/activeProgram,
+// the path a hood fan-off requires (#386).
+func (a *Appliance) StopActiveProgram(ctx context.Context) (*Message, error) {
+	return a.session.SendRaw(ctx, &Message{Resource: "/ro/activeProgram", Action: ActionDelete})
 }

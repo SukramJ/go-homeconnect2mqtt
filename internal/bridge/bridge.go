@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -37,6 +38,10 @@ type Bridge struct {
 	qos     mqtt.QoS
 	retain  bool
 	devices []*Device
+
+	// Command write-window retry budget (FK-5).
+	cmdRetries    int
+	cmdRetryDelay time.Duration
 }
 
 // New builds the bridge and all device workers. It fails fast on a
@@ -53,11 +58,13 @@ func New(deps Deps) (*Bridge, error) {
 		logger = slog.Default()
 	}
 	b := &Bridge{
-		cfg:    deps.Config,
-		mqtt:   deps.MQTT,
-		logger: logger,
-		qos:    mqtt.QoS(deps.Config.MQTTQoS),
-		retain: deps.Config.RetainEnabled(),
+		cfg:           deps.Config,
+		mqtt:          deps.MQTT,
+		logger:        logger,
+		qos:           mqtt.QoS(deps.Config.MQTTQoS),
+		retain:        deps.Config.RetainEnabled(),
+		cmdRetries:    3,
+		cmdRetryDelay: time.Second,
 	}
 	for _, spec := range deps.Devices {
 		dev, err := buildDevice(b, spec)
@@ -79,6 +86,9 @@ func (b *Bridge) Devices() []*Device { return b.devices }
 // is cancelled. Each worker reconnects independently; a single device
 // failure never stops the others (FK-1).
 func (b *Bridge) Run(ctx context.Context) error {
+	if err := b.subscribeCommands(ctx); err != nil {
+		return fmt.Errorf("bridge: subscribe commands: %w", err)
+	}
 	g, gctx := errgroup.WithContext(ctx)
 	for _, d := range b.devices {
 		g.Go(func() error {

@@ -18,6 +18,7 @@ type fakeSession struct {
 	connectErr         error
 	postErr            error
 	written            [][]map[string]any
+	raw                []*Message
 	writeResp          *Message
 	writeErr           error
 }
@@ -34,6 +35,11 @@ func (f *fakeSession) Close() error                  { return nil }
 func (f *fakeSession) Disconnected() <-chan struct{} { return make(chan struct{}) }
 func (f *fakeSession) WriteValues(_ context.Context, data []map[string]any) (*Message, error) {
 	f.written = append(f.written, data)
+	return f.writeResp, f.writeErr
+}
+
+func (f *fakeSession) SendRaw(_ context.Context, m *Message) (*Message, error) {
+	f.raw = append(f.raw, m)
 	return f.writeResp, f.writeErr
 }
 
@@ -157,5 +163,73 @@ func TestApplianceWriteNotWritable(t *testing.T) {
 	// 0x1002 is read-only.
 	if err := a.WriteValue(context.Background(), 0x1002, "x"); err == nil {
 		t.Fatal("expected not-writable error")
+	}
+}
+
+func TestStartProgramStandard(t *testing.T) {
+	fs := &fakeSession{writeResp: &Message{Action: ActionResponse}}
+	a := NewAppliance(fs, testDescription(t), nil)
+	if _, err := a.StartProgram(context.Background(), 0x1015, nil, StartStandard); err != nil {
+		t.Fatalf("StartProgram: %v", err)
+	}
+	if len(fs.raw) != 1 || fs.raw[0].Resource != "/ro/activeProgram" || fs.raw[0].Action != ActionPost {
+		t.Errorf("standard start message wrong: %+v", fs.raw)
+	}
+	if fs.raw[0].Data[0]["program"] != 0x1015 {
+		t.Errorf("program uid not set: %+v", fs.raw[0].Data)
+	}
+}
+
+func TestStartProgramHobUsesSelected(t *testing.T) {
+	fs := &fakeSession{writeResp: &Message{Action: ActionResponse}}
+	a := NewAppliance(fs, testDescription(t), nil)
+	if _, err := a.StartProgram(context.Background(), 0x1015, nil, StartHob); err != nil {
+		t.Fatalf("StartProgram hob: %v", err)
+	}
+	if len(fs.raw) != 1 || fs.raw[0].Resource != "/ro/selectedProgram" {
+		t.Errorf("hob start should post selectedProgram: %+v", fs.raw)
+	}
+}
+
+func TestStartProgramCommand(t *testing.T) {
+	// Add a StartProgram command to the description.
+	dd := `<?xml version="1.0"?><device>
+      <description><type>Oven</type><brand>B</brand><model>M</model><version>2</version></description>
+      <commandList uid="0007"><command access="writeOnly" available="true" refCID="01" uid="2001"/></commandList>
+    </device>`
+	fm := `<featureMappingFile><featureDescription>
+        <feature refUID="2001">BSH.Common.Command.StartProgram</feature>
+      </featureDescription></featureMappingFile>`
+	d, _ := profile.ParseDescription([]byte(dd), []byte(fm), nil)
+	fs := &fakeSession{writeResp: &Message{Action: ActionResponse}}
+	a := NewAppliance(fs, d, nil)
+	if _, err := a.StartProgram(context.Background(), 0, nil, StartCommand); err != nil {
+		t.Fatalf("StartProgram command: %v", err)
+	}
+	if len(fs.written) != 1 || fs.written[0][0]["uid"] != 0x2001 {
+		t.Errorf("command start should write command uid: %+v", fs.written)
+	}
+}
+
+func TestStopActiveProgramDeletes(t *testing.T) {
+	fs := &fakeSession{writeResp: &Message{Action: ActionResponse}}
+	a := NewAppliance(fs, testDescription(t), nil)
+	if _, err := a.StopActiveProgram(context.Background()); err != nil {
+		t.Fatalf("StopActiveProgram: %v", err)
+	}
+	if len(fs.raw) != 1 || fs.raw[0].Action != ActionDelete || fs.raw[0].Resource != "/ro/activeProgram" {
+		t.Errorf("stop should DELETE activeProgram: %+v", fs.raw)
+	}
+}
+
+func TestSelectProgram(t *testing.T) {
+	fs := &fakeSession{writeResp: &Message{Action: ActionResponse}}
+	a := NewAppliance(fs, testDescription(t), nil)
+	opts := []map[string]any{{"uid": 5, "value": 1}}
+	if _, err := a.SelectProgram(context.Background(), 0x1015, opts); err != nil {
+		t.Fatalf("SelectProgram: %v", err)
+	}
+	if fs.raw[0].Resource != "/ro/selectedProgram" || fs.raw[0].Data[0]["options"] == nil {
+		t.Errorf("select message wrong: %+v", fs.raw)
 	}
 }
