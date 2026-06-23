@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: MIT -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>go-homeconnect2mqtt</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 1.5rem; background: #fafafa; color: #222; }
+    h1 { font-size: 1.3rem; }
+    .dev { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: .75rem 1rem; margin: .5rem 0; }
+    .state { font-weight: 600; }
+    .connected { color: #137333; } .offline, .reconnecting { color: #b71c1c; }
+    .muted { color: #777; font-size: .85rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: .5rem; font-size: .85rem; }
+    td, th { text-align: left; padding: .2rem .5rem; border-bottom: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <h1>go-homeconnect2mqtt <span id="ver" class="muted"></span></h1>
+  <p class="muted">MQTT: <span id="mqtt">?</span> · live status via SSE</p>
+  <div id="devices"></div>
+  <script>
+    const elDevices = document.getElementById('devices');
+    const elMqtt = document.getElementById('mqtt');
+    const elVer = document.getElementById('ver');
+
+    async function loadVersion() {
+      try { const v = await (await fetch('api/version')).json(); elVer.textContent = 'v' + v.version; } catch {}
+    }
+    function render(devices) {
+      elDevices.innerHTML = '';
+      (devices || []).forEach(d => {
+        const div = document.createElement('div');
+        div.className = 'dev';
+        div.innerHTML = `<div><span class="state ${d.connection_state}">${d.connection_state}</span>
+          — <b>${d.name}</b> <span class="muted">${d.brand||''} ${d.type||''}</span></div>
+          <div class="muted">features: ${d.feature_count} · age: ${d.age_seconds}s</div>`;
+        elDevices.appendChild(div);
+      });
+    }
+    async function refresh() {
+      try {
+        const s = await (await fetch('api/status')).json();
+        elMqtt.textContent = s.mqtt && s.mqtt.connected ? 'connected' : 'disconnected';
+        render(s.devices);
+      } catch (e) { elMqtt.textContent = 'error'; }
+    }
+    function connectSSE() {
+      try {
+        const es = new EventSource('api/events');
+        es.addEventListener('snapshot', e => { const d = JSON.parse(e.data); render(d.devices); });
+        es.addEventListener('connection', () => refresh());
+        es.addEventListener('value', () => {});
+        es.onerror = () => {};
+      } catch {}
+    }
+    loadVersion(); refresh(); connectSSE(); setInterval(refresh, 10000);
+  </script>
+</body>
+</html>

@@ -15,6 +15,7 @@ import (
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mqtt"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/state"
 )
 
 // DeviceSpec pairs a device's runtime config with its parsed description.
@@ -31,6 +32,8 @@ type Deps struct {
 	Devices []DeviceSpec
 	// HASS is the optional Home Assistant discovery publisher (nil disables).
 	HASS *hass.Discovery
+	// State is the optional in-memory cache feeding the web UI (nil disables).
+	State *state.Store
 }
 
 // Bridge owns the per-device workers and the shared MQTT publish settings.
@@ -42,6 +45,7 @@ type Bridge struct {
 	retain  bool
 	devices []*Device
 	hass    *hass.Discovery
+	state   *state.Store
 
 	// Command write-window retry budget (FK-5).
 	cmdRetries    int
@@ -68,6 +72,7 @@ func New(deps Deps) (*Bridge, error) {
 		qos:           mqtt.QoS(deps.Config.MQTTQoS),
 		retain:        deps.Config.RetainEnabled(),
 		hass:          deps.HASS,
+		state:         deps.State,
 		cmdRetries:    3,
 		cmdRetryDelay: time.Second,
 	}
@@ -77,6 +82,12 @@ func New(deps Deps) (*Bridge, error) {
 			return nil, err
 		}
 		b.devices = append(b.devices, dev)
+		if b.state != nil {
+			info := dev.app.Info()
+			b.state.RegisterDevice(dev.name, "", info.Brand, info.Type, "", map[string]any{
+				"brand": info.Brand, "type": info.Type, "model": info.Model, "version": info.Version,
+			})
+		}
 	}
 	if len(b.devices) == 0 {
 		return nil, fmt.Errorf("bridge: no devices configured")

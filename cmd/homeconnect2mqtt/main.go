@@ -18,13 +18,17 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/bridge"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mapping"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mqtt"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/state"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/version"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/web"
 )
 
 func main() {
@@ -121,11 +125,28 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 		}
 	}
 
-	br, err := bridge.New(bridge.Deps{Config: cfg, MQTT: client, Logger: logger, Devices: specs, HASS: disc})
+	var store *state.Store
+	if cfg.WebEnable {
+		store = state.New(nil)
+	}
+
+	br, err := bridge.New(bridge.Deps{Config: cfg, MQTT: client, Logger: logger, Devices: specs, HASS: disc, State: store})
 	if err != nil {
 		return err
 	}
-	return br.Run(ctx)
+
+	if !cfg.WebEnable {
+		return br.Run(ctx)
+	}
+
+	webSrv := web.New(web.Config{Bind: cfg.WebBind, User: cfg.WebUser, Password: cfg.WebPassword},
+		store, br,
+		web.VersionInfo{Version: version.Version, Commit: version.Commit, BuildDate: version.BuildDate},
+		client.IsConnected, logger)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error { return br.Run(gctx) })
+	g.Go(func() error { return webSrv.Run(gctx) })
+	return g.Wait()
 }
 
 func loadConfig(configPath string) (*config.Config, error) {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/state"
 )
 
 // publishTimeout bounds a single MQTT publish, independent of the worker
@@ -92,12 +93,49 @@ func (d *Device) run(ctx context.Context, logger *slog.Logger) (err error) {
 	return d.manager.Run(ctx)
 }
 
-// onUpdate publishes a changed entity's value to its state topic.
+// onUpdate publishes a changed entity's value to its state topic and feeds
+// the optional state store.
 func (b *Bridge) onUpdate(d *Device, e *homeconnect.Entity) {
 	if !e.HasValue() {
 		return
 	}
 	b.publish(d.topics.state(e), []byte(payloadFor(e)))
+	if b.state != nil {
+		b.state.UpdateFeature(d.name, b.featureView(d, e))
+	}
+}
+
+// featureView builds the web/state representation of an entity.
+func (b *Bridge) featureView(d *Device, e *homeconnect.Entity) state.Feature {
+	f := state.Feature{
+		Feature:      e.Name(),
+		Topic:        d.topics.state(e),
+		UID:          e.UID(),
+		Value:        e.Value(),
+		ValueRaw:     e.ValueRaw(),
+		ProtocolType: string(e.Desc.ProtocolType),
+		ContentType:  e.Desc.ContentType,
+		Access:       e.Access(),
+		Available:    e.Available(),
+		Writable:     e.Writable(),
+	}
+	if e.Desc.IsEnum() {
+		for _, name := range e.Desc.Enumeration {
+			f.Options = append(f.Options, name)
+		}
+	}
+	if minV, hasMin, maxV, hasMax, step, hasStep := e.MinMaxStep(); hasMin || hasMax || hasStep {
+		if hasMin {
+			f.Min = &minV
+		}
+		if hasMax {
+			f.Max = &maxV
+		}
+		if hasStep {
+			f.Step = &step
+		}
+	}
+	return f
 }
 
 // onState publishes the connection state and availability of a device and,
@@ -110,6 +148,9 @@ func (b *Bridge) onState(d *Device, s homeconnect.ConnectionState) {
 		b.publishDiscovery(d)
 	}
 	b.publish(d.topics.availability(), []byte(avail))
+	if b.state != nil {
+		b.state.SetConnectionState(d.name, string(s), s == homeconnect.StateConnected)
+	}
 }
 
 // publishDiscovery emits Home Assistant discovery configs for a device, if
