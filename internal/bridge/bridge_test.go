@@ -195,17 +195,22 @@ func TestNewValidations(t *testing.T) {
 	}
 }
 
-func TestNewRejectsTLS(t *testing.T) {
+func TestTLSDeviceBuilds(t *testing.T) {
+	// A TLS device builds (so AES siblings still run); it only fails at
+	// connect with ErrTLSPSKUnsupported unless built with the tlspsk tag.
 	stub := newStubMQTT()
-	_, err := New(Deps{
+	b, err := New(Deps{
 		Config: testCfg(), MQTT: stub,
 		Devices: []DeviceSpec{{
 			Config:      profile.DeviceConfig{Name: "old", Host: "h", ConnectionType: profile.ConnectionTLS, PSK64: b64(32)},
 			Description: smallDescription(t),
 		}},
 	})
-	if err == nil {
-		t.Error("TLS device should be rejected until P10")
+	if err != nil {
+		t.Fatalf("TLS device should build, got %v", err)
+	}
+	if len(b.devices) != 1 {
+		t.Errorf("expected 1 device, got %d", len(b.devices))
 	}
 }
 

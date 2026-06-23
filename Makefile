@@ -72,6 +72,11 @@ build-util: ## build the CLI utility
 	@mkdir -p $(BIN_DIR)
 	$(GO) build $(GO_BUILD_FLAGS) -o $(BIN_DIR)/hc-util ./cmd/hc-util
 
+.PHONY: build-tlspsk
+build-tlspsk: ## build the daemon with cgo TLS-PSK support (older appliances)
+	@mkdir -p $(BIN_DIR)
+	CGO_ENABLED=1 $(GO) build -tags tlspsk $(GO_BUILD_FLAGS) -o $(BIN_DIR)/homeconnect2mqtt-tlspsk ./cmd/homeconnect2mqtt
+
 .PHONY: install
 install: ## go install both binaries
 	$(GO) install $(GO_BUILD_FLAGS) ./cmd/homeconnect2mqtt

@@ -40,23 +40,19 @@ func buildDevice(b *Bridge, spec DeviceSpec) (*Device, error) {
 	if err != nil {
 		return nil, fmt.Errorf("bridge: device %q psk64: %w", dc.Name, err)
 	}
-
-	var socket homeconnect.Socket
-	switch dc.ConnectionType {
-	case profile.ConnectionAES:
-		iv, err := homeconnect.DecodeKey(dc.IV64)
-		if err != nil {
+	var iv []byte
+	if dc.IV64 != "" {
+		if iv, err = homeconnect.DecodeKey(dc.IV64); err != nil {
 			return nil, fmt.Errorf("bridge: device %q iv64: %w", dc.Name, err)
 		}
-		aes, err := homeconnect.NewAESSocket(host, psk, iv)
-		if err != nil {
-			return nil, fmt.Errorf("bridge: device %q: %w", dc.Name, err)
-		}
-		socket = aes
-	case profile.ConnectionTLS:
-		return nil, fmt.Errorf("bridge: device %q: TLS-PSK transport is not yet supported", dc.Name)
-	default:
-		return nil, fmt.Errorf("bridge: device %q: unknown connection type %q", dc.Name, dc.ConnectionType)
+	}
+	socket, err := homeconnect.NewSocket(homeconnect.ConnectionType(dc.ConnectionType), host, psk, iv)
+	if err != nil {
+		return nil, fmt.Errorf("bridge: device %q: %w", dc.Name, err)
+	}
+	if dc.ConnectionType == profile.ConnectionTLS {
+		b.logger.Warn("bridge.tls_device", slog.String("device", dc.Name),
+			slog.String("note", "TLS-PSK requires the 'tlspsk' (cgo) build; this device will report offline otherwise"))
 	}
 
 	session := homeconnect.NewSession(socket, homeconnect.SessionConfig{
