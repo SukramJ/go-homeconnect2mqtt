@@ -1,0 +1,15 @@
+# go-homeconnect2mqtt — optional feature enrichment catalogue.
+#
+# The daemon exposes EVERY device feature to MQTT generically. This file
+# only enriches selected features with Home Assistant device_class hints,
+# units and device-specific program-start paths. It is operator-patchable
+# and loaded leniently: unknown keys are skipped with a log line, never
+# fatal. See docs/04-geraete-mapping.md.
+
+# features:
+#   BSH.Common.Status.OperationState:
+#     device_class: enum
+#   BSH.Common.Option.RemainingProgramTime:
+#     device_class: duration
+#     unit: s
+features: {}

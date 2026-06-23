@@ -31,3 +31,11 @@ go.work.sum
 # .idea/
 # .vscode/
 /.idea
+
+# build artefacts
+/bin/
+/dist/
+
+# operator-local runtime config (templates are tracked)
+config.yaml
+devices.yaml

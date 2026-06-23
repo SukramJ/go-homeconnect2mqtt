@@ -1,0 +1,36 @@
+# go-homeconnect2mqtt — daemon configuration template.
+# Copy to config.yaml and adjust. Every key can also be overridden via an
+# environment variable with the HC2M_ prefix (e.g. HC2M_MQTT_SERVER=...).
+
+# --- MQTT ---
+MQTT_SERVER: "tcp://localhost:1883"
+MQTT_LOGIN: ""
+MQTT_PASSWORD: ""
+MQTT_TOPIC: "homeconnect"
+MQTT_QOS: 1
+MQTT_RETAIN: true
+
+# --- Home Assistant discovery ---
+HASS_ENABLE: true
+HASS_BASE_TOPIC: "homeassistant"
+HASS_BIRTH_GRACETIME: 15
+
+# --- Connection / resilience ---
+APP_NAME: "go-homeconnect2mqtt"
+APP_ID: ""              # free-form; empty -> generated random hex id
+RECONNECT_INITIAL: 1    # seconds
+RECONNECT_MAX: 30       # seconds
+RECONNECT_JITTER: 500   # milliseconds
+HANDSHAKE_TIMEOUT: 60   # seconds
+SEND_TIMEOUT: 20        # seconds
+HEARTBEAT: 20           # seconds
+
+# --- Web UI (optional, opt-in) ---
+WEB_ENABLE: false
+WEB_BIND: "127.0.0.1:8080"
+WEB_USER: ""
+WEB_PASSWORD: ""
+
+# --- Misc ---
+LANGUAGE: "de"          # de | en
+DEBUG: false

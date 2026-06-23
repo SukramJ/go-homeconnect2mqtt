@@ -1,0 +1,28 @@
+# go-homeconnect2mqtt — device inventory template.
+# Copy to devices.yaml and fill in per-device data extracted from the
+# Home Connect Profile Downloader archive (openHAB target format).
+#
+# Secrets (psk64/iv64) are required at runtime for the local crypto and
+# must never be published to MQTT. Use `hc-util parse <profile.zip>` to
+# generate these entries plus the cached device descriptions.
+
+devices:
+  - name: dishwasher                 # logical name; used in MQTT topics
+    host: ""                         # IP or mDNS name; empty -> default host from profile
+    manual_host: false               # true suppresses mDNS host updates
+    connection_type: AES             # AES | TLS
+    psk64: "<key from <serial>.json>"
+    iv64: "<iv from <serial>.json>"  # AES only
+    description: ./profiles/dishwasher.json   # cached parsed DeviceDescription
+
+  # - name: hob
+  #   connection_type: AES
+  #   psk64: "..."
+  #   iv64: "..."
+  #   description: ./profiles/hob.json
+
+  # - name: washer
+  #   connection_type: AES
+  #   psk64: "..."
+  #   iv64: "..."
+  #   description: ./profiles/washer.json

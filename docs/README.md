@@ -22,6 +22,7 @@ Konventionen und Resilienz-Philosophie.
 | [`07-referenz-quellen.md`](07-referenz-quellen.md) | **Verbatim-Artefakte**: Krypto-Code-Referenz + Test-Fixtures (XML) |
 | [`08-schwesterprojekt-vorlage.md`](08-schwesterprojekt-vorlage.md) | **Wiederverwendbare Dateien verbatim** aus `go-mtec2mqtt`: MQTT-Client, Config-Loader, Makefile, golangci, Dockerfile, version, githook (Unabhängigkeit vom Schwesterprojekt) |
 | [`09-web-api.md`](09-web-api.md) | **HTTP-API- & SSE-Vertrag** der optionalen Web-UI: Endpunkt-Schemas, JSON-Payloads, Event-Format, Fehler-Taxonomie |
+| [`10-implementation-plan.md`](10-implementation-plan.md) | **Trackable implementation plan** (English): 13 phases (P0–P12) with checklists, file mapping, test gates, dependencies, master tracker |
 
 ## Lesereihenfolge
 
