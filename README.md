@@ -44,6 +44,10 @@ $EDITOR config.yaml devices.yaml
 homeconnect2mqtt --config ./config.yaml --devices ./devices.yaml
 ```
 
+For the full step-by-step walkthrough (finding the host/IP, connection test,
+verification and troubleshooting) see the onboarding guide:
+[`docs/connecting-devices.md`](docs/connecting-devices.md).
+
 ## MQTT topics
 
 ```
