@@ -4,7 +4,7 @@
 package profile
 
 // secretKeys are the fields that must never be logged or published in
-// clear text (docs/03-profil-format.md §6).
+// clear text (docs/03-profile-format.md §6).
 var secretKeys = map[string]bool{
 	"psk": true, "key": true, "psk64": true,
 	"iv": true, "aes_iv": true, "iv64": true,

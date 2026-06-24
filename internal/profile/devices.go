@@ -14,7 +14,7 @@ import (
 )
 
 // DeviceConfig is one entry of the operator-maintained devices file
-// (docs/06-architektur-konzept.md §4).
+// (docs/06-architecture.md §4).
 type DeviceConfig struct {
 	Name           string         `yaml:"name"`
 	Host           string         `yaml:"host"`

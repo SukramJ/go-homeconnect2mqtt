@@ -9,7 +9,7 @@ Gaggenau / Neff) to MQTT, with optional Home Assistant discovery. It is a
 sister project of `go-mtec2mqtt`: same structure, conventions and
 resilience philosophy. The full knowledge base lives in `docs/` (protocol,
 data model, profile format, device mapping, resilience, architecture, web
-API) and the phased implementation plan is `docs/10-implementation-plan.md`.
+API) and the phased implementation plan is `docs/09-implementation-plan.md`.
 
 ## Language & identity
 
@@ -45,7 +45,7 @@ API) and the phased implementation plan is `docs/10-implementation-plan.md`.
 - **Resilience contract**: "publish what you can, retry next tick" — a
   read/publish error is logged and the loop continues; only `ctx` cancel
   stops a worker. Per-device and per-entity isolation (see
-  `docs/05-resilienz.md`).
+  `docs/05-resilience.md`).
 
 ## Common commands
 

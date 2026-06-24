@@ -55,7 +55,7 @@ func TestDeriveKeysMatchHMAC(t *testing.T) {
 }
 
 // TestPaddingVectors verifies the exact pad-length byte + total length for
-// the four cases documented in docs/01-protokoll.md §3.2.
+// the four cases documented in docs/01-protocol.md §3.2.
 func TestPaddingVectors(t *testing.T) {
 	c := newDetCrypto(t)
 	cases := []struct {

@@ -5,7 +5,7 @@
 // catalogue (mapping.yaml). It augments features with Home Assistant
 // device_class/unit hints without affecting the generic exposure of every
 // feature. Loading is lenient: a missing file yields an empty catalogue
-// and malformed entries are skipped (docs/04-geraete-mapping.md §6.2).
+// and malformed entries are skipped (docs/04-device-mapping.md §6.2).
 package mapping
 
 import (

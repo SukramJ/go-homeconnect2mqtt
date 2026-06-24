@@ -44,7 +44,7 @@ type Config struct {
 	HASSBaseTopic      string `yaml:"HASS_BASE_TOPIC"`
 	HASSBirthGracetime int    `yaml:"HASS_BIRTH_GRACETIME"` // seconds
 
-	// --- Connection / resilience (see docs/05-resilienz.md) ---
+	// --- Connection / resilience (see docs/05-resilience.md) ---
 	AppName          string `yaml:"APP_NAME"`
 	AppID            string `yaml:"APP_ID"`
 	ReconnectInitial int    `yaml:"RECONNECT_INITIAL"` // seconds

@@ -10,7 +10,7 @@ Encryption keys and the device description come once from the *Home Connect
 Profile Downloader* (openHAB target format); after that everything is local.
 
 > Status: under active initial development. See
-> [`docs/10-implementation-plan.md`](docs/10-implementation-plan.md) for the
+> [`docs/09-implementation-plan.md`](docs/09-implementation-plan.md) for the
 > phased plan and progress tracker.
 
 ## Highlights
@@ -19,7 +19,7 @@ Profile Downloader* (openHAB target format); after that everything is local.
   TLS-PSK on `wss://host:443` (older appliances).
 - **Resilient by design.** Exponential backoff + jitter reconnect, full crypto
   state reset on HMAC desync, per-device and per-entity isolation, "offline is
-  not an error". See [`docs/05-resilienz.md`](docs/05-resilienz.md).
+  not an error". See [`docs/05-resilience.md`](docs/05-resilience.md).
 - **Generic MQTT mapping.** Every device feature is exposed, not a curated
   allowlist; an optional `mapping.yaml` enriches features with device classes,
   units and device-specific program-start paths.

@@ -12,7 +12,7 @@ import (
 )
 
 // ConnectionState is the public lifecycle state surfaced over MQTT/web
-// (docs/01-protokoll.md §10).
+// (docs/01-protocol.md §10).
 type ConnectionState string
 
 // Connection states.

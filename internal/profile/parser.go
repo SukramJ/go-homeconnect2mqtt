@@ -44,7 +44,7 @@ type featureMapping struct {
 }
 
 // parseFeatureMapping parses FeatureMapping.xml into the three maps
-// (docs/02-datenmodell.md §3). Entries with an unparseable id are skipped.
+// (docs/02-data-model.md §3). Entries with an unparseable id are skipped.
 func parseFeatureMapping(data []byte, logger *slog.Logger) (*featureMapping, error) {
 	var doc xmlFeatureMapping
 	if err := xml.Unmarshal(data, &doc); err != nil {
@@ -238,7 +238,7 @@ func flattenProgram(groups []xmlProgramGroup) []xmlProgram {
 
 // ParseDescription parses both XML files into a Description. Parsing is
 // tolerant: an element with an unparseable uid is skipped with a log line
-// rather than failing the whole device (FK-3, docs/05-resilienz.md).
+// rather than failing the whole device (FK-3, docs/05-resilience.md).
 func ParseDescription(descriptionXML, featureMappingXML []byte, logger *slog.Logger) (*Description, error) {
 	if logger == nil {
 		logger = slog.Default()

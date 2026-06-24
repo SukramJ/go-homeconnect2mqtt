@@ -1,12 +1,12 @@
-# Referenz-Quellen (verbatim) — für die Portierung & Tests
+# Reference Sources (verbatim) — for the Port & Tests
 
-> Hier sind die **unverzichtbaren Original-Artefakte** verbatim gesichert, damit die
-> Referenz-Repos (`../aaa_homeconnect_websocket`, `../aaa_homeconnect_local_hass`) gelöscht
-> werden können: der Krypto-Kern als 1:1-Referenz und die Test-Fixtures für den Parser.
+> The **indispensable original artifacts** are preserved verbatim here so that the
+> reference repos (`../aaa_homeconnect_websocket`, `../aaa_homeconnect_local_hass`) can be deleted:
+> the crypto core as a 1:1 reference and the test fixtures for the parser.
 
 ---
 
-## 1. AES-Krypto — Original (`hc_socket.py`, Python) als Portierungs-Referenz
+## 1. AES Crypto — Original (`hc_socket.py`, Python) as a Porting Reference
 
 ```python
 # Konstanten
@@ -69,14 +69,14 @@ ctx.set_psk_client_callback(lambda _: (None, psk))
 # URL: wss://{host}:443/homeconnect ; AES-URL: ws://{host}:80/homeconnect
 ```
 
-**Message (`message.py`):** JSON-Felder `sID,msgID,resource,version,action,data?,code?`;
-`action ∈ {GET,POST,RESPONSE,NOTIFY}`; `data` beim Senden immer Liste; kompakte Separatoren.
+**Message (`message.py`):** JSON fields `sID,msgID,resource,version,action,data?,code?`;
+`action ∈ {GET,POST,RESPONSE,NOTIFY}`; `data` is always a list when sending; compact separators.
 
 ---
 
 ## 2. Fixture: `DeviceDescription_short.xml` (verbatim)
 
-> Minimal-Beispiel für Parser-Tests (Nesting von `*List`, alle Element-Arten, Enum + Subset).
+> Minimal example for parser tests (nesting of `*List`, all element kinds, enum + subset).
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -192,7 +192,7 @@ ctx.set_psk_client_callback(lambda _: (None, psk))
 </featureMappingFile>
 ```
 
-**Erwartetes Parse-Ergebnis (Auszug, zur Test-Verifikation):**
+**Expected parse result (excerpt, for test verification):**
 - `uid 0x1002` → name `Status.2`, contentType `enumeration`, protocolType `Integer`,
   enumeration = `{0:"Open", 1:"Closed"}` (refCID `03`, enumerationType `3002`).
 - `uid 0x1005` → name `Setting.1`, contentType `boolean`, protocolType `Boolean`,
@@ -200,19 +200,19 @@ ctx.set_psk_client_callback(lambda _: (None, psk))
 - `enid 0x3003` (subsetOf 3001) → `{1:"Present"}`.
 - `uid 0x1015` → Program `Program.1`, execution `selectonly`, option refUID `0x1011`.
 
-> Größere, reale Fixtures (`DeviceDescription.xml`/`FeatureMapping.xml` voller Umfang) lagen in
-> `aaa_homeconnect_websocket/tests/`. Für die Erstimplementierung genügen die obigen
-> Kurzfassungen; reale Geräteprofile kommen ohnehin aus dem Profile-Downloader.
+> Larger, real fixtures (`DeviceDescription.xml`/`FeatureMapping.xml` at full scope) were located in
+> `aaa_homeconnect_websocket/tests/`. The short versions above are sufficient for the initial
+> implementation; real device profiles come from the profile downloader anyway.
 
 ---
 
-## 4. Herkunft & Versionsstand
+## 4. Origin & Version State
 
-- `chris-mc1/homeconnect_websocket` — Python-Protokoll-Library, Stand v1.5.3 (März 2026).
-  Quelle der Krypto-/Protokoll-/Parser-Logik.
-- `chris-mc1/homeconnect_local_hass` — HA-Integration, Stand Beta 1.0.5b10/b11 (Juni 2026).
-  Quelle der Onboarding-/Mapping-Logik und der meisten Praxis-Issues.
-- `bruestel/homeconnect-profile-downloader` — Profil-Beschaffung (Zielformat „openHAB").
+- `chris-mc1/homeconnect_websocket` — Python protocol library, as of v1.5.3 (March 2026).
+  Source of the crypto/protocol/parser logic.
+- `chris-mc1/homeconnect_local_hass` — HA integration, as of Beta 1.0.5b10/b11 (June 2026).
+  Source of the onboarding/mapping logic and most of the real-world issues.
+- `bruestel/homeconnect-profile-downloader` — profile acquisition (target format "openHAB").
 
-Lizenz-Hinweis: Beim Übernehmen von Logik/Konstanten die Lizenzen der Quell-Repos beachten
-(die Library hatte zum Analysezeitpunkt ein offenes LICENSE-Issue, #69).
+License note: When adopting logic/constants, observe the licenses of the source repos
+(at the time of analysis the library had an open LICENSE issue, #69).

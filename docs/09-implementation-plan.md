@@ -1,9 +1,9 @@
 # go-homeconnect2mqtt — Implementation Plan (trackable)
 
-> Concrete, step-by-step plan derived from documents `01`–`09`. Structured as a
+> Concrete, step-by-step plan derived from documents `00`–`08`. Structured as a
 > **checklist plan**: each phase is independently buildable/testable, has a hard
 > **test gate** (acceptance criterion), names the **affected files** (layout from
-> `06-architektur-konzept.md` §2) and references the underlying spec.
+> `06-architecture.md` §2) and references the underlying spec.
 >
 > **Legend:** `[ ]` open · `[~]` in progress · `[x]` done · ⭐ critical path · 🧪 test gate.
 > Order follows the roadmap in `06` §9, made more granular and extended with
@@ -37,11 +37,11 @@ P8–P11 are additive; P10/P11 are optional.
 ## P0 — Project bootstrap & infrastructure
 
 **Goal:** build/test/lint scaffold stands; `make check` is green on the empty
-skeleton. All verbatim artefacts from `08-schwesterprojekt-vorlage.md` adopted and
-renamed to `homeconnect2mqtt`.
+skeleton. All reusable infrastructure adopted from the sister project
+`go-mtec2mqtt` and renamed to `homeconnect2mqtt`.
 
 - [x] `go mod init github.com/SukramJ/go-homeconnect2mqtt` (Go 1.26)
-- [x] Global rename per `08` §0 (module, binary names, `HC2M_` prefix, ClientID, AppDir)
+- [x] Global rename (module, binary names, `HC2M_` prefix, ClientID, AppDir)
 - [x] Directory skeleton (`06` §2)
 - [x] `internal/version/version.go`
 - [x] `internal/mqtt/` adopted verbatim incl. tests (path rewrite only; upstream headers kept)
@@ -63,7 +63,7 @@ binaries; git hook blocks direct commits on `main`. Config package fully tested.
 **Goal:** lowest-risk but most delicate core first (`06` §9). The AES socket speaks the
 app-layer crypto protocol exactly like the Python reference.
 
-Spec: `01-protokoll.md` §1–§3, reference code `07-referenz-quellen.md` §1.
+Spec: `01-protocol.md` §1–§3, reference code `07-reference-sources.md` §1.
 
 - [ ] `crypto.go`: base64 `RawURLEncoding` for `psk64`/`iv64` (`01` §2)
 - [ ] KDF: `enckey=HMAC-SHA256(psk,"ENC")`, `mackey=HMAC-SHA256(psk,"MAC")`; `iv` direct (no HKDF)
@@ -88,7 +88,7 @@ frame → `AuthError`; IPv6 host not double-bracketed.
 
 **Goal:** full handshake to `CONNECTED` + post-init; request/response correlation.
 
-Spec: `01-protokoll.md` §5, §6, §8, §9.
+Spec: `01-protocol.md` §5, §6, §8, §9.
 
 - [ ] `message.go`: struct, compact JSON separators, `data` always a list on send
 - [ ] Defensive reads: cast `sID/msgID/version` to int; object-JSON `]"`→`]` workaround
@@ -109,7 +109,7 @@ reached; msgID correlation + timeout + `code` error tested; `500` in post-init d
 
 **Goal:** ZIP/JSON + 2×XML → `DeviceDescription` object model; tolerant of model variance (FK-3).
 
-Spec: `02-datenmodell.md`, `03-profil-format.md`, fixtures `07` §2/§3.
+Spec: `02-data-model.md`, `03-profile-format.md`, fixtures `07` §2/§3.
 
 - [ ] `archive.go`: read ZIP or loose files; find all `*.json`; resolve XML paths via JSON fields
 - [ ] map `<serial>.json` fields; host defaults (AES→`haId`, TLS→`brand-type-haId`); `manual_host`
@@ -130,7 +130,7 @@ skip+log instead of crash.
 
 **Goal:** full reconnect with correct state reset; offline is normal (FK-1).
 
-Spec: `01-protokoll.md` §10, `05-resilienz.md` FK-1/FK-2.
+Spec: `01-protocol.md` §10, `05-resilience.md` FK-1/FK-2.
 
 - [ ] State machine `CONNECTING→HANDSHAKE→CONNECTED→RECONNECTING / CLOSING→CLOSED / ABNORMAL_CLOSURE`
 - [ ] full state reset on every reconnect: crypto, session, services, entity resync
@@ -151,7 +151,7 @@ unbounded log/CPU growth; ctx cancel exits cleanly.
 
 **Goal:** typed entities from the description; NOTIFY routing; value semantics (`02` §6).
 
-Spec: `02-datenmodell.md` §6/§7, `05-resilienz.md` FK-6.
+Spec: `02-data-model.md` §6/§7, `05-resilience.md` FK-6.
 
 - [ ] `entities.go` entity types indexed by `uid` and `name`
 - [ ] value fields `value_raw`/`value`(enum→name)/`value_shadow`; `enumeration`+`rev_enumeration`
@@ -171,7 +171,7 @@ Spec: `02-datenmodell.md` §6/§7, `05-resilienz.md` FK-6.
 **Goal:** first end-to-end: device values mirrored read-only to MQTT; one isolated worker per
 device (FK-1).
 
-Spec: `06-architektur-konzept.md` §3/§5/§6, `04-geraete-mapping.md` §6.1.
+Spec: `06-architecture.md` §3/§5/§6, `04-device-mapping.md` §6.1.
 
 - [ ] `config` filled with HC2M fields (done in P0)
 - [ ] `devices.yaml` loader (`profile.LoadDevices`)
@@ -193,7 +193,7 @@ others; no secret in topic/log.
 
 **Goal:** MQTT `/set` writes values/programs; device-specific start paths + write window (FK-4/5/6).
 
-Spec: `04-geraete-mapping.md` §6.4, `05-resilienz.md` FK-4/5/6, `01` §7.
+Spec: `04-device-mapping.md` §6.4, `05-resilience.md` FK-4/5/6, `01` §7.
 
 - [ ] set topic per writable feature; topic→feature resolution
 - [ ] value normalization: enum name→raw (case-insensitive); float→int at stepSize==1 (#68); type cast
@@ -214,7 +214,7 @@ gated/retried; all three start paths + hood DELETE + delayed-start fields per de
 
 **Goal:** optional HA discovery payloads per platform; birth/LWT re-publish.
 
-Spec: `04-geraete-mapping.md` §1/§6.3.
+Spec: `04-device-mapping.md` §1/§6.3.
 
 - [ ] `discovery.go`: `Initialize()`, entry generation, birth + LWT
 - [ ] platform heuristic: switch/select/sensor/binary_sensor/number/button/event_sensor/light/fan
@@ -247,7 +247,7 @@ ZIP; `dump` lists all entities; `connection-test` returns a categorized error.
 
 **Goal:** second build stage; `connectionType=="TLS"` (`wss://host:443`).
 
-Spec: `01-protokoll.md` §4, `07` §1.
+Spec: `01-protocol.md` §4, `07` §1.
 
 - [ ] clarify Go TLS-PSK option (PSK-capable TLS 1.2 lib vs. std-lib limits)
 - [ ] TLS client: max TLS 1.2, PSK ciphers, no hostname check, PSK callback
@@ -264,7 +264,7 @@ cgo build target documented & green.
 
 **Goal:** opt-in diagnostics/health dashboard (off by default). Core operation unaffected.
 
-Spec: `06-architektur-konzept.md` §10, `09-web-api.md` (full HTTP/SSE contract).
+Spec: `06-architecture.md` §10, `08-web-api.md` (full HTTP/SSE contract).
 
 - [ ] `state/store.go`: thread-safe, `UpdateDevice`, `Snapshot`, `DeviceHealth`, SSE subscriber — only instantiated when `WEB_ENABLE`
 - [ ] `bridge.publish` feeds the store in parallel with MQTT
@@ -286,7 +286,7 @@ set-dispatch maps device codes to the taxonomy.
 
 **Goal:** production readiness, observability, reproducible release.
 
-Spec: `05-resilienz.md` §3, `06` §7/§8, `08` §1.1/§4.
+Spec: `05-resilience.md` §3, `06-architecture.md` §7/§8.
 
 - [ ] resilience principles audit (`05` §3): device/entity isolation, offline handling, full
       reconnect, write gating, tolerant read/strict write, observability, no secrets

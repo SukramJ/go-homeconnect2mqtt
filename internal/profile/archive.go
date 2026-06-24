@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-// Categorized onboarding errors (docs/03-profil-format.md §7). They are
+// Categorized onboarding errors (docs/03-profile-format.md §7). They are
 // sentinels callers can match with errors.Is to drive the manual-IP
 // escalation (FK-7).
 var (
@@ -26,7 +26,7 @@ var (
 )
 
 // DeviceIndex is the per-device index file from the archive
-// (docs/03-profil-format.md §3).
+// (docs/03-profile-format.md §3).
 type DeviceIndex struct {
 	HaID                      string `json:"haId"`
 	DeviceDescriptionFileName string `json:"deviceDescriptionFileName"`

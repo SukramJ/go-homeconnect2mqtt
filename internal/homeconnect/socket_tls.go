@@ -12,12 +12,12 @@ import (
 // ErrTLSPSKUnsupported is returned when a TLS-PSK connection is attempted
 // in a build without TLS-PSK support. Go's crypto/tls has no external
 // TLS-1.2 PSK ciphers, so this transport requires the cgo `tlspsk` build
-// (OpenSSL-backed); see docs/01-protokoll.md §4 and the Makefile.
+// (OpenSSL-backed); see docs/01-protocol.md §4 and the Makefile.
 var ErrTLSPSKUnsupported = errors.New("homeconnect: TLS-PSK transport requires the 'tlspsk' (cgo) build")
 
 // tlsConn is a connected TLS-PSK tunnel with the WebSocket upgrade already
 // performed. Messages are plain UTF-8 text (TLS protects everything;
-// docs/01-protokoll.md §4).
+// docs/01-protocol.md §4).
 type tlsConn interface {
 	send(ctx context.Context, message string) error
 	receive(ctx context.Context) (string, error)

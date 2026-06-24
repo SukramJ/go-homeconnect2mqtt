@@ -209,7 +209,7 @@ func (s *Session) failPending(err error) {
 	_ = err
 }
 
-// handshake runs the exact sequence from docs/01-protokoll.md §6.
+// handshake runs the exact sequence from docs/01-protocol.md §6.
 func (s *Session) handshake(ctx context.Context) error {
 	// 1. Await the device-initiated /ei/initialValues.
 	var initMsg *Message
@@ -334,7 +334,7 @@ func tolerableInit(err error) bool {
 }
 
 // WriteValues issues a POST /ro/values with the given data items and
-// returns the correlated response (docs/01-protokoll.md §7).
+// returns the correlated response (docs/01-protocol.md §7).
 func (s *Session) WriteValues(ctx context.Context, data []map[string]any) (*Message, error) {
 	return s.sendSync(ctx, &Message{Resource: "/ro/values", Action: ActionPost, Data: data})
 }

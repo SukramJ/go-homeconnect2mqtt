@@ -25,7 +25,7 @@ const (
 )
 
 // Message is one protocol frame, JSON-encoded over the WebSocket with
-// compact separators (docs/01-protokoll.md §5).
+// compact separators (docs/01-protocol.md §5).
 type Message struct {
 	SID      int              `json:"sID"`
 	MsgID    int              `json:"msgID"`

@@ -6,7 +6,7 @@ package homeconnect
 import "fmt"
 
 // responseCodes is the full error-code table from const.py
-// (docs/01-protokoll.md §9). A non-nil code on a RESPONSE means failure.
+// (docs/01-protocol.md §9). A non-nil code on a RESPONSE means failure.
 var responseCodes = map[int]string{
 	200: "OK",
 	202: "Accepted",
@@ -67,7 +67,7 @@ func CodeName(code int) string {
 }
 
 // CodeResponseError is returned when an appliance answers a request with a
-// non-nil error code (docs/01-protokoll.md §6.5/§9).
+// non-nil error code (docs/01-protocol.md §6.5/§9).
 type CodeResponseError struct {
 	Code     int
 	Resource string

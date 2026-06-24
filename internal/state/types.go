@@ -2,7 +2,7 @@
 // Copyright (C) 2026 SukramJ
 
 // Package state is the optional in-memory cache behind the diagnostics web
-// UI (docs/09-web-api.md). It is only instantiated when WEB_ENABLE is set,
+// UI (docs/08-web-api.md). It is only instantiated when WEB_ENABLE is set,
 // so the core MQTT bridge carries no overhead otherwise.
 package state
 

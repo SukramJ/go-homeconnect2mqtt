@@ -13,7 +13,7 @@ import (
 )
 
 // ConnectionType selects the transport, derived from the profile's
-// connectionType field (docs/03-profil-format.md §3).
+// connectionType field (docs/03-profile-format.md §3).
 type ConnectionType string
 
 // Connection types.

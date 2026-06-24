@@ -4,7 +4,7 @@
 # only enriches selected features with Home Assistant device_class hints,
 # units and device-specific program-start paths. It is operator-patchable
 # and loaded leniently: unknown keys are skipped with a log line, never
-# fatal. See docs/04-geraete-mapping.md.
+# fatal. See docs/04-device-mapping.md.
 
 # features:
 #   BSH.Common.Status.OperationState:

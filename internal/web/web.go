@@ -4,7 +4,7 @@
 // Package web is the optional, opt-in diagnostics/health UI: a small HTTP
 // API + SSE stream plus an embedded SPA. It is only started when
 // WEB_ENABLE is set and never required for the core MQTT bridge
-// (docs/09-web-api.md).
+// (docs/08-web-api.md).
 package web
 
 import (

@@ -16,7 +16,7 @@ import (
 // CryptoError signals a fatal desynchronisation of the AES stream:
 // an HMAC mismatch, a malformed frame or a padding/decode failure. The
 // rolling HMAC and CBC chains cannot recover in-stream (see
-// docs/01-protokoll.md §3.4, the root cause of upstream bug #62), so the
+// docs/01-protocol.md §3.4, the root cause of upstream bug #62), so the
 // only correct response is to close the socket and fully reconnect.
 type CryptoError struct {
 	Reason string

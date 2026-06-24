@@ -43,7 +43,7 @@ type sessionAPI interface {
 }
 
 // ProgramStartStrategy selects how a program is started; the right one is
-// device-specific (FK-4, docs/05-resilienz.md).
+// device-specific (FK-4, docs/05-resilience.md).
 type ProgramStartStrategy int
 
 // Program start strategies.
@@ -231,7 +231,7 @@ func (a *Appliance) WriteValue(ctx context.Context, uid int, value any) error {
 }
 
 // SelectProgram posts the chosen program (without starting it) to
-// /ro/selectedProgram (docs/01-protokoll.md §7).
+// /ro/selectedProgram (docs/01-protocol.md §7).
 func (a *Appliance) SelectProgram(ctx context.Context, programUID int, options []map[string]any) (*Message, error) {
 	data := map[string]any{"program": programUID}
 	if options != nil {

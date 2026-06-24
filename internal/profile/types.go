@@ -8,7 +8,7 @@
 package profile
 
 // ProtocolType is the coarse wire type that drives value casting
-// (docs/02-datenmodell.md §4.1).
+// (docs/02-data-model.md §4.1).
 type ProtocolType string
 
 // ProtocolType values.

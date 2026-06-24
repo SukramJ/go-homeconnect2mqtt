@@ -3,7 +3,7 @@
 
 // Package hass generates Home Assistant MQTT discovery payloads from the
 // appliance entity model. It maps every feature to a platform via a
-// heuristic (docs/04-geraete-mapping.md §1) and emits one config payload
+// heuristic (docs/04-device-mapping.md §1) and emits one config payload
 // per entity, plus birth/LWT re-publish handling.
 package hass
 

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Fixtures verbatim from docs/07-referenz-quellen.md §2/§3.
+// Fixtures verbatim from docs/07-reference-sources.md §2/§3.
 const deviceDescriptionShort = `<?xml version="1.0" encoding="UTF-8"?>
 <device>
     <description>

@@ -48,7 +48,7 @@ func hmacSHA256(key, msg []byte) []byte {
 // AESCrypto holds the per-appliance keys plus the per-connection rolling
 // crypto state. The TX and RX chains are independent and each guarded by
 // its own mutex; two concurrent sends would corrupt last_tx_hmac and the
-// CBC chain (docs/01-protokoll.md §3.4 obligation 3).
+// CBC chain (docs/01-protocol.md §3.4 obligation 3).
 type AESCrypto struct {
 	encKey []byte
 	macKey []byte
@@ -91,7 +91,7 @@ func NewAESCrypto(psk, iv []byte) (*AESCrypto, error) {
 // Reset re-initialises the rolling state for a fresh connection: both
 // HMAC chains start at 16 zero bytes and the CBC chains restart from the
 // static iv. mirrors AesSocket.connect. Must be called whenever a new
-// socket is established (docs/01-protokoll.md §10).
+// socket is established (docs/01-protocol.md §10).
 func (c *AESCrypto) Reset() {
 	c.txMu.Lock()
 	c.txCBC = cipher.NewCBCEncrypter(c.block, c.iv)
