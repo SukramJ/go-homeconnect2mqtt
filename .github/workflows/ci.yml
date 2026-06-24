@@ -1,52 +1,83 @@
-# SPDX-License-Identifier: MIT
-name: CI
+# GitHub Actions CI for go-homeconnect2mqtt.
+#
+# Three jobs: lint (go vet + gofumpt + golangci-lint), test (matrix across
+# the OS triplet the daemon supports — race detector on, so CGo enabled for
+# that single step) and build (sanity-check the binary builds and prints a
+# version banner). Concurrency cancels stale runs on the same ref.
+name: ci
 
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CGO_ENABLED: "0"
+  GO_VERSION: "1.26"
+
 jobs:
   lint:
+    name: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: ${{ env.GO_VERSION }}
           cache: true
+      - name: go vet
+        run: go vet ./...
       - name: gofumpt
         run: |
           go install mvdan.cc/gofumpt@latest
           diff=$(gofumpt -l .)
-          if [ -n "$diff" ]; then echo "gofumpt would rewrite:"; echo "$diff"; exit 1; fi
-      - name: vet
-        run: go vet ./...
+          if [ -n "$diff" ]; then
+            echo "::error::gofumpt would rewrite:"
+            echo "$diff"
+            exit 1
+          fi
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
 
   test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: ${{ env.GO_VERSION }}
           cache: true
-      - name: test (race)
-        run: go test -race -count=1 -timeout=120s ./...
+      - name: go test
         env:
+          # Race detector requires CGo; re-enable just for this step.
           CGO_ENABLED: "1"
-      - name: build sanity
-        run: |
-          go build ./cmd/homeconnect2mqtt
-          go build ./cmd/hc-util
+        run: go test -race -count=1 -timeout=120s ./...
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: build daemon + util
+        run: make build
+      - name: version banner
+        run: ./bin/homeconnect2mqtt --version
