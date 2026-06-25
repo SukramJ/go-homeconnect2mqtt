@@ -24,6 +24,12 @@ now lives directly in this repository.
 | [`08-web-api.md`](08-web-api.md) | **HTTP API & SSE contract** of the optional web UI: endpoint schemas, JSON payloads, event format, error taxonomy |
 | [`09-implementation-plan.md`](09-implementation-plan.md) | **Trackable implementation plan**: 13 phases (P0–P12) with checklists, file mapping, test gates, dependencies, master tracker |
 
+## Guides
+
+| File | Contents |
+|---|---|
+| [`connecting-devices.md`](connecting-devices.md) | **Onboarding guide**: download profile → parse → host/IP → config → connection test → run → verify → troubleshooting (operator-facing) |
+
 ## Reading order
 
 - **Start implementing:** 06 (concept) → 01 (protocol) → 02 (data model) → 07 (fixtures/tests).
