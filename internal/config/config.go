@@ -43,6 +43,7 @@ type Config struct {
 	HASSEnable         bool   `yaml:"HASS_ENABLE"`
 	HASSBaseTopic      string `yaml:"HASS_BASE_TOPIC"`
 	HASSBirthGracetime int    `yaml:"HASS_BIRTH_GRACETIME"` // seconds
+	HASSDiscovery      string `yaml:"HASS_DISCOVERY"`       // full | curated
 
 	// --- Connection / resilience (see docs/05-resilience.md) ---
 	AppName          string `yaml:"APP_NAME"`

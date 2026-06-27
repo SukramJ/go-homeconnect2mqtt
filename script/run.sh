@@ -42,6 +42,7 @@ export HC2M_MQTT_TOPIC="$(bashio::config 'mqtt_topic')"
 
 # --- Home Assistant discovery + misc ---
 export HC2M_HASS_ENABLE="$(bashio::config 'hass_enable')"
+export HC2M_HASS_DISCOVERY="$(bashio::config 'hass_discovery')"
 export HC2M_LANGUAGE="$(bashio::config 'language')"
 export HC2M_DEBUG="$(bashio::config 'debug')"
 

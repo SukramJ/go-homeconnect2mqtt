@@ -12,6 +12,9 @@ import (
 // allowedLanguages is the whitelist for the display language.
 var allowedLanguages = map[string]bool{"de": true, "en": true}
 
+// allowedDiscovery is the whitelist for the Home Assistant discovery scope.
+var allowedDiscovery = map[string]bool{"full": true, "curated": true}
+
 // ValidationError aggregates every problem found in a single pass so the
 // operator sees all of them at once instead of fixing one per restart.
 type ValidationError struct{ Issues []string }
@@ -75,6 +78,9 @@ func Validate(c *Config) error {
 
 	if !allowedLanguages[c.Language] {
 		add("LANGUAGE must be one of de, en; got %q", c.Language)
+	}
+	if !allowedDiscovery[c.HASSDiscovery] {
+		add("HASS_DISCOVERY must be one of full, curated; got %q", c.HASSDiscovery)
 	}
 
 	if len(issues) > 0 {

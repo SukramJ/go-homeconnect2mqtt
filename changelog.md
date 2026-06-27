@@ -5,6 +5,24 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-27
+
+### Added
+- Localized entity names: Home Assistant friendly names follow `LANGUAGE`
+  (de/en) while entity ids stay English and language-independent (seeded via
+  `default_entity_id`, the replacement for the removed `object_id`).
+- Entity decluttering — the bridge still exposes every feature, but the long
+  tail is now published `enabled_by_default: false` (one click to enable) and
+  categorized (`entity_category: diagnostic`/`config`), so a device drops from
+  ~195 to ~28 entities shown by default. A small primary set stays enabled.
+- `HASS_DISCOVERY: full|curated` (add-on `hass_discovery`): `curated` publishes
+  only the primary set; `full` (default) publishes everything.
+- `mapping.yaml` is now a curation catalogue: per feature `name`/`name_de`,
+  `state_class`, `entity_category`, `enabled_by_default`, `exclude` (in addition
+  to `device_class`/`unit`). A curated default catalogue ships with the project.
+- Numeric sensors get a `state_class` (measurement / total_increasing) for
+  long-term statistics.
+
 ## [0.2.1] - 2026-06-27
 
 ### Fixed

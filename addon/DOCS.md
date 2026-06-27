@@ -33,7 +33,8 @@ For a standard Home Assistant install with the Mosquitto broker:
 | `mqtt_password` | password | `""` | MQTT password (only when `mqtt_server` is set). |
 | `mqtt_topic` | str | `homeconnect` | Base MQTT topic for published appliance state. |
 | `hass_enable` | bool | `true` | Publish Home Assistant MQTT discovery so entities appear automatically. |
-| `language` | list(en\|de) | `en` | Display-name language (topics/entity_ids stay language-independent). |
+| `hass_discovery` | list(full\|curated) | `full` | `full` exposes every feature (the long tail disabled-by-default + categorized as diagnostic/config); `curated` publishes only the primary set. |
+| `language` | list(en\|de) | `en` | Friendly-name language. Entity **names** are localized; entity **ids** stay English and language-independent. |
 | `web_enable` | bool | `true` | Enable the read-only diagnostic web UI (served via Ingress). |
 | `debug` | bool | `false` | Verbose logging. |
 

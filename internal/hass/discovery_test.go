@@ -113,7 +113,7 @@ func TestClassify(t *testing.T) {
 func TestPublishDevice(t *testing.T) {
 	app, entities := buildEntities(t)
 	pub := newStubPub()
-	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), nil)
+	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
 	d.PublishDevice(context.Background(), "dishwasher", app.Info(), entities)
 
 	// Switch config for ChildLock.
@@ -194,10 +194,16 @@ func (fakeEnricher) Unit(feature string) (string, bool) {
 	return "", false
 }
 
+func (fakeEnricher) LocalizedName(_, _ string) (string, bool) { return "", false }
+func (fakeEnricher) StateClass(string) (string, bool)         { return "", false }
+func (fakeEnricher) EntityCategory(string) (string, bool)     { return "", false }
+func (fakeEnricher) EnabledByDefault(string) (val, ok bool)   { return false, false }
+func (fakeEnricher) Excluded(string) bool                     { return false }
+
 func TestEnrichmentOverride(t *testing.T) {
 	app, entities := buildEntities(t)
 	pub := newStubPub()
-	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), nil)
+	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
 	d.SetEnricher(fakeEnricher{})
 	d.PublishDevice(context.Background(), "dw", app.Info(), entities)
 	raw := pub.pubs["homeassistant/sensor/dw/bsh_common_status_temp/config"]
@@ -212,7 +218,7 @@ func TestEnrichmentOverride(t *testing.T) {
 }
 
 func TestBirthTopic(t *testing.T) {
-	d := New(newStubPub(), "homeassistant", "homeconnect", mqtt.QoS(1), nil)
+	d := New(newStubPub(), "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
 	if d.BirthTopic() != "homeassistant/status" {
 		t.Errorf("BirthTopic = %q", d.BirthTopic())
 	}
@@ -221,7 +227,7 @@ func TestBirthTopic(t *testing.T) {
 func TestBinarySensorPayload(t *testing.T) {
 	app, entities := buildEntities(t)
 	pub := newStubPub()
-	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), nil)
+	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
 	d.PublishDevice(context.Background(), "dw", app.Info(), entities)
 	raw := pub.pubs["homeassistant/binary_sensor/dw/bsh_common_event_problem/config"]
 	if raw == "" {
