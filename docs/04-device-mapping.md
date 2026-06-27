@@ -59,6 +59,11 @@ enable in HA) and categorized diagnostic/config — so a device drops from ~195 
 ~28 entities shown, without dropping the "expose everything" promise.
 `HASS_DISCOVERY: curated` instead publishes only the primary set.
 
+**Orphan cleanup.** When a device's feature set changes (exclusions, renames, or
+switching to curated), the bridge clears its own now-orphaned retained discovery
+configs — matched by `unique_id`/state-topic ownership so other integrations are
+never touched — so Home Assistant doesn't keep them as unavailable entities.
+
 ---
 
 ## 2. BSH.Common — Cross-Appliance Features

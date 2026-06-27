@@ -5,6 +5,15 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-06-27
+
+### Added
+- Discovery orphan cleanup: after (re)publishing a device's Home Assistant
+  discovery, the bridge clears its own retained config topics it no longer
+  publishes — features now excluded/renamed/re-platformed, or dropped by curated
+  mode — so they don't linger as unavailable entities. Scoped per device, guarded
+  by `unique_id`/state-topic ownership (never touches other integrations), async.
+
 ## [0.3.0] - 2026-06-27
 
 ### Added

@@ -160,7 +160,9 @@ func (b *Bridge) publishDiscovery(parent context.Context, d *Device) {
 	}
 	ctx, cancel := context.WithTimeout(parent, publishTimeout)
 	defer cancel()
-	b.hass.PublishDevice(ctx, d.name, d.app.Info(), d.app.Entities())
+	published := b.hass.PublishDevice(ctx, d.name, d.app.Info(), d.app.Entities())
+	// Clear our own retained configs for this device that we no longer publish.
+	b.reconcileOrphans(parent, d.name, published)
 }
 
 // publish performs a single retained publish, logging (never failing) on
