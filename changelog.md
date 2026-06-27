@@ -5,6 +5,29 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-27
+
+### Added
+- Comprehensive German localization that mirrors the official Home Assistant
+  `home_connect` integration: **all** entity names and enum/dropdown values are
+  localized (de/en) across every appliance domain (dishwasher, washer, dryer,
+  oven, hob, hood, fridge, coffee maker, cleaning robot, …). Entity ids and MQTT
+  topics stay English.
+- `mapping.yaml` is now a ~680-feature catalogue derived from the official entity
+  descriptions (`name`/`name_de`/`device_class`/`entity_category`, and
+  enabled-by-default for the official set), joined via `aiohomeconnect` feature
+  keys and the appliance profiles. Curated extras the official set omits are
+  preserved. German labels are project-authored (the integration's `de.json` is
+  not distributed with its source).
+- `internal/i18n` enum catalogue (`catalog_gen.go`) grew to ~400 German member
+  labels (states, settings, programs, options) with normalized,
+  separator-insensitive lookup.
+
+### Known limitations
+- Active/selected program is still published as the raw program id rather than
+  the program name (program-id resolution is a separate change); the German
+  program labels already live in the catalogue for when it lands.
+
 ## [0.4.0] - 2026-06-27
 
 ### Added

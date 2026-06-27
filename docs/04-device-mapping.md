@@ -56,8 +56,13 @@ unset field falls back to the heuristic:
 too: `select` options, enum-sensor options and the published state carry the
 localized label (HA's native enum translations aren't available to MQTT
 discovery), and the write path accepts the localized label. Entity ids stay
-English. Common member names ship translated (`internal/i18n`); uncatalogued
-values pass through unchanged, keeping options and state consistent.
+English. The German catalogue mirrors the official Home Assistant `home_connect`
+integration: `mapping.yaml` (~680 features: `name`/`name_de`/`device_class`/
+`entity_category`) is derived from the official entity descriptions via
+`aiohomeconnect` feature keys, and `internal/i18n/catalog_gen.go` (~400 member
+labels) localizes the dropdown values. German labels are project-authored (the
+integration ships no `de.json` in source). Uncatalogued values pass through
+unchanged, keeping options and state consistent.
 
 **Decluttering policy.** A small primary set (power/operation/door state,
 active/selected program, remaining time/progress, key events) is enabled and

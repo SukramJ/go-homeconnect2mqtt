@@ -7,43 +7,35 @@
 // baked into the discovery `options`, the published state, and the reverse
 // command mapping — the same approach as the sister projects.
 //
-// The catalogue covers the common cross-appliance member names (states, common
-// settings); an unknown value falls back to the original (English) name, so a
-// partially-translated enum stays consistent between options and state.
+// The German catalogue (catalog_gen.go) is generated from the official Home
+// Connect integration strings and covers all appliance domains. Lookups are
+// normalized (lower-cased, non-alphanumerics stripped) so a member name matches
+// regardless of its casing/separators; an uncatalogued value falls back to the
+// original (English) name, keeping options and state consistent.
 package i18n
 
 import "strings"
 
-// enumDE maps a Home Connect enum member name (lowercased) to its German label.
-var enumDE = map[string]string{
-	// PowerState / generic on-off
-	"off": "Aus", "on": "Ein", "standby": "Standby",
-	// DoorState
-	"open": "Offen", "closed": "Geschlossen", "locked": "Verriegelt",
-	// OperationState
-	"inactive": "Inaktiv", "ready": "Bereit", "delayedstart": "Startvorwahl",
-	"run": "Läuft", "pause": "Pausiert", "actionrequired": "Aktion erforderlich",
-	"finished": "Beendet", "error": "Fehler", "aborting": "Wird abgebrochen",
-	// Event values (when surfaced as enums)
-	"present": "Vorhanden", "confirmed": "Bestätigt",
-	// RemoteControlLevel
-	"manualremotestart": "Manueller Fernstart", "permanentremotestart": "Dauerhafter Fernstart",
-	"monitoring": "Überwachung",
-	// Common dishwasher / washer settings
-	"program": "Programm", "allprograms": "Alle Programme",
-	"ecoasdefault": "Eco als Standard", "lastprogram": "Letztes Programm",
-	"coldwater": "Kaltwasser", "hotwater": "Warmwasser",
-	"sensitive": "Empfindlich", "standard": "Standard", "verysensitive": "Sehr empfindlich",
-	"auto": "Automatisch", "manual": "Manuell", "low": "Niedrig", "medium": "Mittel", "high": "Hoch",
-	// FavoriteHandling
-	"asbuttons": "Als Tasten", "aslist": "Als Liste",
+// norm reduces an enum member name / label to its lookup key: lower-cased with
+// every non-alphanumeric rune removed (so "Double_Shot", "DoubleShot" and
+// "double shot" all collapse to "doubleshot").
+func norm(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range strings.ToLower(s) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
-// enumEN reverses enumDE (lowercased German label -> lowercased English name).
-var enumEN = func() map[string]string {
-	m := make(map[string]string, len(enumDE))
-	for en, de := range enumDE {
-		m[strings.ToLower(de)] = en
+// enumENGen reverses enumDEGen: normalized German label -> normalized English
+// member key (which the device's enumeration matches case-insensitively).
+var enumENGen = func() map[string]string {
+	m := make(map[string]string, len(enumDEGen))
+	for en, de := range enumDEGen {
+		m[norm(de)] = en
 	}
 	return m
 }()
@@ -52,7 +44,7 @@ var enumEN = func() map[string]string {
 // unchanged when the language is not localized or the value is uncatalogued.
 func EnumLabel(name, lang string) string {
 	if lang == "de" {
-		if de, ok := enumDE[strings.ToLower(name)]; ok {
+		if de, ok := enumDEGen[norm(name)]; ok {
 			return de
 		}
 	}
@@ -65,7 +57,7 @@ func EnumLabel(name, lang string) string {
 // device's enumeration downstream, so the returned casing is not significant.
 func EnumValue(label, lang string) string {
 	if lang == "de" {
-		if en, ok := enumEN[strings.ToLower(label)]; ok {
+		if en, ok := enumENGen[norm(label)]; ok {
 			return en
 		}
 	}
