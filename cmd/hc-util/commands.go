@@ -119,18 +119,19 @@ func testOne(dc profile.DeviceConfig, logger *slog.Logger, _ io.Writer) error {
 	if dc.Host == "" {
 		return errors.New("no host configured")
 	}
-	if dc.ConnectionType != profile.ConnectionAES {
-		return fmt.Errorf("connection type %s not supported by this build", dc.ConnectionType)
-	}
 	psk, err := homeconnect.DecodeKey(dc.PSK64)
 	if err != nil {
 		return fmt.Errorf("bad psk64: %w", err)
 	}
-	iv, err := homeconnect.DecodeKey(dc.IV64)
-	if err != nil {
-		return fmt.Errorf("bad iv64: %w", err)
+	var iv []byte
+	if dc.IV64 != "" { // AES only; TLS-PSK has no IV (docs/01-protocol.md §4)
+		if iv, err = homeconnect.DecodeKey(dc.IV64); err != nil {
+			return fmt.Errorf("bad iv64: %w", err)
+		}
 	}
-	sock, err := homeconnect.NewAESSocket(dc.Host, psk, iv)
+	// NewSocket dispatches on the connection type; the TLS-PSK transport fails
+	// with ErrTLSPSKUnsupported unless this is the cgo `tlspsk` build.
+	sock, err := homeconnect.NewSocket(homeconnect.ConnectionType(dc.ConnectionType), dc.Host, psk, iv)
 	if err != nil {
 		return err
 	}

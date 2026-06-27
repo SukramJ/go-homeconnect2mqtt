@@ -70,10 +70,10 @@ feature values.
 
 ## Notes
 
-- The pre-built add-on images (`ghcr.io/sukramj/go-homeconnect2mqtt-addon-{arch}`,
-  built by `.github/workflows/addon-image.yml`) are CGo-free and support **AES**
-  appliances. **TLS-PSK** (older appliances on `wss://…:443`) needs a separate
-  cgo build and is not included in the default add-on image.
+- The pre-built add-on image (`ghcr.io/sukramj/go-homeconnect2mqtt-addon-amd64`,
+  built by `.github/workflows/addon-image.yml`) is **amd64-only** and built with
+  cgo + OpenSSL, so it supports both **AES** and **TLS-PSK** (older appliances on
+  `wss://…:443`) out of the box.
 - To build locally from `addon/Dockerfile` instead of pulling the GHCR image,
   remove the `image:` key from `addon/config.yaml`.
 

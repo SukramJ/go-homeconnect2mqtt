@@ -64,9 +64,9 @@ discovery configs are published under `homeassistant/<platform>/<unique_id>/conf
   profile ZIP (or pre-parsed `<haId>.json` files) here. Profiles and keys are
   operator-specific and stay on your Home Assistant host; they are never part of
   the generic add-on image.
-- The add-on image is CGo-free and supports **AES** appliances (`ws://host:80`).
-  **TLS-PSK** appliances (`wss://host:443`) require a separate cgo build and are
-  not supported by the default add-on image.
+- The add-on image (**amd64-only**) is built with cgo + OpenSSL, so it supports
+  both **AES** (`ws://host:80`) and **TLS-PSK** (`wss://host:443`, older
+  appliances) out of the box.
 - `host` should be an explicit LAN IP: multicast mDNS typically does not reach
   the add-on container, so the profile's mDNS default host won't resolve.
 - An appliance that is off/asleep shows as `offline` and reconnects

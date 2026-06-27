@@ -9,9 +9,7 @@
 # Assistant base image, which provides bashio and the /usr/bin/with-contenv
 # entrypoint used by script/run.sh.
 build_from:
-  aarch64: "ghcr.io/home-assistant/aarch64-base:latest"
   amd64: "ghcr.io/home-assistant/amd64-base:latest"
-  armv7: "ghcr.io/home-assistant/armv7-base:latest"
 
 # Optional OCI labels stamped onto the built image.
 labels:

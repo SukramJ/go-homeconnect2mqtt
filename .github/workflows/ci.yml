@@ -81,3 +81,23 @@ jobs:
         run: make build
       - name: version banner
         run: ./bin/homeconnect2mqtt --version
+
+  tlspsk:
+    name: tlspsk (cgo build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: install OpenSSL dev
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
+      # The TLS-PSK transport is cgo/OpenSSL behind -tags tlspsk; the default CI
+      # never compiles that tag, so guard it here against bit-rot.
+      - name: vet + build (tlspsk)
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          go vet -tags tlspsk ./...
+          go build -tags tlspsk ./...

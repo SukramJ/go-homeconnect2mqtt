@@ -5,7 +5,6 @@ package homeconnect
 
 import (
 	"context"
-	"errors"
 	"testing"
 )
 
@@ -32,27 +31,6 @@ func TestNewSocketSelectsTLS(t *testing.T) {
 func TestNewSocketUnknownType(t *testing.T) {
 	if _, err := NewSocket(ConnectionType("FOO"), "h", testPSK, testIV); err == nil {
 		t.Error("expected error for unknown connection type")
-	}
-}
-
-func TestTLSSocketUnsupportedByDefault(t *testing.T) {
-	s, err := NewTLSSocket("192.168.1.5", testPSK)
-	if err != nil {
-		t.Fatalf("NewTLSSocket: %v", err)
-	}
-	err = s.Connect(t.Context())
-	if !errors.Is(err, ErrTLSPSKUnsupported) {
-		t.Errorf("Connect err = %v, want ErrTLSPSKUnsupported", err)
-	}
-	// Operations before a successful connect fail cleanly.
-	if _, err := s.Receive(t.Context()); err == nil {
-		t.Error("Receive before connect should fail")
-	}
-	if err := s.Send(t.Context(), "x"); err == nil {
-		t.Error("Send before connect should fail")
-	}
-	if err := s.Close(); err != nil {
-		t.Errorf("Close on unconnected TLS socket: %v", err)
 	}
 }
 

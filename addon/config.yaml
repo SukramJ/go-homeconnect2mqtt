@@ -9,16 +9,16 @@
 # To build locally from addon/Dockerfile instead of pulling GHCR, delete the
 # `image:` key below — the Supervisor then consults addon/build.yaml.
 name: go-homeconnect2mqtt
-version: "0.1.1"
+version: "0.2.0"
 slug: go_homeconnect2mqtt
 description: >-
   Local, cloud-free Home Connect (Bosch/Siemens/Gaggenau/Neff) to MQTT bridge
   with Home Assistant discovery and a diagnostic web UI.
 url: https://github.com/SukramJ/go-homeconnect2mqtt/tree/main/addon
+# amd64 only: the TLS-PSK transport (older appliances) is cgo/OpenSSL-backed, and
+# amd64-only keeps the image a fast native build (no QEMU cross-compile).
 arch:
   - amd64
-  - aarch64
-  - armv7
 image: "ghcr.io/sukramj/go-homeconnect2mqtt-addon-{arch}"
 init: false
 startup: application

@@ -1,9 +1,14 @@
 # SPDX-License-Identifier: MIT
 # Home Assistant add-on Dockerfile.
 #
-# Multi-stage build: compile the (CGo-free) Go binaries, then land them on a
-# Home Assistant base image so bashio + /usr/bin/with-contenv are available to
-# script/run.sh, which translates the add-on options into HC2M_* config.
+# Multi-stage build: compile the Go binaries, then land them on a Home Assistant
+# base image so bashio + /usr/bin/with-contenv are available to script/run.sh,
+# which translates the add-on options into HC2M_* config.
+#
+# This image is built with cgo + OpenSSL and -tags tlspsk, so it supports BOTH
+# AES (ws://host:80) and TLS-PSK (wss://host:443, older appliances) — see
+# docs/01-protocol.md §4. The add-on is amd64-only, which keeps the cgo build a
+# fast native compile (no QEMU cross-build).
 #
 # BUILD CONTEXT: the Go sources live at the REPOSITORY ROOT, not inside addon/.
 # Build with the repo root as context:
@@ -11,9 +16,6 @@
 #   docker build \
 #     --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest \
 #     -f addon/Dockerfile -t go-homeconnect2mqtt-addon .
-#
-# Note: this CGo-free build supports AES appliances. TLS-PSK appliances need a
-# separate cgo build (see the main README / docs/01-protocol.md §4).
 
 # Default keeps manual/standalone builds working; the Supervisor and CI always
 # override BUILD_FROM with the per-arch HA base image (see addon/build.yaml).
@@ -22,6 +24,9 @@ ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 # ---------- Stage 1: build the Go binaries ----------
 FROM golang:1.26-alpine AS builder
 WORKDIR /src
+
+# TLS-PSK needs cgo + OpenSSL (Go's crypto/tls has no external-PSK ciphers).
+RUN apk add --no-cache build-base openssl-dev pkgconf
 
 COPY go.mod go.sum ./
 RUN go mod download
@@ -33,14 +38,15 @@ ARG VERSION=addon
 ARG COMMIT=none
 ARG BUILD_DATE=unknown
 
-ENV CGO_ENABLED=0
-RUN go build -trimpath \
+# cgo + the tlspsk build tag pull in the OpenSSL-backed TLS-PSK transport.
+ENV CGO_ENABLED=1
+RUN go build -trimpath -tags tlspsk \
       -ldflags="-s -w \
         -X github.com/SukramJ/go-homeconnect2mqtt/internal/version.Version=${VERSION} \
         -X github.com/SukramJ/go-homeconnect2mqtt/internal/version.Commit=${COMMIT} \
         -X github.com/SukramJ/go-homeconnect2mqtt/internal/version.BuildDate=${BUILD_DATE}" \
       -o /out/homeconnect2mqtt ./cmd/homeconnect2mqtt && \
-    go build -trimpath \
+    go build -trimpath -tags tlspsk \
       -ldflags="-s -w \
         -X github.com/SukramJ/go-homeconnect2mqtt/internal/version.Version=${VERSION} \
         -X github.com/SukramJ/go-homeconnect2mqtt/internal/version.Commit=${COMMIT} \
@@ -50,6 +56,9 @@ RUN go build -trimpath \
 # ---------- Stage 2: Home Assistant add-on runtime ----------
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 FROM ${BUILD_FROM}
+
+# OpenSSL runtime libs for the cgo TLS-PSK transport (HA base images are Alpine).
+RUN apk add --no-cache libssl3 libcrypto3
 
 # Daemon + the onboarding CLI (run.sh uses hc-util to parse a profile ZIP).
 COPY --from=builder /out/homeconnect2mqtt /usr/bin/homeconnect2mqtt
