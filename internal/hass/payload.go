@@ -45,7 +45,14 @@ func classify(e *homeconnect.Entity) (platform string, ok bool) {
 		return platformButton, true
 	case profile.KindEvent:
 		return platformBinarySensor, true
-	case profile.KindActiveProgram, profile.KindSelectedProgram:
+	case profile.KindActiveProgram:
+		return platformSensor, true
+	case profile.KindSelectedProgram:
+		// The selected program is choosable when writable -> a select with the
+		// program list as options; otherwise a read-only sensor.
+		if e.Desc.Writable() {
+			return platformSelect, true
+		}
 		return platformSensor, true
 	case profile.KindProgram, profile.KindProtectionPort:
 		return "", false
