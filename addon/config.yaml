@@ -9,7 +9,7 @@
 # To build locally from addon/Dockerfile instead of pulling GHCR, delete the
 # `image:` key below — the Supervisor then consults addon/build.yaml.
 name: go-homeconnect2mqtt
-version: "0.5.2"
+version: "0.5.3"
 slug: go_homeconnect2mqtt
 description: >-
   Local, cloud-free Home Connect (Bosch/Siemens/Gaggenau/Neff) to MQTT bridge

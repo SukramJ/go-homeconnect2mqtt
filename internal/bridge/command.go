@@ -157,7 +157,10 @@ func (b *Bridge) selectNamedProgram(ctx context.Context, d *Device, name string)
 	b.runProgramCall(ctx, d, "select", func() error { _, err := d.app.SelectProgram(ctx, uid, nil); return err })
 }
 
-// resolveProgramUID maps a program name (or numeric uid string) to a uid.
+// resolveProgramUID maps a program reference to a uid: the full feature name, a
+// numeric uid string, or a (possibly localized) select label such as
+// "Eco 50 °C" — the label is de-localized and matched against each program's
+// short name, so a Home Assistant select option resolves back to its program.
 func (b *Bridge) resolveProgramUID(d *Device, name string) (int, bool) {
 	if e, ok := d.app.EntityByName(name); ok {
 		return e.UID(), true
@@ -165,7 +168,34 @@ func (b *Bridge) resolveProgramUID(d *Device, name string) (int, bool) {
 	if uid, err := strconv.Atoi(name); err == nil {
 		return uid, true
 	}
+	if key := progNorm(i18n.EnumValue(name, b.cfg.Language)); key != "" {
+		for _, e := range d.app.Entities() {
+			if e.Desc.Kind == profile.KindProgram && progNorm(progLeaf(e.Name())) == key {
+				return e.UID(), true
+			}
+		}
+	}
 	return 0, false
+}
+
+// progLeaf is the last dotted segment of a program feature name.
+func progLeaf(name string) string {
+	if i := strings.LastIndex(name, "."); i >= 0 {
+		return name[i+1:]
+	}
+	return name
+}
+
+// progNorm lower-cases and strips non-alphanumerics, matching the i18n key form
+// so a localized label, the English leaf and the raw value all compare equal.
+func progNorm(s string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(s) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // startStrategy picks the start path for a device: hobs need the direct

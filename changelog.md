@@ -5,6 +5,16 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-06-27
+
+### Added
+- Selected program is now a writable **select**: when the feature is writable it
+  is exposed as a Home Assistant select listing the (localized) program names,
+  and choosing one resolves the label back to its program and posts it to
+  `/ro/selectedProgram` (the program-selection path). The active program stays a
+  read-only sensor. Verified end-to-end on the dishwasher — selecting "Eco 50 °C"
+  makes the appliance select it, and it round-trips back to "Auto 2".
+
 ## [0.5.2] - 2026-06-27
 
 ### Added
