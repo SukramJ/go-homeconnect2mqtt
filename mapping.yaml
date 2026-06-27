@@ -11,7 +11,6 @@
 features:
   # ---- BSH.Common ----
   BSH.Common.Appliance.Connected:
-    name: 
     device_class: connectivity
     enabled_by_default: true
   BSH.Common.Appliance.Depaired:
@@ -356,7 +355,6 @@ features:
     device_class: battery_charging
     enabled_by_default: true
   BSH.Common.Status.BatteryLevel:
-    name: 
     device_class: battery
     enabled_by_default: true
   BSH.Common.Status.BluetoothPresenceDetection:
@@ -797,7 +795,7 @@ features:
   Cooking.Common.Setting.SignalVolume:
     name: Signal Volume
     name_de: Signallautstärke
-    enabled_by_default: false
+    enabled_by_default: true
   # ---- Cooking.Hob ----
   Cooking.Hob.Event.Error.BLEGadgetNeedsPairing:
     name: BLEGadget Needs Pairing
@@ -822,63 +820,63 @@ features:
   Cooking.Hob.Option.FryingSensorLevel:
     name: Frying Sensor Level
     name_de: Bratsensor-Stufe
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Option.JoinZone:
     name: Join Zone
     name_de: Zonen verbinden
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Option.PowerLevel:
     name: Power Level
     name_de: Leistungsstufe
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Option.ZoneSelector:
     name: Zone Selector
     name_de: Zonenauswahl
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Setting.AutomaticKeyLock:
     name: Automatic Key Lock
     name_de: Automatische Tastensperre
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Setting.AutomaticTimer:
     name: Automatic Timer
     name_de: Automatischer Timer
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Setting.AutomaticZoneSelection:
     name: Automatic Zone Selection
     name_de: Automatische Zonenauswahl
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Setting.BuzzerBeepLevel:
     name: Buzzer Beep Level
     name_de: Signaltonlautstärke
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Setting.EnergyConsumptionIndication:
     name: Energy Consumption Indication
     name_de: Energieverbrauchsanzeige
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Setting.HoodAfterRun:
     name: Hood After Run
     name_de: Dunstabzug-Nachlauf
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Setting.HoodAutomaticLightOff:
     name: Hood Automatic Light Off
     name_de: Dunstabzug automatisches Licht aus
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Setting.HoodAutomaticLightOn:
     name: Hood Automatic Light On
     name_de: Dunstabzug automatisches Licht ein
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Setting.HoodAutomaticStart:
     name: Hood Automatic Start
     name_de: Dunstabzug Automatikstart
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Setting.PowerManagement:
     name: Power Management
     name_de: Leistungsmanagement
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Setting.TimerSelection:
     name: Timer Selection
     name_de: Timerauswahl
-    enabled_by_default: false
+    enabled_by_default: true
   Cooking.Hob.Setting.UPDTestPosition:
     name: UPDTest Position
     name_de: UPDTest Position

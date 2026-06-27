@@ -5,6 +5,17 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-06-27
+
+### Added
+- Hob (cooktop) controls in curated mode: the writable hob features — zone
+  selector, power level, frying-sensor level, join/automatic zone selection, key
+  lock, power management, timers, buzzer volume, energy indication, and the
+  extractor-hood automation — are now enabled-by-default, so a hob is
+  controllable from Home Assistant via its program-assistant model (choose zone +
+  level + program, then start). Per-zone power stays read-only — Home Connect
+  exposes no direct remote zone power control.
+
 ## [0.6.0] - 2026-06-27
 
 ### Changed
