@@ -1,15 +1,159 @@
-# go-homeconnect2mqtt — optional feature enrichment catalogue.
+# go-homeconnect2mqtt — feature enrichment & curation catalogue.
 #
-# The daemon exposes EVERY device feature to MQTT generically. This file
-# only enriches selected features with Home Assistant device_class hints,
-# units and device-specific program-start paths. It is operator-patchable
-# and loaded leniently: unknown keys are skipped with a log line, never
-# fatal. See docs/04-device-mapping.md.
+# The daemon exposes EVERY device feature to MQTT generically; this file only
+# enriches Home Assistant discovery. It is operator-patchable and loaded
+# leniently (unknown keys are skipped, never fatal). See docs/04-device-mapping.md.
+#
+# Per feature (all optional; unset -> discovery heuristic):
+#   name / name_de      friendly label (en / de). entity_ids stay English.
+#   device_class        HA device_class
+#   unit                unit_of_measurement
+#   state_class         measurement | total | total_increasing
+#   entity_category     diagnostic | config   (empty = primary, shown on top)
+#   enabled_by_default  true/false            (default: primary heuristic)
+#   exclude             true                  (never expose this feature)
+#
+# Entity ids are seeded English & language-independent; only `name`/`name_de`
+# are localized (LANGUAGE: de|en).
 
-# features:
-#   BSH.Common.Status.OperationState:
-#     device_class: enum
-#   BSH.Common.Option.RemainingProgramTime:
-#     device_class: duration
-#     unit: s
-features: {}
+features:
+  # ---- BSH.Common: shared across all appliances ----
+  BSH.Common.Setting.PowerState:
+    name: Power
+    name_de: Betrieb
+  BSH.Common.Status.OperationState:
+    name: Operation state
+    name_de: Betriebszustand
+    device_class: enum
+  BSH.Common.Status.DoorState:
+    name: Door
+    name_de: Tür
+    device_class: enum
+  BSH.Common.Status.RemoteControlActive:
+    name: Remote control active
+    name_de: Fernsteuerung aktiv
+  BSH.Common.Status.RemoteControlStartAllowed:
+    name: Remote start allowed
+    name_de: Fernstart erlaubt
+  BSH.Common.Status.LocalControlActive:
+    name: Local control active
+    name_de: Lokale Bedienung aktiv
+    entity_category: diagnostic
+  BSH.Common.Status.BackendConnected:
+    name: Cloud connected
+    name_de: Cloud verbunden
+    entity_category: diagnostic
+  BSH.Common.Root.ActiveProgram:
+    name: Active program
+    name_de: Aktives Programm
+  BSH.Common.Root.SelectedProgram:
+    name: Selected program
+    name_de: Gewähltes Programm
+
+  # ---- Program timing / progress ----
+  BSH.Common.Option.RemainingProgramTime:
+    name: Remaining time
+    name_de: Restzeit
+    device_class: duration
+    unit: s
+  BSH.Common.Option.RemainingProgramTimeIsEstimated:
+    name: Remaining time estimated
+    name_de: Restzeit geschätzt
+    entity_category: diagnostic
+  BSH.Common.Option.ElapsedProgramTime:
+    name: Elapsed time
+    name_de: Verstrichene Zeit
+    device_class: duration
+    unit: s
+    entity_category: diagnostic
+  BSH.Common.Option.ProgramProgress:
+    name: Progress
+    name_de: Fortschritt
+    unit: "%"
+  BSH.Common.Option.StartInRelative:
+    name: Start in
+    name_de: Startverzögerung
+    device_class: duration
+    unit: s
+  BSH.Common.Option.FinishInRelative:
+    name: Finish in
+    name_de: Fertig in
+    device_class: duration
+    unit: s
+
+  # ---- Consumption forecasts (diagnostic) ----
+  BSH.Common.Option.EnergyForecast:
+    name: Energy forecast
+    name_de: Energie-Prognose
+    unit: "%"
+    entity_category: diagnostic
+  BSH.Common.Option.WaterForecast:
+    name: Water forecast
+    name_de: Wasser-Prognose
+    unit: "%"
+    entity_category: diagnostic
+
+  # ---- Common settings (config) ----
+  BSH.Common.Setting.ChildLock:
+    name: Child lock
+    name_de: Kindersicherung
+    entity_category: config
+    enabled_by_default: true
+  BSH.Common.Setting.AllowBackendConnection:
+    name: Allow cloud connection
+    name_de: Cloud-Verbindung erlauben
+    entity_category: config
+
+  # ---- Common events ----
+  BSH.Common.Event.ProgramFinished:
+    name: Program finished
+    name_de: Programm beendet
+  BSH.Common.Event.ProgramAborted:
+    name: Program aborted
+    name_de: Programm abgebrochen
+  BSH.Common.Event.AlarmClockElapsed:
+    name: Alarm clock elapsed
+    name_de: Wecker abgelaufen
+
+  # ---- Counters (diagnostic, monotonic) ----
+  BSH.Common.Status.Program.All.Count.Started:
+    name: Programs started
+    name_de: Programme gestartet
+    state_class: total_increasing
+    entity_category: diagnostic
+
+  # ---- Dishwasher ----
+  Dishcare.Dishwasher.Event.SaltLack:
+    name: Salt low
+    name_de: Salzmangel
+  Dishcare.Dishwasher.Event.RinseAidLack:
+    name: Rinse aid low
+    name_de: Klarspülermangel
+  Dishcare.Dishwasher.Event.SaltNearlyEmpty:
+    name: Salt nearly empty
+    name_de: Salz fast leer
+  Dishcare.Dishwasher.Event.RinseAidNearlyEmpty:
+    name: Rinse aid nearly empty
+    name_de: Klarspüler fast leer
+
+  # ---- Washer ----
+  LaundryCare.Washer.Option.Temperature:
+    name: Temperature
+    name_de: Temperatur
+  LaundryCare.Washer.Option.SpinSpeed:
+    name: Spin speed
+    name_de: Schleuderdrehzahl
+  LaundryCare.Washer.Event.IDos1FillLevelPoor:
+    name: i-Dos 1 fill level low
+    name_de: i-Dos 1 Füllstand niedrig
+  LaundryCare.Washer.Event.IDos2FillLevelPoor:
+    name: i-Dos 2 fill level low
+    name_de: i-Dos 2 Füllstand niedrig
+
+  # ---- Hob ----
+  Cooking.Hob.Status.Zone001.PowerLevel:
+    name: Zone 1 power level
+    name_de: Zone 1 Leistungsstufe
+  Cooking.Hob.Status.Zone002.PowerLevel:
+    name: Zone 2 power level
+    name_de: Zone 2 Leistungsstufe

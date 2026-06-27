@@ -37,6 +37,30 @@ appliance).
 
 ---
 
+## 1b. Enrichment & curation catalogue (`mapping.yaml`)
+
+Every feature is still exposed; the catalogue only refines the Home Assistant
+discovery payload. It is keyed by feature name; each entry is optional and an
+unset field falls back to the heuristic:
+
+| field | effect |
+|---|---|
+| `name` / `name_de` | localized friendly **name** (en / de). Entity **ids** stay English (seeded via `default_entity_id`, the replacement for the removed `object_id`). |
+| `device_class`, `unit` | HA `device_class` / `unit_of_measurement`. |
+| `state_class` | `measurement` / `total` / `total_increasing` for sensor statistics. |
+| `entity_category` | `diagnostic` / `config`; empty = primary (shown on top). |
+| `enabled_by_default` | tri-state; overrides the primary heuristic. |
+| `exclude` | never expose this feature. |
+
+**Decluttering policy.** A small primary set (power/operation/door state,
+active/selected program, remaining time/progress, key events) is enabled and
+uncategorized. The long tail is published **disabled-by-default** (one click to
+enable in HA) and categorized diagnostic/config — so a device drops from ~195 to
+~28 entities shown, without dropping the "expose everything" promise.
+`HASS_DISCOVERY: curated` instead publishes only the primary set.
+
+---
+
 ## 2. BSH.Common — Cross-Appliance Features
 
 Applies (partly) to **all** appliances. (`common.py`)

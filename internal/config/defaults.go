@@ -11,6 +11,7 @@ const (
 	DefaultMQTTQoS            = 1
 	DefaultHASSBaseTopic      = "homeassistant"
 	DefaultHASSBirthGracetime = 15
+	DefaultHASSDiscovery      = "full"
 	DefaultAppName            = "go-homeconnect2mqtt"
 	DefaultReconnectInitial   = 1
 	DefaultReconnectMax       = 30
@@ -41,6 +42,9 @@ func applyDefaults(c *Config) {
 	}
 	if c.HASSBirthGracetime == 0 {
 		c.HASSBirthGracetime = DefaultHASSBirthGracetime
+	}
+	if c.HASSDiscovery == "" {
+		c.HASSDiscovery = DefaultHASSDiscovery
 	}
 	if c.AppName == "" {
 		c.AppName = DefaultAppName

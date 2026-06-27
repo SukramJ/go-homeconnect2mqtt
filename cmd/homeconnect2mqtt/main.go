@@ -116,7 +116,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 
 	var disc *hass.Discovery
 	if cfg.HASSEnable {
-		disc = hass.New(client, cfg.HASSBaseTopic, cfg.MQTTTopic, mqtt.QoS(cfg.MQTTQoS), logger)
+		disc = hass.New(client, cfg.HASSBaseTopic, cfg.MQTTTopic, mqtt.QoS(cfg.MQTTQoS), cfg.Language, cfg.HASSDiscovery == "curated", logger)
 		if cat, err := mapping.Load(mappingPath); err != nil {
 			logger.Warn("mapping.load", slog.String("err", err.Error()))
 		} else {
