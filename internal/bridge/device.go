@@ -99,7 +99,7 @@ func (b *Bridge) onUpdate(d *Device, e *homeconnect.Entity) {
 	if !e.HasValue() {
 		return
 	}
-	b.publish(d.topics.state(e), []byte(payloadFor(e)))
+	b.publish(d.topics.state(e), []byte(payloadFor(e, b.cfg.Language)))
 	if b.state != nil {
 		b.state.UpdateFeature(d.name, b.featureView(d, e))
 	}

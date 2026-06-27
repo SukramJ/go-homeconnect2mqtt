@@ -52,6 +52,13 @@ unset field falls back to the heuristic:
 | `enabled_by_default` | tri-state; overrides the primary heuristic. |
 | `exclude` | never expose this feature. |
 
+**Localized values.** Enum/dropdown member values are localized per `LANGUAGE`
+too: `select` options, enum-sensor options and the published state carry the
+localized label (HA's native enum translations aren't available to MQTT
+discovery), and the write path accepts the localized label. Entity ids stay
+English. Common member names ship translated (`internal/i18n`); uncatalogued
+values pass through unchanged, keeping options and state consistent.
+
 **Decluttering policy.** A small primary set (power/operation/door state,
 active/selected program, remaining time/progress, key events) is enabled and
 uncategorized. The long tail is published **disabled-by-default** (one click to

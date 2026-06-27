@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mqtt"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
@@ -147,6 +148,21 @@ func (d *Discovery) applyEnrichment(e *homeconnect.Entity, payload map[string]an
 	}
 }
 
+// localizeOptions translates a select's enum options to the configured display
+// language so HA dropdown labels match the (also localized) published state.
+// Uncatalogued values pass through unchanged, keeping options and state aligned.
+func (d *Discovery) localizeOptions(payload map[string]any) {
+	opts, ok := payload["options"].([]string)
+	if !ok {
+		return
+	}
+	loc := make([]string, len(opts))
+	for i, o := range opts {
+		loc[i] = i18n.EnumLabel(o, d.lang)
+	}
+	payload["options"] = loc
+}
+
 func (d *Discovery) configTopic(platform, device string, e *homeconnect.Entity) string {
 	return d.baseTopic + "/" + platform + "/" + sanitize(device) + "/" + featureKey(e) + "/config"
 }
@@ -177,6 +193,7 @@ func (d *Discovery) PublishDevice(ctx context.Context, device string, info profi
 		}
 		payload := payloadFor(e, platform, device, d.topicsFor(device, e), dev)
 		d.applyEnrichment(e, payload)
+		d.localizeOptions(payload)
 		// Curated mode: only publish the enabled-by-default (primary) entities.
 		if d.curated && disabledByDefault(payload) {
 			continue
