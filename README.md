@@ -57,6 +57,13 @@ to **Settings → Add-ons → Add-on Store → ⋮ → Repositories** and add
 broker, publishes discovery, and surfaces the diagnostic web UI via Ingress.
 See [`addon/README.md`](addon/README.md) and [`addon/DOCS.md`](addon/DOCS.md).
 
+Your appliance profiles and keys are **operator-specific and never baked into
+the image** (the published image is generic: binaries + `mapping.yaml` only). On
+first start the add-on creates a **`/share/homeconnect/`** drop folder — copy
+your profile ZIP (or pre-parsed `<haId>.json` files) there and point the
+`profile_zip`/`description` options at it. Keys (`psk64`/`iv64`) are supplied via
+the add-on options and stay on your Home Assistant host.
+
 ## MQTT topics
 
 ```

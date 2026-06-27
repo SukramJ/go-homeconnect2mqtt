@@ -5,6 +5,21 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-27
+
+### Added
+- Home Assistant add-on manifest (`addon/config.yaml`) so the Supervisor can
+  discover, install and configure the add-on (options/schema, per-arch GHCR
+  image, `map: share:rw`, `services: mqtt:want`, Ingress web UI).
+- `/share/homeconnect/` drop folder, created on add-on start, as the place to
+  copy the profile ZIP or pre-parsed `<haId>.json` files.
+
+### Fixed
+- `.gitignore` no longer swallows `addon/config.yaml`: the `config.yaml` /
+  `devices.yaml` rules are anchored to the repo root.
+- Dockerfile `InvalidDefaultArgInFrom` warning — `BUILD_FROM` now has a default
+  (overridden by the Supervisor / CI per arch).
+
 ## [0.1.0] - 2026-06-27
 
 ### Added
