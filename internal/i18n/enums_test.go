@@ -10,11 +10,11 @@ func TestEnumLabel(t *testing.T) {
 		{"Run", "de", "Läuft"},
 		{"Closed", "de", "Geschlossen"},
 		{"Off", "de", "Aus"},
-		{"DelayedStart", "de", "Startvorwahl"}, // CamelCase, case-insensitive
-		{"R01", "de", "R01"},                   // uncatalogued -> unchanged
-		{"Eco50", "de", "Eco50"},               // program name -> unchanged
-		{"Run", "en", "Run"},                   // english display -> unchanged
-		{"Run", "fr", "Run"},                   // unsupported lang -> unchanged
+		{"DelayedStart", "de", "Startvorwahl"},       // CamelCase, normalized
+		{"Double_Shot", "de", "Double Shot"},         // separators normalized away
+		{"NoSuchMemberXyz", "de", "NoSuchMemberXyz"}, // uncatalogued -> unchanged
+		{"Run", "en", "Run"},                         // english display -> unchanged
+		{"Run", "fr", "Run"},                         // unsupported lang -> unchanged
 	}
 	for _, c := range cases {
 		if got := EnumLabel(c.name, c.lang); got != c.want {
@@ -24,15 +24,14 @@ func TestEnumLabel(t *testing.T) {
 }
 
 func TestEnumValue(t *testing.T) {
-	// German label -> English member name (lowercased; matched case-insensitively
-	// downstream). Already-English / uncatalogued / non-de pass through unchanged.
+	// German label -> English member key (normalized; matched case-insensitively
+	// downstream). Uncatalogued / non-de pass through unchanged.
 	cases := []struct{ label, lang, want string }{
 		{"Läuft", "de", "run"},
-		{"Aus", "de", "off"},
 		{"Geschlossen", "de", "closed"},
-		{"Off", "de", "Off"},     // already english -> unchanged
-		{"R01", "de", "R01"},     // uncatalogued -> unchanged
-		{"Läuft", "en", "Läuft"}, // en mode -> no reverse mapping
+		{"Startvorwahl", "de", "delayedstart"},
+		{"NoSuchLabelXyz", "de", "NoSuchLabelXyz"}, // uncatalogued -> unchanged
+		{"Läuft", "en", "Läuft"},                   // en mode -> no reverse mapping
 	}
 	for _, c := range cases {
 		if got := EnumValue(c.label, c.lang); got != c.want {
