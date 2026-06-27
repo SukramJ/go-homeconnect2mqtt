@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -50,6 +51,10 @@ type Bridge struct {
 	// Command write-window retry budget (FK-5).
 	cmdRetries    int
 	cmdRetryDelay time.Duration
+
+	// Per-device discovery orphan-cleanup gate (skips a re-entrant reconcile).
+	reconcileMu sync.Mutex
+	reconciling map[string]bool
 }
 
 // New builds the bridge and all device workers. It fails fast on a
@@ -75,6 +80,7 @@ func New(deps Deps) (*Bridge, error) {
 		state:         deps.State,
 		cmdRetries:    3,
 		cmdRetryDelay: time.Second,
+		reconciling:   map[string]bool{},
 	}
 	for _, spec := range deps.Devices {
 		dev, err := buildDevice(b, spec)

@@ -162,9 +162,11 @@ func disabledByDefault(payload map[string]any) bool {
 }
 
 // PublishDevice emits a discovery config for every exposable entity of a
-// device. Errors are logged, never fatal (publish what you can).
-func (d *Discovery) PublishDevice(ctx context.Context, device string, info profile.DeviceInfo, entities []*homeconnect.Entity) {
+// device. Errors are logged, never fatal (publish what you can). It returns
+// the set of config topics it published, so the caller can clear orphaned ones.
+func (d *Discovery) PublishDevice(ctx context.Context, device string, info profile.DeviceInfo, entities []*homeconnect.Entity) map[string]bool {
 	dev := d.deviceBlockFor(device, info)
+	published := map[string]bool{}
 	for _, e := range entities {
 		if d.enrich != nil && e.Name() != "" && d.enrich.Excluded(e.Name()) {
 			continue
@@ -185,8 +187,33 @@ func (d *Discovery) PublishDevice(ctx context.Context, device string, info profi
 			continue
 		}
 		topic := d.configTopic(platform, device, e)
+		published[topic] = true
 		if err := d.mqtt.Publish(ctx, topic, b, d.qos, true); err != nil {
 			d.logger.Warn("hass.publish", slog.String("topic", topic), slog.String("err", err.Error()))
 		}
 	}
+	return published
+}
+
+// DeviceConfigFilter is the MQTT filter matching a device's discovery config
+// topics (homeassistant/+/<device>/+/config), for collecting retained configs
+// to reconcile against the published set.
+func (d *Discovery) DeviceConfigFilter(device string) string {
+	return d.baseTopic + "/+/" + sanitize(device) + "/+/config"
+}
+
+// IsOwnConfig reports whether a retained HA discovery config payload was
+// published by this daemon (its unique_id is in our `homeconnect_` namespace
+// and its state topic is under our root), so orphan cleanup never touches
+// configs owned by another integration or bridge instance.
+func (d *Discovery) IsOwnConfig(payload []byte) bool {
+	var cfg struct {
+		UniqueID   string `json:"unique_id"`
+		StateTopic string `json:"state_topic"`
+	}
+	if json.Unmarshal(payload, &cfg) != nil {
+		return false
+	}
+	return strings.HasPrefix(cfg.UniqueID, "homeconnect_") &&
+		(cfg.StateTopic == "" || strings.HasPrefix(cfg.StateTopic, d.rootTopic+"/"))
 }
