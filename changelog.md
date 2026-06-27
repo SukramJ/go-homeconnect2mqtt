@@ -5,6 +5,8 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-06-27
+
 ### Added
 - Initial implementation of the local Home Connect to MQTT bridge:
   AES app-layer crypto transport, WebSocket protocol session/handshake,
