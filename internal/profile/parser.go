@@ -314,7 +314,37 @@ func ParseDescription(descriptionXML, featureMappingXML []byte, logger *slog.Log
 			logger.Debug("profile.single_skip", slog.String("kind", string(single.kind)), slog.String("err", err.Error()))
 		}
 	}
+	resolveProgramNames(d)
 	return d, nil
+}
+
+// resolveProgramNames gives the active/selected-program entries an enumeration
+// mapping each program's uid to its short name, so they publish a human
+// (localizable) program instead of the raw numeric uid the appliance reports.
+func resolveProgramNames(d *Description) {
+	progEnum := map[int]string{}
+	for _, e := range d.Entries {
+		if e.Kind == KindProgram && e.Name != "" {
+			progEnum[e.UID] = programLeaf(e.Name)
+		}
+	}
+	if len(progEnum) == 0 {
+		return
+	}
+	for _, e := range d.Entries {
+		if (e.Kind == KindActiveProgram || e.Kind == KindSelectedProgram) && len(e.Enumeration) == 0 {
+			e.Enumeration = progEnum
+		}
+	}
+}
+
+// programLeaf is the last dotted segment of a feature name
+// ("…Program.Eco50" -> "Eco50"), matching the i18n enum-member key.
+func programLeaf(name string) string {
+	if i := strings.LastIndex(name, "."); i >= 0 {
+		return name[i+1:]
+	}
+	return name
 }
 
 func resolveEnumSubsets(types []xmlEnumType, fm *featureMapping, logger *slog.Logger) {

@@ -123,8 +123,18 @@ licenses: ## fail on copyleft dependency licenses
 tidy: ## sync go.mod / go.sum
 	$(GO) mod tidy
 
+.PHONY: addon-changelog
+addon-changelog: ## sync the add-on changelog (addon/CHANGELOG.md) from changelog.md
+	cp changelog.md addon/CHANGELOG.md
+
+.PHONY: addon-changelog-check
+addon-changelog-check: ## fail when addon/CHANGELOG.md drifts from changelog.md
+	@if ! diff -q changelog.md addon/CHANGELOG.md >/dev/null; then \
+	  echo "addon/CHANGELOG.md is out of sync — run 'make addon-changelog'"; exit 1; \
+	fi
+
 .PHONY: check
-check: vet fmt-check lint test ## the pre-commit / pre-push gate
+check: vet fmt-check lint addon-changelog-check test ## the pre-commit / pre-push gate
 
 .PHONY: run
 run: build-daemon ## run the daemon
