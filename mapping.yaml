@@ -35,6 +35,10 @@ features:
   BSH.Common.Status.RemoteControlStartAllowed:
     name: Remote start allowed
     name_de: Fernstart erlaubt
+  BSH.Common.Setting.RemoteControlLevel:
+    name: Remote control level
+    name_de: Fernsteuerungsstufe
+    entity_category: config
   BSH.Common.Status.LocalControlActive:
     name: Local control active
     name_de: Lokale Bedienung aktiv
@@ -135,6 +139,32 @@ features:
   Dishcare.Dishwasher.Event.RinseAidNearlyEmpty:
     name: Rinse aid nearly empty
     name_de: Klarspüler fast leer
+
+  # ---- Dishwasher settings (config) ----
+  Dishcare.Dishwasher.Setting.RinseAid:
+    name: Rinse aid
+    name_de: Klarspüler
+    entity_category: config
+  Dishcare.Dishwasher.Setting.HotWater:
+    name: Hot water connection
+    name_de: Warmwasseranschluss
+    entity_category: config
+  Dishcare.Dishwasher.Setting.EcoAsDefault:
+    name: Eco as default
+    name_de: Eco als Standard
+    entity_category: config
+  Dishcare.Dishwasher.Setting.SensitivityTurbidity:
+    name: Turbidity sensitivity
+    name_de: Trübungssensor-Empfindlichkeit
+    entity_category: config
+  Dishcare.Dishwasher.Setting.DryingAssistantAllPrograms:
+    name: Drying assistant
+    name_de: Trocknungsassistent
+    entity_category: config
+  Dishcare.Dishwasher.Setting.ExtraDry:
+    name: Extra dry
+    name_de: Extra-Trocknung
+    entity_category: config
 
   # ---- Washer ----
   LaundryCare.Washer.Option.Temperature:

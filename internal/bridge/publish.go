@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
 )
 
 // availability payload values.
@@ -46,13 +47,16 @@ func featurePath(name string, uid int) string {
 }
 
 // payloadFor renders an entity's display value as an MQTT payload.
-func payloadFor(e *homeconnect.Entity) string {
+func payloadFor(e *homeconnect.Entity, lang string) string {
 	v := e.Value()
 	if v == nil {
 		return ""
 	}
 	switch t := v.(type) {
 	case string:
+		if e.Desc.IsEnum() {
+			return i18n.EnumLabel(t, lang) // localized dropdown/enum value
+		}
 		return t
 	case bool:
 		return strconv.FormatBool(t)

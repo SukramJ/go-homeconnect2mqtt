@@ -206,6 +206,10 @@ func payloadFor(e *homeconnect.Entity, platform, device string, t entityTopics, 
 		}
 	case platformSelect:
 		p["options"] = enumOptions(e)
+	case platformSensor:
+		if e.Desc.IsEnum() {
+			p["options"] = enumOptions(e) // device_class=enum sensors need options
+		}
 	case platformNumber:
 		b := e.Bounds()
 		if b.HasMin {

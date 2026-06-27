@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
 
@@ -98,6 +99,9 @@ func (b *Bridge) resolveEntity(d *Device, rel string) (*homeconnect.Entity, bool
 // window: a not-yet-writable feature or a 541 ProcessStateNotCompliant is
 // retried a bounded number of times (FK-5, #384).
 func (b *Bridge) writeWithWindow(ctx context.Context, d *Device, e *homeconnect.Entity, value string) {
+	if e.Desc.IsEnum() {
+		value = i18n.EnumValue(value, b.cfg.Language) // accept localized dropdown labels
+	}
 	for attempt := 0; ; attempt++ {
 		if e.Writable() {
 			err := d.app.WriteValue(ctx, e.UID(), value)

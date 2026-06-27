@@ -177,7 +177,7 @@ func TestPayloadForFloat(t *testing.T) {
 	// assert payloadFor directly on a value-bearing entity.
 	dev.app.ApplyValues([]map[string]any{{"uid": 0x1002, "value": 3}})
 	e, _ := dev.app.Entity(0x1002)
-	if got := payloadFor(e); got != "Run" {
+	if got := payloadFor(e, "en"); got != "Run" {
 		t.Errorf("payloadFor enum = %q", got)
 	}
 }

@@ -5,6 +5,20 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-27
+
+### Added
+- Localized dropdown/enum values: `select` options, enum-sensor options and the
+  published state now follow `LANGUAGE` (de/en), and the write path accepts
+  localized labels — the sister-project approach (HA's native enum translations
+  aren't available to MQTT discovery). Entity ids and topics stay English. Common
+  cross-appliance member names (operation/door/power state, remote-control level,
+  common settings) ship translated; uncatalogued values pass through unchanged so
+  options and state stay consistent.
+- Enum sensors now publish their `options` (required by HA's `enum` device class;
+  previously only `select` did).
+- More German entity names (`RemoteControlLevel` + the common dishwasher settings).
+
 ## [0.3.1] - 2026-06-27
 
 ### Added
