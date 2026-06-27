@@ -46,6 +46,16 @@ export HC2M_DEBUG="$(bashio::config 'debug')"
 export HC2M_WEB_ENABLE="$(bashio::config 'web_enable')"
 export HC2M_WEB_BIND="0.0.0.0:8080"
 
+# --- Operator drop folder: make sure /share/homeconnect exists so the profile
+# ZIP (or pre-parsed <haId>.json files) has an obvious place to be copied to.
+# /share is mapped read-write by the add-on manifest. ---
+SHARE_DIR="/share/homeconnect"
+if mkdir -p "${SHARE_DIR}" 2>/dev/null; then
+  bashio::log.info "Profile drop folder ready at ${SHARE_DIR} (copy your profile ZIP or <haId>.json files here)."
+else
+  bashio::log.warning "Could not create ${SHARE_DIR} (is /share mapped?)."
+fi
+
 # --- Optional: parse the Home Connect profile ZIP into device descriptions ---
 PROFILES="/data/profiles"
 mkdir -p "${PROFILES}"

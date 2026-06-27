@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 SukramJ
+#
+# Home Assistant add-on manifest. The Supervisor reads this file to discover,
+# install and configure the add-on. The pre-built images are pushed per arch by
+# .github/workflows/addon-image.yml to ghcr.io/sukramj/go-homeconnect2mqtt-addon-{arch};
+# the Supervisor substitutes {arch} and pulls the matching tag (== `version`).
+#
+# To build locally from addon/Dockerfile instead of pulling GHCR, delete the
+# `image:` key below — the Supervisor then consults addon/build.yaml.
+name: go-homeconnect2mqtt
+version: "0.1.0"
+slug: go_homeconnect2mqtt
+description: >-
+  Local, cloud-free Home Connect (Bosch/Siemens/Gaggenau/Neff) to MQTT bridge
+  with Home Assistant discovery and a diagnostic web UI.
+url: https://github.com/SukramJ/go-homeconnect2mqtt/tree/main/addon
+arch:
+  - amd64
+  - aarch64
+  - armv7
+image: "ghcr.io/sukramj/go-homeconnect2mqtt-addon-{arch}"
+init: false
+startup: application
+
+# Diagnostic web UI is served through Ingress (no exposed port). run.sh binds
+# the daemon to 0.0.0.0:8080 inside the container.
+ingress: true
+ingress_port: 8080
+panel_icon: mdi:dishwasher
+panel_title: Home Connect
+
+# Auto-discover the Home Assistant MQTT broker (used when mqtt_server is empty)
+# and read the Supervisor services API for it.
+hassio_api: true
+services:
+  - mqtt:want
+
+# /share is the drop folder for the profile ZIP / pre-parsed <haId>.json files
+# (run.sh creates /share/homeconnect on start); /data is the add-on's own
+# persistent volume (parsed descriptions + generated devices.yaml land there).
+map:
+  - share:rw
+
+options:
+  profile_zip: ""
+  devices: []
+  mqtt_server: ""
+  mqtt_port: 1883
+  mqtt_login: ""
+  mqtt_password: ""
+  mqtt_topic: homeconnect
+  hass_enable: true
+  language: en
+  web_enable: true
+  debug: false
+
+schema:
+  profile_zip: "str?"
+  devices:
+    - name: str
+      host: str
+      connection_type: "list(AES|TLS)"
+      psk64: password
+      iv64: "password?"
+      description: "str?"
+      haid: "str?"
+  mqtt_server: "str?"
+  mqtt_port: port
+  mqtt_login: "str?"
+  mqtt_password: "password?"
+  mqtt_topic: str
+  hass_enable: bool
+  language: "list(en|de)"
+  web_enable: bool
+  debug: bool

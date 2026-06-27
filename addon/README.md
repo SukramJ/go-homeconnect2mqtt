@@ -24,6 +24,11 @@ Profile Downloader** (target format *openHAB*) — see the main
 [onboarding guide](https://github.com/SukramJ/go-homeconnect2mqtt/blob/main/docs/connecting-devices.md).
 You get a ZIP per appliance.
 
+> Your profiles are **specific to your appliances** and the keys are private, so
+> they are **not** baked into the (generic) add-on image — they live on your Home
+> Assistant host. On first start the add-on creates a **`/share/homeconnect/`**
+> drop folder; copy your ZIP (or pre-parsed `<haId>.json` files) there.
+
 Two ways to supply it to the add-on:
 
 - **Recommended:** copy the ZIP to `/share` (e.g. `/share/homeconnect/profile.zip`)

@@ -60,6 +60,10 @@ discovery configs are published under `homeassistant/<platform>/<unique_id>/conf
 
 ## Notes
 
+- On first start the add-on creates **`/share/homeconnect/`** — copy your
+  profile ZIP (or pre-parsed `<haId>.json` files) here. Profiles and keys are
+  operator-specific and stay on your Home Assistant host; they are never part of
+  the generic add-on image.
 - The add-on image is CGo-free and supports **AES** appliances (`ws://host:80`).
   **TLS-PSK** appliances (`wss://host:443`) require a separate cgo build and are
   not supported by the default add-on image.

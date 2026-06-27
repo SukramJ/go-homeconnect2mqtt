@@ -15,7 +15,9 @@
 # Note: this CGo-free build supports AES appliances. TLS-PSK appliances need a
 # separate cgo build (see the main README / docs/01-protocol.md §4).
 
-ARG BUILD_FROM
+# Default keeps manual/standalone builds working; the Supervisor and CI always
+# override BUILD_FROM with the per-arch HA base image (see addon/build.yaml).
+ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 
 # ---------- Stage 1: build the Go binaries ----------
 FROM golang:1.26-alpine AS builder
@@ -46,7 +48,7 @@ RUN go build -trimpath \
       -o /out/hc-util ./cmd/hc-util
 
 # ---------- Stage 2: Home Assistant add-on runtime ----------
-ARG BUILD_FROM
+ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 FROM ${BUILD_FROM}
 
 # Daemon + the onboarding CLI (run.sh uses hc-util to parse a profile ZIP).

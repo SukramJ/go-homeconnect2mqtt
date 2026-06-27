@@ -36,7 +36,10 @@ go.work.sum
 /bin/
 /dist/
 
-# operator-local runtime config (templates are tracked)
-config.yaml
-devices.yaml
+# operator-local runtime config (templates are tracked; anchored to the repo
+# root with a leading slash so addon/config.yaml — the Home Assistant add-on
+# manifest — is NOT swallowed by these rules)
+/config.yaml
+/devices.yaml
 /tmp
+/profiles
