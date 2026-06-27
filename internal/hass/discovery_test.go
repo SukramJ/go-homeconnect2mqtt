@@ -96,7 +96,7 @@ func TestClassify(t *testing.T) {
 		"BSH.Common.Option.Duration":       platformNumber,       // writable float
 		"BSH.Common.Event.Problem":         platformBinarySensor, // event
 		"BSH.Common.Command.AbortProgram":  platformButton,       // command
-		"BSH.Common.Root.ActiveProgram":    platformSensor,       // active program
+		"BSH.Common.Root.ActiveProgram":    platformSensor,       // read-only (start via control)
 	}
 	for name, want := range cases {
 		got, ok := classifyByName(t, app, name)

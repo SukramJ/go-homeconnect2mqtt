@@ -46,10 +46,12 @@ func classify(e *homeconnect.Entity) (platform string, ok bool) {
 	case profile.KindEvent:
 		return platformBinarySensor, true
 	case profile.KindActiveProgram:
+		// Read-only: shows the running program. Starting is done via the
+		// synthetic "start program" control, not by writing this.
 		return platformSensor, true
 	case profile.KindSelectedProgram:
-		// The selected program is choosable when writable -> a select with the
-		// program list as options; otherwise a read-only sensor.
+		// Choosable when writable -> a select listing the programs to stage;
+		// otherwise a read-only sensor showing the current selection.
 		if e.Desc.Writable() {
 			return platformSelect, true
 		}

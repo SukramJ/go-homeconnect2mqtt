@@ -14,6 +14,7 @@ import (
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
 
 // availability payload values.
@@ -46,11 +47,23 @@ func featurePath(name string, uid int) string {
 	return strings.ReplaceAll(name, ".", "/")
 }
 
+// isProgramKind reports whether the entry is the active/selected program.
+func isProgramKind(k profile.EntryKind) bool {
+	return k == profile.KindActiveProgram || k == profile.KindSelectedProgram
+}
+
 // payloadFor renders an entity's display value as an MQTT payload.
 func payloadFor(e *homeconnect.Entity, lang string) string {
 	v := e.Value()
 	if v == nil {
 		return ""
+	}
+	// An active/selected program reported as a raw uid (idle, or an unknown
+	// program) publishes empty so a program select shows "no selection".
+	if isProgramKind(e.Desc.Kind) {
+		if _, ok := v.(string); !ok {
+			return ""
+		}
 	}
 	switch t := v.(type) {
 	case string:

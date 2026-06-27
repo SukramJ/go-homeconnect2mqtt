@@ -69,7 +69,11 @@ active/selected program, remaining time/progress, key events) is enabled and
 uncategorized. The long tail is published **disabled-by-default** (one click to
 enable in HA) and categorized diagnostic/config — so a device drops from ~195 to
 ~28 entities shown, without dropping the "expose everything" promise.
-`HASS_DISCOVERY: curated` instead publishes only the primary set.
+`HASS_DISCOVERY: curated` (the **default**) instead publishes only this primary
+set, aligned with the features the official Home Assistant `home_connect`
+integration exposes as entities; `full` publishes every feature (long tail
+disabled-by-default). The curated/primary set is the `enabled_by_default: true`
+features in `mapping.yaml` (the official catalogue); everything else is omitted.
 
 **Orphan cleanup.** When a device's feature set changes (exclusions, renames, or
 switching to curated), the bridge clears its own now-orphaned retained discovery
