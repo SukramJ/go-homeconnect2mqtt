@@ -51,9 +51,9 @@ func buildDevice(b *Bridge, spec DeviceSpec) (*Device, error) {
 	if err != nil {
 		return nil, fmt.Errorf("bridge: device %q: %w", dc.Name, err)
 	}
-	if dc.ConnectionType == profile.ConnectionTLS {
+	if dc.ConnectionType == profile.ConnectionTLS && !homeconnect.TLSPSKSupported {
 		b.logger.Warn("bridge.tls_device", slog.String("device", dc.Name),
-			slog.String("note", "TLS-PSK requires the 'tlspsk' (cgo) build; this device will report offline otherwise"))
+			slog.String("note", "TLS-PSK needs the 'tlspsk' (cgo) build; this device will report offline in the CGo-free build"))
 	}
 
 	session := homeconnect.NewSession(socket, homeconnect.SessionConfig{

@@ -5,6 +5,29 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-27
+
+### Added
+- TLS-PSK transport for older appliances (`connectionType: TLS`,
+  `wss://host:443`): OpenSSL-backed via cgo behind `-tags tlspsk`, TLS 1.2
+  ECDHE-PSK, driven through memory BIOs with the WebSocket layer over the tunnel
+  (docs/01-protocol.md §4). Verified end-to-end against a real Neff appliance.
+- `hc-util connection-test` now dispatches on the connection type, so it
+  connects both AES and TLS devices (was AES-only).
+- Add-on auto-config: drop the profile ZIP(s) into `/share/homeconnect` and the
+  entrypoint parses **all** of them, writing a keys inventory (`/data/profiles/
+  inventory.json`, 0600). A `devices` entry then only needs `name` + `host` +
+  `haid` — `connection_type`/`psk64`/`iv64`/`description` are auto-filled from the
+  matching ZIP. `hc-util parse` accepts a directory and a `--inventory` flag, and
+  no longer prints secrets when writing an inventory (fixes a key leak into the
+  add-on log). Flags are now honoured after the path argument too.
+
+### Changed
+- The Home Assistant add-on image is now **amd64-only** and built with cgo +
+  OpenSSL (`-tags tlspsk`), so it supports both AES and TLS-PSK appliances out of
+  the box. The CGo-free default `go build` still cross-compiles for AES-only
+  standalone use; TLS devices there report `ErrTLSPSKUnsupported`.
+
 ## [0.1.1] - 2026-06-27
 
 ### Added

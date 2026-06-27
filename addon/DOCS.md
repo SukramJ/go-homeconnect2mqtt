@@ -4,19 +4,17 @@
 
 For a standard Home Assistant install with the Mosquitto broker:
 
-1. Download your appliance profile with the **Home Connect Profile Downloader**
-   (target format *openHAB*) and copy the ZIP to `/share`
-   (e.g. `/share/homeconnect/profile.zip`). Set **`profile_zip`** to that path.
-2. Add one entry per appliance under **`devices`**:
+1. Download your appliance profile(s) with the **Home Connect Profile Downloader**
+   (target format *openHAB*) — one ZIP per appliance — and copy them into
+   **`/share/homeconnect/`** (the add-on creates that folder on first start).
+2. Add one entry per appliance under **`devices`**. With the ZIPs in place you
+   only need three fields:
    - `name` — a logical name (used in MQTT topics).
    - `host` — the appliance's **LAN IP** (mDNS usually does not work from inside
      the container, so set an explicit IP).
-   - `connection_type` — `AES` (newer appliances) or `TLS` (older; see Notes).
-   - `psk64` / `iv64` — the keys printed by `hc-util parse` (the parse log runs
-     on start; you can read the keys from the downloader's `<serial>.json` too).
-   - `haid` — the appliance haId, so the description resolves to
-     `/data/profiles/<haid>.json` (printed in the parse log). Alternatively set
-     `description` to an explicit path.
+   - `haid` — the appliance haId (in the ZIP's `<serial>.json` and the parse
+     log). It auto-fills `connection_type`, `psk64`/`iv64` and the description
+     from the matching ZIP. You can still set any of those explicitly to override.
 3. Leave **`mqtt_server` empty** — the add-on auto-connects to the Home
    Assistant MQTT broker, and `hass_enable` is on by default, so entities appear
    automatically via MQTT discovery.
@@ -27,7 +25,7 @@ For a standard Home Assistant install with the Mosquitto broker:
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `profile_zip` | str | `""` | Path to the Home Connect profile ZIP (e.g. `/share/homeconnect/profile.zip`). Parsed on start into `/data/profiles/<haId>.json`. Optional if you supply explicit `description` paths. |
+| `profile_zip` | str | `""` | Optional explicit path to ONE profile ZIP. If empty, **every `*.zip` in `/share/homeconnect`** is parsed on start. Either way you get `/data/profiles/<haId>.json` descriptions plus a keys inventory used to auto-fill `devices`. |
 | `devices` | list | `[]` | One entry per appliance (see below). |
 | `mqtt_server` | str | `""` | MQTT broker host or full URL. **Leave empty** to auto-use the Home Assistant MQTT broker. |
 | `mqtt_port` | int | `1883` | MQTT broker port (only used when `mqtt_server` is a bare host). |
@@ -43,13 +41,13 @@ For a standard Home Assistant install with the Mosquitto broker:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `name` | str | Logical device name; used in MQTT topics. |
-| `host` | str | Appliance LAN IP or hostname. |
-| `connection_type` | list(AES\|TLS) | `AES` for newer appliances, `TLS` for older (see Notes). |
-| `psk64` | password | Pre-shared key (from `hc-util parse` / `<serial>.json`). |
-| `iv64` | password | Init vector (AES only). |
-| `description` | str? | Explicit path to a parsed description JSON. Omit to derive from `haid`. |
-| `haid` | str? | Appliance haId; resolves the description to `/data/profiles/<haid>.json`. |
+| `name` | str | Logical device name; used in MQTT topics. **Required.** |
+| `host` | str | Appliance LAN IP (or hostname). **Required** (not in the profile). |
+| `haid` | str? | Appliance haId. With the ZIP in `/share/homeconnect` this alone auto-fills `connection_type`, `psk64`/`iv64` and `description`. |
+| `connection_type` | list(AES\|TLS)? | Optional; auto-filled from the ZIP via `haid`. `AES` (newer) or `TLS` (older). |
+| `psk64` | password? | Optional; auto-filled from the ZIP via `haid`. The pre-shared key. |
+| `iv64` | password? | Optional; AES only; auto-filled from the ZIP. |
+| `description` | str? | Optional; defaults to `/data/profiles/<haid>.json`. |
 
 ## Topics
 
@@ -60,13 +58,14 @@ discovery configs are published under `homeassistant/<platform>/<unique_id>/conf
 
 ## Notes
 
-- On first start the add-on creates **`/share/homeconnect/`** — copy your
-  profile ZIP (or pre-parsed `<haId>.json` files) here. Profiles and keys are
-  operator-specific and stay on your Home Assistant host; they are never part of
-  the generic add-on image.
-- The add-on image is CGo-free and supports **AES** appliances (`ws://host:80`).
-  **TLS-PSK** appliances (`wss://host:443`) require a separate cgo build and are
-  not supported by the default add-on image.
+- On first start the add-on creates **`/share/homeconnect/`** — copy your profile
+  ZIP(s) here. On start every `*.zip` is parsed into descriptions plus a keys
+  inventory (`/data/profiles/inventory.json`, 0600, never logged), which auto-fills
+  each `devices` entry from its `haid`. Profiles and keys are operator-specific,
+  stay on your Home Assistant host, and are never part of the generic image.
+- The add-on image (**amd64-only**) is built with cgo + OpenSSL, so it supports
+  both **AES** (`ws://host:80`) and **TLS-PSK** (`wss://host:443`, older
+  appliances) out of the box.
 - `host` should be an explicit LAN IP: multicast mDNS typically does not reach
   the add-on container, so the profile's mDNS default host won't resolve.
 - An appliance that is off/asleep shows as `offline` and reconnects

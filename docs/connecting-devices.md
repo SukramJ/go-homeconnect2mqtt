@@ -127,10 +127,12 @@ devices:
     description: ./profiles/dishwasher.json
 ```
 
-> **AES vs. TLS:** newer appliances use **AES** on `ws://host:80` (default, works
-> with the standard build). Older appliances use **TLS-PSK** on `wss://host:443`,
-> which needs the cgo build: `make build-tlspsk`. With the standard build a TLS
-> device simply reports `offline` (it never blocks the other appliances).
+> **AES vs. TLS:** newer appliances use **AES** on `ws://host:80`; older
+> appliances use **TLS-PSK** on `wss://host:443`. The Home Assistant add-on image
+> (amd64) supports both. For a standalone binary, AES works with the default
+> CGo-free build, while TLS-PSK needs the cgo build (`make build-tlspsk`, requires
+> OpenSSL); with the CGo-free build a TLS device simply reports `offline` (it
+> never blocks the other appliances).
 
 ---
 
