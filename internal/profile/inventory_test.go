@@ -5,10 +5,10 @@ package profile
 
 import (
 	"encoding/json"
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -45,7 +45,7 @@ func TestParseArchiveDir(t *testing.T) {
 	write("broken.zip", []byte("not a zip")) // skipped leniently, not fatal
 	write("notes.txt", []byte("ignore me"))  // not a zip
 
-	profs, err := ParseArchiveDir(dir, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	profs, err := ParseArchiveDir(dir, slog.New(slog.DiscardHandler))
 	if err != nil {
 		t.Fatalf("ParseArchiveDir: %v", err)
 	}
@@ -80,7 +80,8 @@ func TestWriteInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if perm := info.Mode().Perm(); perm != 0o600 {
+	// Windows does not honour Unix permission bits, so only assert on Unix.
+	if perm := info.Mode().Perm(); runtime.GOOS != "windows" && perm != 0o600 {
 		t.Errorf("inventory perms = %o, want 600 (holds secrets)", perm)
 	}
 	var got []InventoryEntry
