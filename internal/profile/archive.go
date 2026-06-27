@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -81,6 +82,38 @@ func ParseArchiveFile(zipPath string, logger *slog.Logger) ([]*DeviceProfile, er
 		return nil, fmt.Errorf("%w: %w", ErrInvalidProfile, err)
 	}
 	return ParseArchiveBytes(data, logger)
+}
+
+// ParseArchiveDir parses every *.zip in dir and aggregates the appliances.
+// An unparseable archive is skipped + logged (lenient loading), not fatal, so
+// one bad ZIP in the drop folder doesn't block the others. It errors only when
+// the directory holds no *.zip at all.
+func ParseArchiveDir(dir string, logger *slog.Logger) ([]*DeviceProfile, error) {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrInvalidProfile, err)
+	}
+	var all []*DeviceProfile
+	var zips int
+	for _, e := range entries {
+		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".zip") {
+			continue
+		}
+		zips++
+		profs, err := ParseArchiveFile(filepath.Join(dir, e.Name()), logger)
+		if err != nil {
+			logger.Warn("profile.skip_archive", slog.String("file", e.Name()), slog.String("err", err.Error()))
+			continue
+		}
+		all = append(all, profs...)
+	}
+	if zips == 0 {
+		return nil, fmt.Errorf("%w: no *.zip in %s", ErrInvalidProfile, dir)
+	}
+	return all, nil
 }
 
 // ParseArchiveBytes parses an in-memory profile ZIP. It finds every *.json

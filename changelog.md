@@ -14,6 +14,13 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
   (docs/01-protocol.md §4). Verified end-to-end against a real Neff appliance.
 - `hc-util connection-test` now dispatches on the connection type, so it
   connects both AES and TLS devices (was AES-only).
+- Add-on auto-config: drop the profile ZIP(s) into `/share/homeconnect` and the
+  entrypoint parses **all** of them, writing a keys inventory (`/data/profiles/
+  inventory.json`, 0600). A `devices` entry then only needs `name` + `host` +
+  `haid` — `connection_type`/`psk64`/`iv64`/`description` are auto-filled from the
+  matching ZIP. `hc-util parse` accepts a directory and a `--inventory` flag, and
+  no longer prints secrets when writing an inventory (fixes a key leak into the
+  add-on log). Flags are now honoured after the path argument too.
 
 ### Changed
 - The Home Assistant add-on image is now **amd64-only** and built with cgo +

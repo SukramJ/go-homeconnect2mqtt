@@ -56,20 +56,37 @@ else
   bashio::log.warning "Could not create ${SHARE_DIR} (is /share mapped?)."
 fi
 
-# --- Optional: parse the Home Connect profile ZIP into device descriptions ---
+# --- Parse profile ZIPs into descriptions + a keys inventory ---
+# Source: an explicit profile_zip (single file) wins; otherwise EVERY *.zip in
+# the /share/homeconnect drop folder. The inventory (keys, 0600) lets each
+# device be filled from just its haId — no need to paste psk64/connection_type.
 PROFILES="/data/profiles"
 mkdir -p "${PROFILES}"
+INVENTORY="${PROFILES}/inventory.json"
+rm -f "${INVENTORY}"
+
+ZIP_SRC=""
 if bashio::config.has_value 'profile_zip'; then
-  ZIP="$(bashio::config 'profile_zip')"
-  if [ -f "${ZIP}" ]; then
-    bashio::log.info "Parsing profile archive ${ZIP} -> ${PROFILES}"
-    if ! hc-util parse "${ZIP}" --out "${PROFILES}"; then
-      bashio::log.warning "hc-util parse failed; relying on explicit 'description' paths."
-    fi
-  else
-    bashio::log.warning "profile_zip '${ZIP}' not found (is /share mapped and the path correct?)."
+  ZIP_SRC="$(bashio::config 'profile_zip')"
+  if [ ! -f "${ZIP_SRC}" ]; then
+    bashio::log.warning "profile_zip '${ZIP_SRC}' not found (is /share mapped?)."
+    ZIP_SRC=""
+  fi
+elif ls "${SHARE_DIR}"/*.zip >/dev/null 2>&1; then
+  ZIP_SRC="${SHARE_DIR}"
+fi
+if [ -n "${ZIP_SRC}" ]; then
+  bashio::log.info "Parsing profiles from ${ZIP_SRC} -> ${PROFILES}"
+  if ! hc-util parse "${ZIP_SRC}" --out "${PROFILES}" --inventory "${INVENTORY}"; then
+    bashio::log.warning "hc-util parse failed; relying on explicit device fields."
   fi
 fi
+
+# Look up a field from the inventory by haId (empty if absent).
+inv_get() { # $1=haId  $2=jq field
+  [ -f "${INVENTORY}" ] || return 0
+  jq -r --arg h "$1" --arg f "$2" '(.[] | select(.haId==$h) | .[$f]) // empty' "${INVENTORY}" 2>/dev/null
+}
 
 # --- Build devices.yaml from the 'devices' option list ---
 DEVICES="/data/devices.yaml"
@@ -84,25 +101,29 @@ if [ -n "$(bashio::config 'devices|keys')" ]; then
     desc="$(bashio::config "devices[${i}].description")"
     haid="$(bashio::config "devices[${i}].haid")"
 
-    if [ -z "${desc}" ] || [ "${desc}" = "null" ]; then
-      desc=""
-      if [ -n "${haid}" ] && [ "${haid}" != "null" ]; then
-        desc="${PROFILES}/${haid}.json"
-      fi
+    # bashio yields "null" for unset optional fields; normalise to empty.
+    [ "${ctype}" = "null" ] && ctype=""
+    [ "${psk}" = "null" ] && psk=""
+    [ "${iv}" = "null" ] && iv=""
+    [ "${desc}" = "null" ] && desc=""
+    [ "${haid}" = "null" ] && haid=""
+
+    # Auto-fill from the parsed ZIP inventory by haId (operator values win).
+    if [ -n "${haid}" ]; then
+      [ -z "${ctype}" ] && ctype="$(inv_get "${haid}" connectionType)"
+      [ -z "${psk}" ] && psk="$(inv_get "${haid}" psk64)"
+      [ -z "${iv}" ] && iv="$(inv_get "${haid}" iv64)"
+      [ -z "${desc}" ] && desc="${PROFILES}/${haid}.json"
     fi
 
     {
       echo "  - name: \"${name}\""
       echo "    host: \"${host}\""
-      echo "    connection_type: ${ctype}"
+      if [ -n "${ctype}" ]; then echo "    connection_type: ${ctype}"; fi
       echo "    psk64: \"${psk}\""
     } >> "${DEVICES}"
-    if [ -n "${iv}" ] && [ "${iv}" != "null" ]; then
-      echo "    iv64: \"${iv}\"" >> "${DEVICES}"
-    fi
-    if [ -n "${desc}" ]; then
-      echo "    description: \"${desc}\"" >> "${DEVICES}"
-    fi
+    if [ -n "${iv}" ]; then echo "    iv64: \"${iv}\"" >> "${DEVICES}"; fi
+    if [ -n "${desc}" ]; then echo "    description: \"${desc}\"" >> "${DEVICES}"; fi
   done
 else
   bashio::log.warning "No devices configured under 'devices'."

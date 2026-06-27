@@ -38,22 +38,21 @@ Two ways to supply it to the add-on:
   description files somewhere under `/share`, referencing them via each device's
   `description` option.
 
-Either way, set the per-appliance `host` (its LAN IP — mDNS usually does not
-work from inside the container) and paste the `psk64`/`iv64` keys (printed by
-`hc-util parse`) into the `devices` list.
+With the ZIP(s) in `/share/homeconnect`, each `devices` entry then only needs a
+`name`, the appliance's `host` (its LAN IP — mDNS usually does not work from
+inside the container) and its `haid`; `connection_type`, `psk64`/`iv64` and the
+description are auto-filled from the matching ZIP (set any explicitly to override).
 
 ## Configuration example
 
 ```yaml
-profile_zip: /share/homeconnect/profile.zip
+# Copy your profile ZIP(s) into /share/homeconnect first. Then per appliance you
+# only need name + host + haid — the rest is auto-filled from the ZIP:
 devices:
   - name: dishwasher
     host: 192.168.1.50
-    connection_type: AES
-    psk64: "<key from hc-util parse>"
-    iv64: "<iv from hc-util parse>"
-    haid: "0102030405"          # resolves description to /data/profiles/0102030405.json
-mqtt_server: ""                  # empty = use the Home Assistant MQTT broker
+    haid: "0102030405"     # auto-fills connection_type, psk64/iv64, description
+mqtt_server: ""             # empty = use the Home Assistant MQTT broker
 hass_enable: true
 web_enable: true
 ```

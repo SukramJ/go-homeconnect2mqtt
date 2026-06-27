@@ -60,11 +60,11 @@ schema:
   devices:
     - name: str
       host: str
-      connection_type: "list(AES|TLS)"
-      psk64: password
+      haid: "str?"
+      connection_type: "list(AES|TLS)?"
+      psk64: "password?"
       iv64: "password?"
       description: "str?"
-      haid: "str?"
   mqtt_server: "str?"
   mqtt_port: port
   mqtt_login: "str?"
