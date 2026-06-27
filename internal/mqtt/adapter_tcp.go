@@ -337,7 +337,7 @@ func (c *TCPClient) dial(ctx context.Context, u *url.URL) (net.Conn, error) {
 		if err != nil {
 			return nil, err
 		}
-		tlsConn := tls.Client(tcpConn, c.cfg.TLSConfig)
+		tlsConn := tls.Client(tcpConn, tlsConfigFor(c.cfg.TLSConfig, u.Hostname()))
 		if err := tlsConn.HandshakeContext(ctx); err != nil {
 			_ = tcpConn.Close()
 			return nil, err
@@ -345,6 +345,23 @@ func (c *TCPClient) dial(ctx context.Context, u *url.URL) (net.Conn, error) {
 		return tlsConn, nil
 	}
 	return nil, fmt.Errorf("mqtt/tcp: unsupported scheme %q", u.Scheme)
+}
+
+// tlsConfigFor returns the TLS config to use for an ssl:// broker. crypto/tls
+// requires a ServerName (or InsecureSkipVerify) or the handshake fails with
+// "either ServerName or InsecureSkipVerify must be specified"; default
+// ServerName to the broker host so verification works without extra config.
+// The input is never mutated.
+func tlsConfigFor(base *tls.Config, host string) *tls.Config {
+	if base == nil {
+		base = &tls.Config{MinVersion: tls.VersionTLS12}
+	} else {
+		base = base.Clone()
+	}
+	if base.ServerName == "" && !base.InsecureSkipVerify {
+		base.ServerName = host
+	}
+	return base
 }
 
 type frameEncoder interface {

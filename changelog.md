@@ -5,6 +5,16 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-06-27
+
+### Fixed
+- Add-on MQTT auto-discovery used the wrong scheme: `run.sh` tested the exit
+  code of `bashio::services 'mqtt' 'ssl'` (always 0) instead of its value, so it
+  always built `ssl://` and failed against the plaintext Home Assistant Mosquitto
+  broker. Test the value now.
+- MQTT TLS dial failed with "either ServerName or InsecureSkipVerify must be
+  specified": default the TLS `ServerName` to the broker host for `ssl://` URLs.
+
 ## [0.2.0] - 2026-06-27
 
 ### Added
