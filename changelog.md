@@ -5,6 +5,16 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-06-27
+
+### Added
+- Localize the remaining device-specific enum/dropdown values: ~300 member
+  labels harvested from the appliance profiles — settings/statuses the official
+  integration does not expose as selects (hob key-lock/buzzer/timer, washer
+  textile type, language codes, …) — are now German too. The enum catalogue grew
+  to ~700 members. Verified end-to-end across the real dishwasher, washer and
+  hob: **100 %** of entity names *and* enum/dropdown values localized.
+
 ## [0.5.0] - 2026-06-27
 
 ### Added
