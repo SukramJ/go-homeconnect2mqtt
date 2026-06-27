@@ -39,3 +39,4 @@ go.work.sum
 # operator-local runtime config (templates are tracked)
 config.yaml
 devices.yaml
+/tmp
