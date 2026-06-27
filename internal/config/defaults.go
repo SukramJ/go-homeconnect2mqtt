@@ -11,7 +11,7 @@ const (
 	DefaultMQTTQoS            = 1
 	DefaultHASSBaseTopic      = "homeassistant"
 	DefaultHASSBirthGracetime = 15
-	DefaultHASSDiscovery      = "full"
+	DefaultHASSDiscovery      = "curated"
 	DefaultAppName            = "go-homeconnect2mqtt"
 	DefaultReconnectInitial   = 1
 	DefaultReconnectMax       = 30

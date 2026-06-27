@@ -11,87 +11,65 @@
 features:
   # ---- BSH.Common ----
   BSH.Common.Appliance.Connected:
-    name: ""
+    name: 
     device_class: connectivity
     enabled_by_default: true
   BSH.Common.Appliance.Depaired:
     name: Depaired
     name_de: Entkoppelt
+    enabled_by_default: false
   BSH.Common.Appliance.Disconnected:
     name: Disconnected
     name_de: Getrennt
+    enabled_by_default: false
   BSH.Common.Appliance.Paired:
     name: Paired
     name_de: Gekoppelt
-  BSH.Common.Event.Favorite.001.ExternalTrigger:
-    name: External Trigger
-    name_de: Externer Auslöser
-  BSH.Common.Event.Favorite.002.ExternalTrigger:
-    name: External Trigger
-    name_de: Externer Auslöser
-  BSH.Common.Option.BaseProgram:
-    name: Base Program
-    name_de: Basisprogramm
-  BSH.Common.Option.CurrentStepRemainingTime:
-    name: Current Step Remaining Time
-    name_de: Restzeit aktueller Schritt
-  BSH.Common.Option.ElapsedProgramTime:
-    name: Elapsed Program Time
-    name_de: Vergangene Programmzeit
-  BSH.Common.Option.EnergyForecast:
-    name: Energy Forecast
-    name_de: Energieprognose
-  BSH.Common.Option.EstimatedTotalProgramTime:
-    name: Estimated Total Program Time
-    name_de: Geschätzte Gesamtprogrammzeit
-  BSH.Common.Option.ProgramName:
-    name: Program Name
-    name_de: Programmname
-  BSH.Common.Option.RemainingProgramTime.AutoCounting:
-    name: Auto Counting
-    name_de: Automatische Zählung
-  BSH.Common.Option.RemainingProgramTimeEstimationState:
-    name: Remaining Program Time Estimation State
-    name_de: Schätzstatus der Restprogrammzeit
-  BSH.Common.Option.RemainingProgramTimeIsEstimated:
-    name: Remaining Program Time Is Estimated
-    name_de: Restprogrammzeit ist geschätzt
-  BSH.Common.Option.SmartEnergyService.SmartStartEnabled:
-    name: Smart Start Enabled
-    name_de: Smart-Start aktiviert
-  BSH.Common.Option.WaterForecast:
-    name: Water Forecast
-    name_de: Wasserprognose
-  BSH.Common.Status.BatteryChargingState:
-    name: Battery charging state
-    name_de: Batterieladezustand
-    device_class: battery_charging
-    enabled_by_default: true
-  BSH.Common.Status.ChargingConnection:
-    name: Charging connection
-    name_de: Ladeverbindung
-    device_class: plug
-    enabled_by_default: true
-  BSH.Common.Status.InteriorIlluminationActive:
-    name: Interior illumination active
-    name_de: Innenbeleuchtung
-    device_class: light
-    enabled_by_default: true
-  BSH.Common.Status.LocalControlActive:
-    name: Local control
-    name_de: Lokale Steuerung
-    enabled_by_default: true
-  BSH.Common.Status.RemoteControlActive:
-    name: Remote control
-    name_de: Fernsteuerung
-    enabled_by_default: true
-  BSH.Common.Status.RemoteControlStartAllowed:
-    name: Remote start
-    name_de: Fernstart
-    enabled_by_default: true
+    enabled_by_default: false
+  BSH.Common.Command.AbortProgram:
+    name: Abort Program
+    name_de: Programm abbrechen
+    enabled_by_default: false
   BSH.Common.Command.AcknowledgeEvent:
     name: Acknowledge Event
     name_de: Ereignis bestätigen
+    enabled_by_default: false
+  BSH.Common.Command.AllowCustomerServiceConnectionLocalWiFi:
+    name: Allow Customer Service Connection Local Wi Fi
+    name_de: Lokale WLAN-Kundendienstverbindung erlauben
+    enabled_by_default: false
+  BSH.Common.Command.AllowSoftwareDownload:
+    name: Allow Software Download
+    name_de: Software-Download erlauben
+    enabled_by_default: false
+  BSH.Common.Command.AllowSoftwareUpdate:
+    name: Allow Software Update
+    name_de: Software-Update erlauben
+    enabled_by_default: false
+  BSH.Common.Command.ApplyFactoryReset:
+    name: Apply Factory Reset
+    name_de: Auf Werkseinstellungen zurücksetzen
+    enabled_by_default: false
+  BSH.Common.Command.ApplyNetworkReset:
+    name: Apply Network Reset
+    name_de: Netzwerk zurücksetzen
+    enabled_by_default: false
+  BSH.Common.Command.ConnectLocalCustomerService:
+    name: Connect Local Customer Service
+    name_de: Lokalen Kundendienst verbinden
+    enabled_by_default: false
+  BSH.Common.Command.DeactivateRemoteControlStart:
+    name: Deactivate Remote Control Start
+    name_de: Fernstart deaktivieren
+    enabled_by_default: false
+  BSH.Common.Command.DeactivateWiFi:
+    name: Deactivate Wi Fi
+    name_de: WLAN deaktivieren
+    enabled_by_default: false
+  BSH.Common.Command.DisallowCustomerServiceConnection:
+    name: Disallow Customer Service Connection
+    name_de: Kundendienstverbindung verbieten
+    enabled_by_default: false
   BSH.Common.Command.OpenDoor:
     name: Open door
     name_de: Tür öffnen
@@ -104,82 +82,22 @@ features:
     name: Pause program
     name_de: Programm pausieren
     enabled_by_default: true
+  BSH.Common.Command.RejectEvent:
+    name: Reject Event
+    name_de: Ereignis ablehnen
+    enabled_by_default: false
   BSH.Common.Command.ResumeProgram:
     name: Resume program
     name_de: Programm fortsetzen
     enabled_by_default: true
-  BSH.Common.Setting.AmbientLightEnabled:
-    name: Ambient light
-    name_de: Umgebungslicht
-    enabled_by_default: true
-  BSH.Common.Option.Duration:
-    name: Duration
-    name_de: Dauer
-    enabled_by_default: true
-  BSH.Common.Option.FinishInRelative:
-    name: Finish in relative
-    name_de: Beenden in relativ
-    enabled_by_default: true
-  BSH.Common.Option.StartInRelative:
-    name: Start in relative
-    name_de: Start in relativ
-    enabled_by_default: true
-  BSH.Common.Setting.AlarmClock:
-    name: Alarm clock
-    name_de: Wecker
-    device_class: duration
-    enabled_by_default: true
-  BSH.Common.Root.ActiveProgram:
-    name: Active program
-    name_de: Aktives Programm
-    enabled_by_default: true
-  BSH.Common.Root.SelectedProgram:
-    name: Selected program
-    name_de: Ausgewähltes Programm
-    enabled_by_default: true
-  BSH.Common.Setting.AmbientLightColor:
-    name: Ambient light color
-    name_de: Umgebungslichtfarbe
-    enabled_by_default: true
-  BSH.Common.Command.AbortProgram:
-    name: Abort Program
-    name_de: Programm abbrechen
-  BSH.Common.Command.AllowCustomerServiceConnectionLocalWiFi:
-    name: Allow Customer Service Connection Local Wi Fi
-    name_de: Lokale WLAN-Kundendienstverbindung erlauben
-  BSH.Common.Command.AllowSoftwareDownload:
-    name: Allow Software Download
-    name_de: Software-Download erlauben
-  BSH.Common.Command.AllowSoftwareUpdate:
-    name: Allow Software Update
-    name_de: Software-Update erlauben
-  BSH.Common.Command.ApplyFactoryReset:
-    name: Apply Factory Reset
-    name_de: Auf Werkseinstellungen zurücksetzen
-  BSH.Common.Command.ApplyNetworkReset:
-    name: Apply Network Reset
-    name_de: Netzwerk zurücksetzen
-  BSH.Common.Command.ConnectLocalCustomerService:
-    name: Connect Local Customer Service
-    name_de: Lokalen Kundendienst verbinden
-  BSH.Common.Command.DeactivateRemoteControlStart:
-    name: Deactivate Remote Control Start
-    name_de: Fernstart deaktivieren
-  BSH.Common.Command.DeactivateWiFi:
-    name: Deactivate Wi Fi
-    name_de: WLAN deaktivieren
-  BSH.Common.Command.DisallowCustomerServiceConnection:
-    name: Disallow Customer Service Connection
-    name_de: Kundendienstverbindung verbieten
-  BSH.Common.Command.RejectEvent:
-    name: Reject Event
-    name_de: Ereignis ablehnen
   BSH.Common.Command.SetWaterHardness:
     name: Set Water Hardness
     name_de: Wasserhärte einstellen
+    enabled_by_default: false
   BSH.Common.Command.StartBluetoothPresenceDetection:
     name: Start Bluetooth Presence Detection
     name_de: Bluetooth-Anwesenheitserkennung starten
+    enabled_by_default: false
   BSH.Common.Event.AlarmClockElapsed:
     name: Alarm clock elapsed
     name_de: Wecker abgelaufen
@@ -188,24 +106,39 @@ features:
   BSH.Common.Event.AquaStopOccured:
     name: Aqua Stop Occured
     name_de: Aqua-Stop ausgelöst
+    enabled_by_default: false
   BSH.Common.Event.ConfirmPermanentRemoteStart:
     name: Confirm Permanent Remote Start
     name_de: Dauerhaften Fernstart bestätigen
+    enabled_by_default: false
   BSH.Common.Event.ConnectLocalWiFi:
     name: Connect Local Wi Fi
     name_de: Lokales WLAN verbinden
+    enabled_by_default: false
   BSH.Common.Event.CustomerServiceRequest:
     name: Customer Service Request
     name_de: Kundendienstanfrage
+    enabled_by_default: false
   BSH.Common.Event.DemoModeRunning:
     name: Demo Mode Running
     name_de: Demomodus aktiv
+    enabled_by_default: false
+  BSH.Common.Event.Favorite.001.ExternalTrigger:
+    name: External Trigger
+    name_de: Externer Auslöser
+    enabled_by_default: false
+  BSH.Common.Event.Favorite.002.ExternalTrigger:
+    name: External Trigger
+    name_de: Externer Auslöser
+    enabled_by_default: false
   BSH.Common.Event.HomeConnectApplianceDataMissing:
     name: Home Connect Appliance Data Missing
     name_de: Home-Connect-Gerätedaten fehlen
+    enabled_by_default: false
   BSH.Common.Event.LowWaterPressure:
     name: Low Water Pressure
     name_de: Niedriger Wasserdruck
+    enabled_by_default: false
   BSH.Common.Event.ProgramAborted:
     name: Program aborted
     name_de: Programm abgebrochen
@@ -219,15 +152,51 @@ features:
   BSH.Common.Event.SoftwareDownloadAvailable:
     name: Software Download Available
     name_de: Software-Download verfügbar
+    enabled_by_default: false
   BSH.Common.Event.SoftwareUpdateAvailable:
     name: Software Update Available
     name_de: Software-Update verfügbar
+    enabled_by_default: false
   BSH.Common.Event.SoftwareUpdateSuccessful:
     name: Software Update Successful
     name_de: Software-Update erfolgreich
+    enabled_by_default: false
+  BSH.Common.Option.BaseProgram:
+    name: Base Program
+    name_de: Basisprogramm
+    enabled_by_default: false
   BSH.Common.Option.BluetoothPresenceToken:
     name: Bluetooth Presence Token
     name_de: Bluetooth-Anwesenheitstoken
+    enabled_by_default: false
+  BSH.Common.Option.CurrentStepRemainingTime:
+    name: Current Step Remaining Time
+    name_de: Restzeit aktueller Schritt
+    enabled_by_default: false
+  BSH.Common.Option.Duration:
+    name: Duration
+    name_de: Dauer
+    enabled_by_default: true
+  BSH.Common.Option.ElapsedProgramTime:
+    name: Elapsed Program Time
+    name_de: Vergangene Programmzeit
+    enabled_by_default: false
+  BSH.Common.Option.EnergyForecast:
+    name: Energy Forecast
+    name_de: Energieprognose
+    enabled_by_default: false
+  BSH.Common.Option.EstimatedTotalProgramTime:
+    name: Estimated Total Program Time
+    name_de: Geschätzte Gesamtprogrammzeit
+    enabled_by_default: false
+  BSH.Common.Option.FinishInRelative:
+    name: Finish in relative
+    name_de: Beenden in relativ
+    enabled_by_default: true
+  BSH.Common.Option.ProgramName:
+    name: Program Name
+    name_de: Programmname
+    enabled_by_default: false
   BSH.Common.Option.ProgramProgress:
     name: Program progress
     name_de: Programm-Fortschritt
@@ -237,61 +206,172 @@ features:
     name_de: Programm-Endzeit
     device_class: timestamp
     enabled_by_default: true
+  BSH.Common.Option.RemainingProgramTime.AutoCounting:
+    name: Auto Counting
+    name_de: Automatische Zählung
+    enabled_by_default: false
+  BSH.Common.Option.RemainingProgramTimeEstimationState:
+    name: Remaining Program Time Estimation State
+    name_de: Schätzstatus der Restprogrammzeit
+    enabled_by_default: false
+  BSH.Common.Option.RemainingProgramTimeIsEstimated:
+    name: Remaining Program Time Is Estimated
+    name_de: Restprogrammzeit ist geschätzt
+    enabled_by_default: false
+  BSH.Common.Option.SmartEnergyService.SmartStartEnabled:
+    name: Smart Start Enabled
+    name_de: Smart-Start aktiviert
+    enabled_by_default: false
+  BSH.Common.Option.StartInRelative:
+    name: Start in relative
+    name_de: Start in relativ
+    enabled_by_default: true
+  BSH.Common.Option.WaterForecast:
+    name: Water Forecast
+    name_de: Wasserprognose
+    enabled_by_default: false
+  BSH.Common.Root.ActiveProgram:
+    name: Active program
+    name_de: Aktives Programm
+    enabled_by_default: true
   BSH.Common.Root.ProtectionPort:
     name: Protection Port
     name_de: Schutzport
+    enabled_by_default: false
+  BSH.Common.Root.SelectedProgram:
+    name: Selected program
+    name_de: Ausgewähltes Programm
+    enabled_by_default: true
+  BSH.Common.Setting.AlarmClock:
+    name: Alarm clock
+    name_de: Wecker
+    device_class: duration
+    enabled_by_default: true
+  BSH.Common.Setting.AllowBackendConnection:
+    name: Allow cloud connection
+    name_de: Cloud-Verbindung erlauben
+    entity_category: config
+    enabled_by_default: false
+  BSH.Common.Setting.AmbientLightBrightness:
+    name: Ambient Light Brightness
+    name_de: Umgebungslicht-Helligkeit
+    enabled_by_default: false
+  BSH.Common.Setting.AmbientLightColor:
+    name: Ambient light color
+    name_de: Umgebungslichtfarbe
+    enabled_by_default: true
+  BSH.Common.Setting.AmbientLightCustomColor:
+    name: Ambient Light Custom Color
+    name_de: Benutzerdefinierte Umgebungslichtfarbe
+    enabled_by_default: false
+  BSH.Common.Setting.AmbientLightEnabled:
+    name: Ambient light
+    name_de: Umgebungslicht
+    enabled_by_default: true
   BSH.Common.Setting.ApplianceDateTime:
     name: Appliance Date Time
     name_de: Gerätedatum und -uhrzeit
+    enabled_by_default: false
   BSH.Common.Setting.ApplianceTime:
     name: Appliance Time
     name_de: Gerätezeit
+    enabled_by_default: false
+  BSH.Common.Setting.ChildLock:
+    name: Child lock
+    name_de: Kindersicherung
+    enabled_by_default: true
   BSH.Common.Setting.Favorite.001.Functionality:
     name: Functionality
     name_de: Funktion
+    enabled_by_default: false
   BSH.Common.Setting.Favorite.001.Name:
     name: Name
     name_de: Name
+    enabled_by_default: false
   BSH.Common.Setting.Favorite.001.Program:
     name: Program
     name_de: Programm
+    enabled_by_default: false
   BSH.Common.Setting.Favorite.002.Functionality:
     name: Functionality
     name_de: Funktion
+    enabled_by_default: false
   BSH.Common.Setting.Favorite.002.Name:
     name: Name
     name_de: Name
+    enabled_by_default: false
   BSH.Common.Setting.Favorite.002.Program:
     name: Program
     name_de: Programm
+    enabled_by_default: false
   BSH.Common.Setting.Language:
     name: Language
     name_de: Sprache
+    enabled_by_default: false
+  BSH.Common.Setting.LiquidVolumeUnit:
+    name: Liquid Volume Unit
+    name_de: Flüssigkeitsvolumen-Einheit
+    enabled_by_default: false
+  BSH.Common.Setting.PowerState:
+    name: Power
+    name_de: Einschalter
+    enabled_by_default: true
+  BSH.Common.Setting.RemoteControlLevel:
+    name: Remote control level
+    name_de: Fernsteuerungsstufe
+    entity_category: config
+    enabled_by_default: false
   BSH.Common.Setting.SmartEnergyService.AutoSmartStartEnabled:
     name: Auto Smart Start Enabled
     name_de: Automatischer Smart-Start aktiviert
+    enabled_by_default: false
   BSH.Common.Setting.SynchronizeWithTimeServer:
     name: Synchronize With Time Server
     name_de: Mit Zeitserver synchronisieren
+    enabled_by_default: false
+  BSH.Common.Setting.TemperatureUnit:
+    name: Temperature Unit
+    name_de: Temperatureinheit
+    enabled_by_default: false
   BSH.Common.Setting.Time.DisplayMode:
     name: Display Mode
     name_de: Anzeigemodus
+    enabled_by_default: false
   BSH.Common.Setting.TimeFormat:
     name: Time Format
     name_de: Zeitformat
+    enabled_by_default: false
   BSH.Common.Setting.Timezone:
     name: Timezone
     name_de: Zeitzone
+    enabled_by_default: false
+  BSH.Common.Status.BackendConnected:
+    name: Cloud connected
+    name_de: Cloud verbunden
+    entity_category: diagnostic
+    enabled_by_default: false
+  BSH.Common.Status.BatteryChargingState:
+    name: Battery charging state
+    name_de: Batterieladezustand
+    device_class: battery_charging
+    enabled_by_default: true
   BSH.Common.Status.BatteryLevel:
-    name: ""
+    name: 
     device_class: battery
     enabled_by_default: true
   BSH.Common.Status.BluetoothPresenceDetection:
     name: Bluetooth Presence Detection
     name_de: Bluetooth-Anwesenheitserkennung
+    enabled_by_default: false
+  BSH.Common.Status.ChargingConnection:
+    name: Charging connection
+    name_de: Ladeverbindung
+    device_class: plug
+    enabled_by_default: true
   BSH.Common.Status.CustomerServiceConnectionAllowed:
     name: Customer Service Connection Allowed
     name_de: Kundendienstverbindung erlaubt
+    enabled_by_default: false
   BSH.Common.Status.DoorState:
     name: Door
     name_de: Tür
@@ -300,9 +380,20 @@ features:
   BSH.Common.Status.ErrorCodesList:
     name: Error Codes List
     name_de: Fehlercodeliste
+    enabled_by_default: false
   BSH.Common.Status.Favorite.Handling:
     name: Handling
     name_de: Handhabung
+    enabled_by_default: false
+  BSH.Common.Status.InteriorIlluminationActive:
+    name: Interior illumination active
+    name_de: Innenbeleuchtung
+    device_class: light
+    enabled_by_default: true
+  BSH.Common.Status.LocalControlActive:
+    name: Local control
+    name_de: Lokale Steuerung
+    enabled_by_default: true
   BSH.Common.Status.OperationState:
     name: Operation state
     name_de: Betriebszustand
@@ -311,18 +402,37 @@ features:
   BSH.Common.Status.Power.On.All.Time:
     name: Time
     name_de: Zeit
+    enabled_by_default: false
+  BSH.Common.Status.Program.All.Count.Started:
+    name: Programs started
+    name_de: Programme gestartet
+    state_class: total_increasing
+    entity_category: diagnostic
+    enabled_by_default: false
   BSH.Common.Status.ProgramRunDetail.EndTrigger:
     name: End Trigger
     name_de: Endauslöser
+    enabled_by_default: false
   BSH.Common.Status.ProgramSessionSummary.Latest:
     name: Latest
     name_de: Letzte
+    enabled_by_default: false
+  BSH.Common.Status.RemoteControlActive:
+    name: Remote control
+    name_de: Fernsteuerung
+    enabled_by_default: true
+  BSH.Common.Status.RemoteControlStartAllowed:
+    name: Remote start
+    name_de: Fernstart
+    enabled_by_default: true
   BSH.Common.Status.RemoteControlStartAllowedSince:
     name: Remote Control Start Allowed Since
     name_de: Fernstart erlaubt seit
+    enabled_by_default: false
   BSH.Common.Status.SoftwareUpdateTransactionID:
     name: Software Update Transaction ID
     name_de: Software-Update-Transaktions-ID
+    enabled_by_default: false
   BSH.Common.Status.Video.CameraState:
     name: Camera state
     name_de: Kamerastatus
@@ -331,61 +441,12 @@ features:
   BSH.Common.Status.WiFiSignalStrength:
     name: Wi Fi Signal Strength
     name_de: WLAN-Signalstärke
+    enabled_by_default: false
   BSH.Common.Status.WipeProtectionActive:
     name: Wipe Protection Active
     name_de: Wischschutz aktiv
-  BSH.Common.Setting.AmbientLightBrightness:
-    name: Ambient Light Brightness
-    name_de: Umgebungslicht-Helligkeit
-  BSH.Common.Setting.AmbientLightCustomColor:
-    name: Ambient Light Custom Color
-    name_de: Benutzerdefinierte Umgebungslichtfarbe
-  BSH.Common.Setting.ChildLock:
-    name: Child lock
-    name_de: Kindersicherung
-    enabled_by_default: true
-  BSH.Common.Setting.LiquidVolumeUnit:
-    name: Liquid Volume Unit
-    name_de: Flüssigkeitsvolumen-Einheit
-  BSH.Common.Setting.PowerState:
-    name: Power
-    name_de: Einschalter
-    enabled_by_default: true
-  BSH.Common.Setting.TemperatureUnit:
-    name: Temperature Unit
-    name_de: Temperatureinheit
+    enabled_by_default: false
   # ---- ConsumerProducts.CleaningRobot ----
-  ConsumerProducts.CleaningRobot.Option.ProcessPhase:
-    name: Process Phase
-    name_de: Prozessphase
-  ConsumerProducts.CleaningRobot.Status.DustBoxInserted:
-    name: Dust box
-    name_de: Staubbehälter
-    enabled_by_default: true
-  ConsumerProducts.CleaningRobot.Status.Lifted:
-    name: Lifted
-    name_de: Angehoben
-    enabled_by_default: true
-  ConsumerProducts.CleaningRobot.Status.Lost:
-    name: Lost
-    name_de: Verloren
-    enabled_by_default: true
-  ConsumerProducts.CleaningRobot.Option.CleaningMode:
-    name: Cleaning mode
-    name_de: Reinigungsmodus
-    enabled_by_default: true
-  ConsumerProducts.CleaningRobot.Option.ReferenceMapId:
-    name: Reference map ID
-    name_de: Referenzkarten-ID
-    enabled_by_default: true
-  ConsumerProducts.CleaningRobot.Option.SuctionPower:
-    name: Suction power
-    name_de: Saugkraft
-    enabled_by_default: true
-  ConsumerProducts.CleaningRobot.Setting.CurrentMap:
-    name: Current map
-    name_de: Aktuelle Karte
-    enabled_by_default: true
   ConsumerProducts.CleaningRobot.Event.DockingStationNotFound:
     name: Docking station not found
     name_de: Ladestation nicht gefunden
@@ -401,112 +462,87 @@ features:
     name_de: Roboter steckt fest
     device_class: enum
     enabled_by_default: true
+  ConsumerProducts.CleaningRobot.Option.CleaningMode:
+    name: Cleaning mode
+    name_de: Reinigungsmodus
+    enabled_by_default: true
+  ConsumerProducts.CleaningRobot.Option.ProcessPhase:
+    name: Process Phase
+    name_de: Prozessphase
+    enabled_by_default: false
+  ConsumerProducts.CleaningRobot.Option.ReferenceMapId:
+    name: Reference map ID
+    name_de: Referenzkarten-ID
+    enabled_by_default: true
+  ConsumerProducts.CleaningRobot.Option.SuctionPower:
+    name: Suction power
+    name_de: Saugkraft
+    enabled_by_default: true
+  ConsumerProducts.CleaningRobot.Setting.CurrentMap:
+    name: Current map
+    name_de: Aktuelle Karte
+    enabled_by_default: true
+  ConsumerProducts.CleaningRobot.Setting.NameOfMap1:
+    name: Name Of Map 1
+    name_de: Name Karte 1
+    enabled_by_default: false
+  ConsumerProducts.CleaningRobot.Setting.NameOfMap2:
+    name: Name Of Map 2
+    name_de: Name Karte 2
+    enabled_by_default: false
+  ConsumerProducts.CleaningRobot.Setting.NameOfMap3:
+    name: Name Of Map 3
+    name_de: Name Karte 3
+    enabled_by_default: false
+  ConsumerProducts.CleaningRobot.Setting.NameOfMap4:
+    name: Name Of Map 4
+    name_de: Name Karte 4
+    enabled_by_default: false
+  ConsumerProducts.CleaningRobot.Setting.NameOfMap5:
+    name: Name Of Map 5
+    name_de: Name Karte 5
+    enabled_by_default: false
+  ConsumerProducts.CleaningRobot.Status.DustBoxInserted:
+    name: Dust box
+    name_de: Staubbehälter
+    enabled_by_default: true
   ConsumerProducts.CleaningRobot.Status.LastSelectedMap:
     name: Last selected map
     name_de: Zuletzt ausgewählte Karte
     device_class: enum
     enabled_by_default: true
-  ConsumerProducts.CleaningRobot.Setting.NameOfMap1:
-    name: Name Of Map 1
-    name_de: Name Karte 1
-  ConsumerProducts.CleaningRobot.Setting.NameOfMap2:
-    name: Name Of Map 2
-    name_de: Name Karte 2
-  ConsumerProducts.CleaningRobot.Setting.NameOfMap3:
-    name: Name Of Map 3
-    name_de: Name Karte 3
-  ConsumerProducts.CleaningRobot.Setting.NameOfMap4:
-    name: Name Of Map 4
-    name_de: Name Karte 4
-  ConsumerProducts.CleaningRobot.Setting.NameOfMap5:
-    name: Name Of Map 5
-    name_de: Name Karte 5
+  ConsumerProducts.CleaningRobot.Status.Lifted:
+    name: Lifted
+    name_de: Angehoben
+    enabled_by_default: true
+  ConsumerProducts.CleaningRobot.Status.Lost:
+    name: Lost
+    name_de: Verloren
+    enabled_by_default: true
   # ---- ConsumerProducts.CoffeeMaker ----
-  ConsumerProducts.CoffeeMaker.Option.AromaSelect:
-    name: Aroma Select
-    name_de: Aromaauswahl
-  ConsumerProducts.CoffeeMaker.Option.BeverageSize:
-    name: Beverage Size
-    name_de: Getränkegröße
-  ConsumerProducts.CoffeeMaker.Option.BeveragesRemaining:
-    name: Beverages Remaining
-    name_de: Verbleibende Getränke
-  ConsumerProducts.CoffeeMaker.Option.Coarsness:
-    name: Coarsness
-    name_de: Mahlgrad
-  ConsumerProducts.CoffeeMaker.Option.Coarsness.Recommendation:
-    name: Recommendation
-    name_de: Empfehlung
-  ConsumerProducts.CoffeeMaker.Option.CoffeeStrength:
-    name: Coffee Strength
-    name_de: Kaffeestärke
-  ConsumerProducts.CoffeeMaker.Option.CoffeeStrength.Recommendation:
-    name: Recommendation
-    name_de: Empfehlung
-  ConsumerProducts.CoffeeMaker.Option.CoffeeTemperature.Recommendation:
-    name: Recommendation
-    name_de: Empfehlung
-  ConsumerProducts.CoffeeMaker.Option.FillQuantity.Recommendation:
-    name: Recommendation
-    name_de: Empfehlung
-  ConsumerProducts.CoffeeMaker.Option.FlowRate.Recommendation:
-    name: Recommendation
-    name_de: Empfehlung
-  ConsumerProducts.CoffeeMaker.Option.Shot.Count:
-    name: Count
-    name_de: Anzahl
-  ConsumerProducts.CoffeeMaker.Option.FillQuantity:
-    name: Fill quantity
-    name_de: Füllmenge
-    device_class: volume
-    enabled_by_default: true
-  ConsumerProducts.CoffeeMaker.Option.BeanAmount:
-    name: Bean amount
-    name_de: Kaffeestärke
-    enabled_by_default: true
-  ConsumerProducts.CoffeeMaker.Option.BeanContainerSelection:
-    name: Bean container
-    name_de: Bohnenbehälter
-    enabled_by_default: true
-  ConsumerProducts.CoffeeMaker.Option.CoffeeMilkRatio:
-    name: Coffee milk ratio
-    name_de: Kaffee-Milch-Verhältnis
-    enabled_by_default: true
-  ConsumerProducts.CoffeeMaker.Option.CoffeeTemperature:
-    name: Coffee Temperature
-    name_de: Kaffeetemperatur
-    enabled_by_default: true
-  ConsumerProducts.CoffeeMaker.Option.FlowRate:
-    name: Flow rate
-    name_de: Durchflussmenge
-    enabled_by_default: true
-  ConsumerProducts.CoffeeMaker.Option.HotWaterTemperature:
-    name: Hot water temperature
-    name_de: Warmwassertemperatur
-    enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.BeanContainerEmpty:
     name: Bean container empty
     name_de: Bohnenbehälter leer
     device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.CalcNCleanIn10Cups:
-    name: "Calc'N'Clean in 10 cups"
-    name_de: "Calc'N'Clean in 10 Tassen"
+    name: Calc'N'Clean in 10 cups
+    name_de: Calc'N'Clean in 10 Tassen
     device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.CalcNCleanIn15Cups:
-    name: "Calc'N'Clean in 15 cups"
-    name_de: "Calc'N'Clean in 15 Tassen"
+    name: Calc'N'Clean in 15 cups
+    name_de: Calc'N'Clean in 15 Tassen
     device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.CalcNCleanIn20Cups:
-    name: "Calc'N'Clean in 20 cups"
-    name_de: "Calc'N'Clean in 20 Tassen"
+    name: Calc'N'Clean in 20 cups
+    name_de: Calc'N'Clean in 20 Tassen
     device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.CalcNCleanIn5Cups:
-    name: "Calc'N'Clean in 5 cups"
-    name_de: "Calc'N'Clean in 5 Tassen"
+    name: Calc'N'Clean in 5 cups
+    name_de: Calc'N'Clean in 5 Tassen
     device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DescalingIn10Cups:
@@ -530,13 +566,13 @@ features:
     device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceCalcNCleanBlockage:
-    name: "Device Calc'N'Clean blockage"
-    name_de: "Calc'N'Clean-Blockierung"
+    name: Device Calc'N'Clean blockage
+    name_de: Calc'N'Clean-Blockierung
     device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceCalcNCleanOverdue:
-    name: "Device Calc'N'Clean overdue"
-    name_de: "Calc'N'Clean überfällig"
+    name: Device Calc'N'Clean overdue
+    name_de: Calc'N'Clean überfällig
     device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceCleaningOverdue:
@@ -555,8 +591,8 @@ features:
     device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceShouldBeCalcNCleaned:
-    name: "Device should be Calc'N'Cleaned"
-    name_de: "Calc'N'Clean erforderlich"
+    name: Device should be Calc'N'Cleaned
+    name_de: Calc'N'Clean erforderlich
     device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceShouldBeCleaned:
@@ -583,6 +619,87 @@ features:
     name: Water tank empty
     name_de: Wassertank leer
     device_class: enum
+    enabled_by_default: true
+  ConsumerProducts.CoffeeMaker.Option.AromaSelect:
+    name: Aroma Select
+    name_de: Aromaauswahl
+    enabled_by_default: false
+  ConsumerProducts.CoffeeMaker.Option.BeanAmount:
+    name: Bean amount
+    name_de: Kaffeestärke
+    enabled_by_default: true
+  ConsumerProducts.CoffeeMaker.Option.BeanContainerSelection:
+    name: Bean container
+    name_de: Bohnenbehälter
+    enabled_by_default: true
+  ConsumerProducts.CoffeeMaker.Option.BeverageSize:
+    name: Beverage Size
+    name_de: Getränkegröße
+    enabled_by_default: false
+  ConsumerProducts.CoffeeMaker.Option.BeveragesRemaining:
+    name: Beverages Remaining
+    name_de: Verbleibende Getränke
+    enabled_by_default: false
+  ConsumerProducts.CoffeeMaker.Option.Coarsness:
+    name: Coarsness
+    name_de: Mahlgrad
+    enabled_by_default: false
+  ConsumerProducts.CoffeeMaker.Option.Coarsness.Recommendation:
+    name: Recommendation
+    name_de: Empfehlung
+    enabled_by_default: false
+  ConsumerProducts.CoffeeMaker.Option.CoffeeMilkRatio:
+    name: Coffee milk ratio
+    name_de: Kaffee-Milch-Verhältnis
+    enabled_by_default: true
+  ConsumerProducts.CoffeeMaker.Option.CoffeeStrength:
+    name: Coffee Strength
+    name_de: Kaffeestärke
+    enabled_by_default: false
+  ConsumerProducts.CoffeeMaker.Option.CoffeeStrength.Recommendation:
+    name: Recommendation
+    name_de: Empfehlung
+    enabled_by_default: false
+  ConsumerProducts.CoffeeMaker.Option.CoffeeTemperature:
+    name: Coffee Temperature
+    name_de: Kaffeetemperatur
+    enabled_by_default: true
+  ConsumerProducts.CoffeeMaker.Option.CoffeeTemperature.Recommendation:
+    name: Recommendation
+    name_de: Empfehlung
+    enabled_by_default: false
+  ConsumerProducts.CoffeeMaker.Option.FillQuantity:
+    name: Fill quantity
+    name_de: Füllmenge
+    device_class: volume
+    enabled_by_default: true
+  ConsumerProducts.CoffeeMaker.Option.FillQuantity.Recommendation:
+    name: Recommendation
+    name_de: Empfehlung
+    enabled_by_default: false
+  ConsumerProducts.CoffeeMaker.Option.FlowRate:
+    name: Flow rate
+    name_de: Durchflussmenge
+    enabled_by_default: true
+  ConsumerProducts.CoffeeMaker.Option.FlowRate.Recommendation:
+    name: Recommendation
+    name_de: Empfehlung
+    enabled_by_default: false
+  ConsumerProducts.CoffeeMaker.Option.HotWaterTemperature:
+    name: Hot water temperature
+    name_de: Warmwassertemperatur
+    enabled_by_default: true
+  ConsumerProducts.CoffeeMaker.Option.MultipleBeverages:
+    name: Multiple beverages
+    name_de: Mehrere Getränke
+    enabled_by_default: true
+  ConsumerProducts.CoffeeMaker.Option.Shot.Count:
+    name: Count
+    name_de: Anzahl
+    enabled_by_default: false
+  ConsumerProducts.CoffeeMaker.Setting.CupWarmer:
+    name: Cup warmer
+    name_de: Tassenwärmer
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee:
     name: Coffees
@@ -630,39 +747,19 @@ features:
     name_de: Tassen Ristretto Espresso
     entity_category: diagnostic
     enabled_by_default: true
-  ConsumerProducts.CoffeeMaker.Option.MultipleBeverages:
-    name: Multiple beverages
-    name_de: Mehrere Getränke
-    enabled_by_default: true
-  ConsumerProducts.CoffeeMaker.Setting.CupWarmer:
-    name: Cup warmer
-    name_de: Tassenwärmer
-    enabled_by_default: true
   # ---- Cooking.Common ----
-  Cooking.Common.Option.Hood.Boost:
-    name: Boost
-    name_de: Boost
-  Cooking.Common.Setting.Lighting:
-    name: Functional light
-    name_de: Funktionslicht
-    enabled_by_default: true
-  Cooking.Common.Option.Hood.IntensiveLevel:
-    name: Intensive level
-    name_de: Intensivstufe
-    enabled_by_default: true
-  Cooking.Common.Option.Hood.VentingLevel:
-    name: Venting level
-    name_de: Lüfterstufe
-    enabled_by_default: true
   Cooking.Common.Event.ApplianceModuleError:
     name: Appliance Module Error
     name_de: Gerätemodulfehler
+    enabled_by_default: false
   Cooking.Common.Event.ApplianceOverheated:
     name: Appliance Overheated
     name_de: Gerät überhitzt
+    enabled_by_default: false
   Cooking.Common.Event.ConfirmActionAtAppliance:
     name: Confirm Action At Appliance
     name_de: Aktion am Gerät bestätigen
+    enabled_by_default: false
   Cooking.Common.Event.Hood.GreaseFilterMaxSaturationNearlyReached:
     name: Grease filter max saturation nearly reached
     name_de: Fettfiltersättigung fast erreicht
@@ -676,818 +773,1062 @@ features:
   Cooking.Common.Event.PreheatFinished:
     name: Preheat Finished
     name_de: Vorheizen beendet
-  Cooking.Common.Setting.SignalVolume:
-    name: Signal Volume
-    name_de: Signallautstärke
+    enabled_by_default: false
+  Cooking.Common.Option.Hood.Boost:
+    name: Boost
+    name_de: Boost
+    enabled_by_default: false
+  Cooking.Common.Option.Hood.IntensiveLevel:
+    name: Intensive level
+    name_de: Intensivstufe
+    enabled_by_default: true
+  Cooking.Common.Option.Hood.VentingLevel:
+    name: Venting level
+    name_de: Lüfterstufe
+    enabled_by_default: true
+  Cooking.Common.Setting.Lighting:
+    name: Functional light
+    name_de: Funktionslicht
+    enabled_by_default: true
   Cooking.Common.Setting.LightingBrightness:
     name: Lighting Brightness
     name_de: Beleuchtungshelligkeit
+    enabled_by_default: false
+  Cooking.Common.Setting.SignalVolume:
+    name: Signal Volume
+    name_de: Signallautstärke
+    enabled_by_default: false
   # ---- Cooking.Hob ----
   Cooking.Hob.Event.Error.BLEGadgetNeedsPairing:
     name: BLEGadget Needs Pairing
     name_de: BLE-Gadget muss gekoppelt werden
+    enabled_by_default: false
   Cooking.Hob.Event.Error.IABOTemperatureTooHigh:
     name: IABOTemperature Too High
     name_de: IABO-Temperatur zu hoch
+    enabled_by_default: false
   Cooking.Hob.Event.Error.MaxNumberBLEGadgets:
     name: Max Number BLEGadgets
     name_de: Maximale Anzahl BLE-Gadgets
+    enabled_by_default: false
   Cooking.Hob.Event.Error.OperatingTimeLimitReached:
     name: Operating Time Limit Reached
     name_de: Betriebszeitlimit erreicht
+    enabled_by_default: false
   Cooking.Hob.Event.Error.OperatingVoltageError:
     name: Operating Voltage Error
     name_de: Betriebsspannungsfehler
+    enabled_by_default: false
   Cooking.Hob.Option.FryingSensorLevel:
     name: Frying Sensor Level
     name_de: Bratsensor-Stufe
+    enabled_by_default: false
   Cooking.Hob.Option.JoinZone:
     name: Join Zone
     name_de: Zonen verbinden
+    enabled_by_default: false
   Cooking.Hob.Option.PowerLevel:
     name: Power Level
     name_de: Leistungsstufe
+    enabled_by_default: false
   Cooking.Hob.Option.ZoneSelector:
     name: Zone Selector
     name_de: Zonenauswahl
+    enabled_by_default: false
   Cooking.Hob.Setting.AutomaticKeyLock:
     name: Automatic Key Lock
     name_de: Automatische Tastensperre
+    enabled_by_default: false
   Cooking.Hob.Setting.AutomaticTimer:
     name: Automatic Timer
     name_de: Automatischer Timer
+    enabled_by_default: false
   Cooking.Hob.Setting.AutomaticZoneSelection:
     name: Automatic Zone Selection
     name_de: Automatische Zonenauswahl
+    enabled_by_default: false
   Cooking.Hob.Setting.BuzzerBeepLevel:
     name: Buzzer Beep Level
     name_de: Signaltonlautstärke
+    enabled_by_default: false
   Cooking.Hob.Setting.EnergyConsumptionIndication:
     name: Energy Consumption Indication
     name_de: Energieverbrauchsanzeige
+    enabled_by_default: false
   Cooking.Hob.Setting.HoodAfterRun:
     name: Hood After Run
     name_de: Dunstabzug-Nachlauf
+    enabled_by_default: false
   Cooking.Hob.Setting.HoodAutomaticLightOff:
     name: Hood Automatic Light Off
     name_de: Dunstabzug automatisches Licht aus
+    enabled_by_default: false
   Cooking.Hob.Setting.HoodAutomaticLightOn:
     name: Hood Automatic Light On
     name_de: Dunstabzug automatisches Licht ein
+    enabled_by_default: false
   Cooking.Hob.Setting.HoodAutomaticStart:
     name: Hood Automatic Start
     name_de: Dunstabzug Automatikstart
+    enabled_by_default: false
   Cooking.Hob.Setting.PowerManagement:
     name: Power Management
     name_de: Leistungsmanagement
+    enabled_by_default: false
   Cooking.Hob.Setting.TimerSelection:
     name: Timer Selection
     name_de: Timerauswahl
+    enabled_by_default: false
   Cooking.Hob.Setting.UPDTestPosition:
     name: UPDTest Position
     name_de: UPDTest Position
+    enabled_by_default: false
   Cooking.Hob.Status.Size.LengthX:
     name: Length X
     name_de: Länge X
+    enabled_by_default: false
   Cooking.Hob.Status.Size.LengthY:
     name: Length Y
     name_de: Länge Y
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.ActiveProgram:
     name: Active Program
     name_de: Aktives Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.BaseProgram:
     name: Base Program
     name_de: Basisprogramm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.CurrentTemperature:
     name: Current Temperature
     name_de: Aktuelle Temperatur
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.Duration:
     name: Duration
     name_de: Dauer
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.ElapsedProgramTime:
     name: Elapsed Program Time
     name_de: Verstrichene Programmzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.ElapsedProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatisches Zählen
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.FryingSensorLevel:
     name: Frying Sensor Level
     name_de: Bratsensorstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.HeatupProgress:
     name: Heatup Progress
     name_de: Aufheizfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.JoinZone:
     name: Join Zone
     name_de: Zone verbinden
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.LengthX:
     name: Length X
     name_de: Länge X
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.LengthY:
     name: Length Y
     name_de: Länge Y
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.OperationState:
     name: Operation State
     name_de: Betriebszustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.Position:
     name: Position
     name_de: Position
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.PowerLevel:
     name: Power Level
     name_de: Leistungsstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.ProgramName:
     name: Program Name
     name_de: Programmname
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.ProgramProgress:
     name: Program Progress
     name_de: Programmfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.RemainingProgramTime:
     name: Remaining Program Time
     name_de: Restprogrammzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.RemainingProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatisches Zählen
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.SelectedProgram:
     name: Selected Program
     name_de: Ausgewähltes Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.Shape:
     name: Shape
     name_de: Form
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.State:
     name: State
     name_de: Zustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.Type:
     name: Type
     name_de: Typ
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.100.ZoneSelector:
     name: Zone Selector
     name_de: Zonenwähler
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.ActiveProgram:
     name: Active Program
     name_de: Aktives Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.BaseProgram:
     name: Base Program
     name_de: Basisprogramm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.CurrentTemperature:
     name: Current Temperature
     name_de: Aktuelle Temperatur
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.Duration:
     name: Duration
     name_de: Dauer
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.ElapsedProgramTime:
     name: Elapsed Program Time
     name_de: Verstrichene Programmzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.ElapsedProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatisches Zählen
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.FryingSensorLevel:
     name: Frying Sensor Level
     name_de: Bratsensorstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.HeatupProgress:
     name: Heatup Progress
     name_de: Aufheizfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.JoinZone:
     name: Join Zone
     name_de: Zone verbinden
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.LengthX:
     name: Length X
     name_de: Länge X
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.LengthY:
     name: Length Y
     name_de: Länge Y
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.OperationState:
     name: Operation State
     name_de: Betriebszustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.Position:
     name: Position
     name_de: Position
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.PowerLevel:
     name: Power Level
     name_de: Leistungsstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.ProgramName:
     name: Program Name
     name_de: Programmname
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.ProgramProgress:
     name: Program Progress
     name_de: Programmfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.RemainingProgramTime:
     name: Remaining Program Time
     name_de: Restprogrammzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.RemainingProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatisches Zählen
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.SelectedProgram:
     name: Selected Program
     name_de: Ausgewähltes Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.Shape:
     name: Shape
     name_de: Form
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.State:
     name: State
     name_de: Zustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.Type:
     name: Type
     name_de: Typ
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.120.ZoneSelector:
     name: Zone Selector
     name_de: Zonenwähler
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.ActiveProgram:
     name: Active Program
     name_de: Aktives Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.BaseProgram:
     name: Base Program
     name_de: Basisprogramm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.CurrentTemperature:
     name: Current Temperature
     name_de: Aktuelle Temperatur
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.Duration:
     name: Duration
     name_de: Dauer
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.ElapsedProgramTime:
     name: Elapsed Program Time
     name_de: Verstrichene Programmzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.ElapsedProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatisches Zählen
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.FryingSensorLevel:
     name: Frying Sensor Level
     name_de: Bratsensorstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.HeatupProgress:
     name: Heatup Progress
     name_de: Aufheizfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.JoinZone:
     name: Join Zone
     name_de: Zone verbinden
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.LengthX:
     name: Length X
     name_de: Länge X
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.LengthY:
     name: Length Y
     name_de: Länge Y
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.OperationState:
     name: Operation State
     name_de: Betriebszustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.Position:
     name: Position
     name_de: Position
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.PowerLevel:
     name: Power Level
     name_de: Leistungsstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.ProgramName:
     name: Program Name
     name_de: Programmname
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.ProgramProgress:
     name: Program Progress
     name_de: Programmfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.RemainingProgramTime:
     name: Remaining Program Time
     name_de: Restprogrammzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.RemainingProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.SelectedProgram:
     name: Selected Program
     name_de: Ausgewähltes Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.Shape:
     name: Shape
     name_de: Form
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.State:
     name: State
     name_de: Zustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.Type:
     name: Type
     name_de: Typ
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.121.ZoneSelector:
     name: Zone Selector
     name_de: Zonenauswahl
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.ActiveProgram:
     name: Active Program
     name_de: Aktives Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.BaseProgram:
     name: Base Program
     name_de: Basisprogramm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.CurrentTemperature:
     name: Current Temperature
     name_de: Aktuelle Temperatur
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.Duration:
     name: Duration
     name_de: Dauer
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.ElapsedProgramTime:
     name: Elapsed Program Time
     name_de: Verstrichene Programmzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.ElapsedProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.FryingSensorLevel:
     name: Frying Sensor Level
     name_de: Bratsensorstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.HeatupProgress:
     name: Heatup Progress
     name_de: Aufheizfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.JoinZone:
     name: Join Zone
     name_de: Zone verbinden
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.LengthX:
     name: Length X
     name_de: Länge X
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.LengthY:
     name: Length Y
     name_de: Länge Y
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.OperationState:
     name: Operation State
     name_de: Betriebszustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.Position:
     name: Position
     name_de: Position
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.PowerLevel:
     name: Power Level
     name_de: Leistungsstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.ProgramName:
     name: Program Name
     name_de: Programmname
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.ProgramProgress:
     name: Program Progress
     name_de: Programmfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.RemainingProgramTime:
     name: Remaining Program Time
     name_de: Restprogrammzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.RemainingProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.SelectedProgram:
     name: Selected Program
     name_de: Ausgewähltes Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.Shape:
     name: Shape
     name_de: Form
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.State:
     name: State
     name_de: Zustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.Type:
     name: Type
     name_de: Typ
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.200.ZoneSelector:
     name: Zone Selector
     name_de: Zonenauswahl
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.ActiveProgram:
     name: Active Program
     name_de: Aktives Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.BaseProgram:
     name: Base Program
     name_de: Basisprogramm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.CurrentTemperature:
     name: Current Temperature
     name_de: Aktuelle Temperatur
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.Duration:
     name: Duration
     name_de: Dauer
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.ElapsedProgramTime:
     name: Elapsed Program Time
     name_de: Verstrichene Programmzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.ElapsedProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.FryingSensorLevel:
     name: Frying Sensor Level
     name_de: Bratsensorstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.HeatupProgress:
     name: Heatup Progress
     name_de: Aufheizfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.JoinZone:
     name: Join Zone
     name_de: Zone verbinden
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.LengthX:
     name: Length X
     name_de: Länge X
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.LengthY:
     name: Length Y
     name_de: Länge Y
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.OperationState:
     name: Operation State
     name_de: Betriebszustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.Position:
     name: Position
     name_de: Position
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.PowerLevel:
     name: Power Level
     name_de: Leistungsstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.ProgramName:
     name: Program Name
     name_de: Programmname
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.ProgramProgress:
     name: Program Progress
     name_de: Programmfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.RemainingProgramTime:
     name: Remaining Program Time
     name_de: Restprogrammzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.RemainingProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.SelectedProgram:
     name: Selected Program
     name_de: Ausgewähltes Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.Shape:
     name: Shape
     name_de: Form
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.State:
     name: State
     name_de: Zustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.Type:
     name: Type
     name_de: Typ
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.201.ZoneSelector:
     name: Zone Selector
     name_de: Zonenauswahl
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.ActiveProgram:
     name: Active Program
     name_de: Aktives Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.BaseProgram:
     name: Base Program
     name_de: Basisprogramm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.CurrentTemperature:
     name: Current Temperature
     name_de: Aktuelle Temperatur
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.Duration:
     name: Duration
     name_de: Dauer
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.ElapsedProgramTime:
     name: Elapsed Program Time
     name_de: Verstrichene Programmzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.ElapsedProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.FryingSensorLevel:
     name: Frying Sensor Level
     name_de: Bratsensorstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.HeatupProgress:
     name: Heatup Progress
     name_de: Aufheizfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.JoinZone:
     name: Join Zone
     name_de: Zone verbinden
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.LengthX:
     name: Length X
     name_de: Länge X
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.LengthY:
     name: Length Y
     name_de: Länge Y
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.OperationState:
     name: Operation State
     name_de: Betriebszustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.Position:
     name: Position
     name_de: Position
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.PowerLevel:
     name: Power Level
     name_de: Leistungsstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.ProgramName:
     name: Program Name
     name_de: Programmname
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.ProgramProgress:
     name: Program Progress
     name_de: Programmfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.RemainingProgramTime:
     name: Remaining Program Time
     name_de: Restprogrammzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.RemainingProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.SelectedProgram:
     name: Selected Program
     name_de: Ausgewähltes Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.Shape:
     name: Shape
     name_de: Form
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.State:
     name: State
     name_de: Zustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.Type:
     name: Type
     name_de: Typ
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.300.ZoneSelector:
     name: Zone Selector
     name_de: Zonenauswahl
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.ActiveProgram:
     name: Active Program
     name_de: Aktives Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.BaseProgram:
     name: Base Program
     name_de: Basisprogramm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.CurrentTemperature:
     name: Current Temperature
     name_de: Aktuelle Temperatur
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.Duration:
     name: Duration
     name_de: Dauer
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.ElapsedProgramTime:
     name: Elapsed Program Time
     name_de: Abgelaufene Programmzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.ElapsedProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.FryingSensorLevel:
     name: Frying Sensor Level
     name_de: Bratsensorstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.HeatupProgress:
     name: Heatup Progress
     name_de: Aufheizfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.JoinZone:
     name: Join Zone
     name_de: Zone verbinden
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.LengthX:
     name: Length X
     name_de: Länge X
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.LengthY:
     name: Length Y
     name_de: Länge Y
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.OperationState:
     name: Operation State
     name_de: Betriebszustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.Position:
     name: Position
     name_de: Position
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.PowerLevel:
     name: Power Level
     name_de: Leistungsstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.ProgramName:
     name: Program Name
     name_de: Programmname
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.ProgramProgress:
     name: Program Progress
     name_de: Programmfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.RemainingProgramTime:
     name: Remaining Program Time
     name_de: Restprogrammzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.RemainingProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.SelectedProgram:
     name: Selected Program
     name_de: Ausgewähltes Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.Shape:
     name: Shape
     name_de: Form
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.State:
     name: State
     name_de: Zustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.Type:
     name: Type
     name_de: Typ
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.301.ZoneSelector:
     name: Zone Selector
     name_de: Zonenauswahl
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.ActiveProgram:
     name: Active Program
     name_de: Aktives Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.BaseProgram:
     name: Base Program
     name_de: Basisprogramm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.CurrentTemperature:
     name: Current Temperature
     name_de: Aktuelle Temperatur
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.Duration:
     name: Duration
     name_de: Dauer
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.ElapsedProgramTime:
     name: Elapsed Program Time
     name_de: Abgelaufene Programmzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.ElapsedProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.FryingSensorLevel:
     name: Frying Sensor Level
     name_de: Bratsensorstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.HeatupProgress:
     name: Heatup Progress
     name_de: Aufheizfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.JoinZone:
     name: Join Zone
     name_de: Zone verbinden
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.LengthX:
     name: Length X
     name_de: Länge X
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.LengthY:
     name: Length Y
     name_de: Länge Y
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.OperationState:
     name: Operation State
     name_de: Betriebszustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.Position:
     name: Position
     name_de: Position
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.PowerLevel:
     name: Power Level
     name_de: Leistungsstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.ProgramName:
     name: Program Name
     name_de: Programmname
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.ProgramProgress:
     name: Program Progress
     name_de: Programmfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.RemainingProgramTime:
     name: Remaining Program Time
     name_de: Restprogrammzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.RemainingProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.SelectedProgram:
     name: Selected Program
     name_de: Ausgewähltes Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.Shape:
     name: Shape
     name_de: Form
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.State:
     name: State
     name_de: Zustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.Type:
     name: Type
     name_de: Typ
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.340.ZoneSelector:
     name: Zone Selector
     name_de: Zonenauswahl
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.ActiveProgram:
     name: Active Program
     name_de: Aktives Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.BaseProgram:
     name: Base Program
     name_de: Basisprogramm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.CurrentTemperature:
     name: Current Temperature
     name_de: Aktuelle Temperatur
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.Duration:
     name: Duration
     name_de: Dauer
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.ElapsedProgramTime:
     name: Elapsed Program Time
     name_de: Verstrichene Programmzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.ElapsedProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.FryingSensorLevel:
     name: Frying Sensor Level
     name_de: Bratsensor-Stufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.HeatupProgress:
     name: Heatup Progress
     name_de: Aufheizfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.JoinZone:
     name: Join Zone
     name_de: Zone verbinden
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.LengthX:
     name: Length X
     name_de: Länge X
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.LengthY:
     name: Length Y
     name_de: Länge Y
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.OperationState:
     name: Operation State
     name_de: Betriebszustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.Position:
     name: Position
     name_de: Position
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.PowerLevel:
     name: Power Level
     name_de: Leistungsstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.ProgramName:
     name: Program Name
     name_de: Programmname
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.ProgramProgress:
     name: Program Progress
     name_de: Programmfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.RemainingProgramTime:
     name: Remaining Program Time
     name_de: Verbleibende Programmzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.RemainingProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.SelectedProgram:
     name: Selected Program
     name_de: Ausgewähltes Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.Shape:
     name: Shape
     name_de: Form
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.State:
     name: State
     name_de: Zustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.Type:
     name: Type
     name_de: Typ
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.341.ZoneSelector:
     name: Zone Selector
     name_de: Zonenauswahl
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.ActiveProgram:
     name: Active Program
     name_de: Aktives Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.BaseProgram:
     name: Base Program
     name_de: Basisprogramm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.CurrentTemperature:
     name: Current Temperature
     name_de: Aktuelle Temperatur
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.Duration:
     name: Duration
     name_de: Dauer
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.ElapsedProgramTime:
     name: Elapsed Program Time
     name_de: Verstrichene Programmzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.ElapsedProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.FryingSensorLevel:
     name: Frying Sensor Level
     name_de: Bratsensor-Stufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.HeatupProgress:
     name: Heatup Progress
     name_de: Aufheizfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.JoinZone:
     name: Join Zone
     name_de: Zone verbinden
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.LengthX:
     name: Length X
     name_de: Länge X
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.LengthY:
     name: Length Y
     name_de: Länge Y
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.OperationState:
     name: Operation State
     name_de: Betriebszustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.Position:
     name: Position
     name_de: Position
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.PowerLevel:
     name: Power Level
     name_de: Leistungsstufe
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.ProgramName:
     name: Program Name
     name_de: Programmname
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.ProgramProgress:
     name: Program Progress
     name_de: Programmfortschritt
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.RemainingProgramTime:
     name: Remaining Program Time
     name_de: Verbleibende Programmzeit
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.RemainingProgramTime.AutoCounting:
     name: Auto Counting
     name_de: Automatische Zählung
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.SelectedProgram:
     name: Selected Program
     name_de: Ausgewähltes Programm
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.Shape:
     name: Shape
     name_de: Form
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.State:
     name: State
     name_de: Zustand
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.Type:
     name: Type
     name_de: Typ
+    enabled_by_default: false
   Cooking.Hob.Status.Zone.400.ZoneSelector:
     name: Zone Selector
     name_de: Zonenauswahl
+    enabled_by_default: false
+  Cooking.Hob.Status.Zone001.PowerLevel:
+    name: Zone 1 power level
+    name_de: Zone 1 Leistungsstufe
+    enabled_by_default: false
+  Cooking.Hob.Status.Zone002.PowerLevel:
+    name: Zone 2 power level
+    name_de: Zone 2 Leistungsstufe
+    enabled_by_default: false
   # ---- Cooking.Hood ----
-  Cooking.Hood.Setting.ColorTemperaturePercent:
-    name: Functional light color temperature percent
-    name_de: Funktionslicht-Farbtemperatur in Prozent
-    enabled_by_default: true
   Cooking.Hood.Setting.ColorTemperature:
     name: Functional light color temperature
     name_de: Funktionslicht-Farbtemperatur
     enabled_by_default: true
+  Cooking.Hood.Setting.ColorTemperaturePercent:
+    name: Functional light color temperature percent
+    name_de: Funktionslicht-Farbtemperatur in Prozent
+    enabled_by_default: true
   # ---- Cooking.Oven ----
-  Cooking.Oven.Option.AirExchange:
-    name: Air Exchange
-    name_de: Luftaustausch
-  Cooking.Oven.Option.CavitySelector:
-    name: Cavity Selector
-    name_de: Garraumauswahl
-  Cooking.Oven.Option.HeatupProgress:
-    name: Heatup Progress
-    name_de: Aufheizfortschritt
-  Cooking.Oven.Option.Level:
-    name: Level
-    name_de: Stufe
-  Cooking.Oven.Option.MeatProbeTemperatureV2:
-    name: Meat Probe Temperature V 2
-    name_de: Bratenthermometer-Temperatur V2
-  Cooking.Oven.Option.MicrowavePower:
-    name: Microwave Power
-    name_de: Mikrowellenleistung
-  Cooking.Oven.Option.PyrolysisLevel:
-    name: Pyrolysis Level
-    name_de: Pyrolyse-Stufe
-  Cooking.Oven.Option.SteamAssistLevel:
-    name: Steam Assist Level
-    name_de: Dampfunterstützungsstufe
-  Cooking.Oven.Option.SteamBoost:
-    name: Steam Boost
-    name_de: Dampfstoß
-  Cooking.Oven.Option.SetpointTemperature:
-    name: Setpoint temperature
-    name_de: Solltemperatur
-    device_class: temperature
-    enabled_by_default: true
-  Cooking.Oven.Option.WarmingLevel:
-    name: Warming level
-    name_de: Wärmestufe
-    enabled_by_default: true
   Cooking.Oven.Event.PreheatFinished:
     name: Pre-heat finished
     name_de: Vorheizen beendet
@@ -1498,163 +1839,179 @@ features:
     name_de: Reguläres Vorheizen beendet
     device_class: enum
     enabled_by_default: true
-  Cooking.Oven.Status.CurrentCavityTemperature:
-    name: Current oven cavity temperature
-    name_de: Aktuelle Garraumtemperatur
-    device_class: temperature
-    enabled_by_default: true
+  Cooking.Oven.Option.AirExchange:
+    name: Air Exchange
+    name_de: Luftaustausch
+    enabled_by_default: false
+  Cooking.Oven.Option.CavitySelector:
+    name: Cavity Selector
+    name_de: Garraumauswahl
+    enabled_by_default: false
   Cooking.Oven.Option.FastPreHeat:
     name: Fast pre-heat
     name_de: Schnelles Vorheizen
+    enabled_by_default: true
+  Cooking.Oven.Option.HeatupProgress:
+    name: Heatup Progress
+    name_de: Aufheizfortschritt
+    enabled_by_default: false
+  Cooking.Oven.Option.Level:
+    name: Level
+    name_de: Stufe
+    enabled_by_default: false
+  Cooking.Oven.Option.MeatProbeTemperatureV2:
+    name: Meat Probe Temperature V 2
+    name_de: Bratenthermometer-Temperatur V2
+    enabled_by_default: false
+  Cooking.Oven.Option.MicrowavePower:
+    name: Microwave Power
+    name_de: Mikrowellenleistung
+    enabled_by_default: false
+  Cooking.Oven.Option.PyrolysisLevel:
+    name: Pyrolysis Level
+    name_de: Pyrolyse-Stufe
+    enabled_by_default: false
+  Cooking.Oven.Option.SetpointTemperature:
+    name: Setpoint temperature
+    name_de: Solltemperatur
+    device_class: temperature
+    enabled_by_default: true
+  Cooking.Oven.Option.SteamAssistLevel:
+    name: Steam Assist Level
+    name_de: Dampfunterstützungsstufe
+    enabled_by_default: false
+  Cooking.Oven.Option.SteamBoost:
+    name: Steam Boost
+    name_de: Dampfstoß
+    enabled_by_default: false
+  Cooking.Oven.Option.WarmingLevel:
+    name: Warming level
+    name_de: Wärmestufe
     enabled_by_default: true
   Cooking.Oven.Setting.SabbathMode:
     name: Sabbath mode
     name_de: Sabbatmodus
     enabled_by_default: true
+  Cooking.Oven.Status.CurrentCavityTemperature:
+    name: Current oven cavity temperature
+    name_de: Aktuelle Garraumtemperatur
+    device_class: temperature
+    enabled_by_default: true
   # ---- Dishcare.Dishwasher ----
-  Dishcare.Dishwasher.Event.MachineCareAndFilterCleaningReminder:
-    name: Machine Care And Filter Cleaning Reminder
-    name_de: Erinnerung an Maschinenpflege und Filterreinigung
-  Dishcare.Dishwasher.Event.MachineCareAndLowMaintenanceFilterCleaningReminder:
-    name: Machine Care And Low Maintenance Filter Cleaning Reminder
-    name_de: Erinnerung an Maschinenpflege und wartungsarme Filterreinigung
-  Dishcare.Dishwasher.Event.MachineCareReminder:
-    name: Machine Care Reminder
-    name_de: Erinnerung an Maschinenpflege
-  Dishcare.Dishwasher.Event.ProgramBlockedSaltLack:
-    name: Program Blocked Salt Lack
-    name_de: Programm blockiert – Salzmangel
-  Dishcare.Dishwasher.Event.RinseAidLack:
-    name: Rinse Aid Lack
-    name_de: Klarspülermangel
-  Dishcare.Dishwasher.Event.SaltLack:
-    name: Salt Lack
-    name_de: Salzmangel
-  Dishcare.Dishwasher.Event.SmartFilterCleaningReminder:
-    name: Smart Filter Cleaning Reminder
-    name_de: Erinnerung an Smart-Filterreinigung
-  Dishcare.Dishwasher.Option.DelicateBasket:
-    name: Delicate Basket
-    name_de: Schonkorb
-  Dishcare.Dishwasher.Option.EnergySafe:
-    name: Energy Safe
-    name_de: Energiesparen
-  Dishcare.Dishwasher.Option.ExtraRinse:
-    name: Extra Rinse
-    name_de: Extra-Spülen
-  Dishcare.Dishwasher.Option.FlexSpray.BackLeft:
-    name: Back Left
-    name_de: Hinten links
-  Dishcare.Dishwasher.Option.FlexSpray.BackRight:
-    name: Back Right
-    name_de: Hinten rechts
-  Dishcare.Dishwasher.Option.FlexSpray.FrontLeft:
-    name: Front Left
-    name_de: Vorne links
-  Dishcare.Dishwasher.Option.FlexSpray.FrontRight:
-    name: Front Right
-    name_de: Vorne rechts
-  Dishcare.Dishwasher.Option.FlexSpray.Type:
-    name: Type
-    name_de: Typ
-  Dishcare.Dishwasher.Option.HolidayMode:
-    name: Holiday Mode
-    name_de: Urlaubsmodus
-  Dishcare.Dishwasher.Option.LearningDishwasher.CleaningLevel:
-    name: Cleaning Level
-    name_de: Reinigungsstufe
-  Dishcare.Dishwasher.Option.LearningDishwasher.DryingLevel:
-    name: Drying Level
-    name_de: Trockenstufe
-  Dishcare.Dishwasher.Option.LearningDishwasher.DurationLevel:
-    name: Duration Level
-    name_de: Dauerstufe
-  Dishcare.Dishwasher.Option.Pretreatment:
-    name: Pretreatment
-    name_de: Vorbehandlung
-  Dishcare.Dishwasher.Option.SanitationUC:
-    name: Sanitation UC
-    name_de: Hygiene UC
-  Dishcare.Dishwasher.Option.StorageFunction:
-    name: Storage Function
-    name_de: Speicherfunktion
-  Dishcare.Dishwasher.Option.Turbo:
-    name: Turbo
-    name_de: Turbo
-  Dishcare.Dishwasher.Option.VarioSpeed:
-    name: Vario Speed
-    name_de: Vario Speed
   Dishcare.Dishwasher.Event.CheckFilterSystem:
     name: Check Filter System
     name_de: Filtersystem prüfen
+    enabled_by_default: false
   Dishcare.Dishwasher.Event.DrainPumpBlocked:
     name: Drain Pump Blocked
     name_de: Ablaufpumpe blockiert
+    enabled_by_default: false
   Dishcare.Dishwasher.Event.DrainingNotPossible:
     name: Draining Not Possible
     name_de: Abpumpen nicht möglich
+    enabled_by_default: false
   Dishcare.Dishwasher.Event.InternalError:
     name: Internal Error
     name_de: Interner Fehler
+    enabled_by_default: false
   Dishcare.Dishwasher.Event.LowVoltage:
     name: Low Voltage
     name_de: Unterspannung
+    enabled_by_default: false
+  Dishcare.Dishwasher.Event.MachineCareAndFilterCleaningReminder:
+    name: Machine Care And Filter Cleaning Reminder
+    name_de: Erinnerung an Maschinenpflege und Filterreinigung
+    enabled_by_default: false
+  Dishcare.Dishwasher.Event.MachineCareAndLowMaintenanceFilterCleaningReminder:
+    name: Machine Care And Low Maintenance Filter Cleaning Reminder
+    name_de: Erinnerung an Maschinenpflege und wartungsarme Filterreinigung
+    enabled_by_default: false
+  Dishcare.Dishwasher.Event.MachineCareReminder:
+    name: Machine Care Reminder
+    name_de: Erinnerung an Maschinenpflege
+    enabled_by_default: false
+  Dishcare.Dishwasher.Event.ProgramBlockedSaltLack:
+    name: Program Blocked Salt Lack
+    name_de: Programm blockiert – Salzmangel
+    enabled_by_default: false
+  Dishcare.Dishwasher.Event.RinseAidLack:
+    name: Rinse Aid Lack
+    name_de: Klarspülermangel
+    enabled_by_default: false
   Dishcare.Dishwasher.Event.RinseAidNearlyEmpty:
     name: Rinse aid nearly empty
     name_de: Klarspüler fast leer
     device_class: enum
     enabled_by_default: true
+  Dishcare.Dishwasher.Event.SaltLack:
+    name: Salt Lack
+    name_de: Salzmangel
+    enabled_by_default: false
   Dishcare.Dishwasher.Event.SaltNearlyEmpty:
     name: Salt nearly empty
     name_de: Salz fast leer
     device_class: enum
     enabled_by_default: true
+  Dishcare.Dishwasher.Event.SmartFilterCleaningReminder:
+    name: Smart Filter Cleaning Reminder
+    name_de: Erinnerung an Smart-Filterreinigung
+    enabled_by_default: false
   Dishcare.Dishwasher.Event.WaterheaterCalcified:
     name: Waterheater Calcified
     name_de: Durchlauferhitzer verkalkt
-  Dishcare.Dishwasher.Setting.InfoLight:
-    name: Info Light
-    name_de: Infolicht
-  Dishcare.Dishwasher.Setting.SilenceOnDemandDefaultTime:
-    name: Silence On Demand Default Time
-    name_de: Standardzeit Leise nach Wunsch
-  Dishcare.Dishwasher.Setting.SoundLevelSignal:
-    name: Sound Level Signal
-    name_de: Signaltonlautstärke
-  Dishcare.Dishwasher.Setting.SpeedOnDemand:
-    name: Speed On Demand
-    name_de: Beschleunigung nach Wunsch
-  Dishcare.Dishwasher.Setting.WaterHardness:
-    name: Water Hardness
-    name_de: Wasserhärte
-  Dishcare.Dishwasher.Status.EcoDryActive:
-    name: Eco Dry Active
-    name_de: Eco-Trocknung aktiv
-  Dishcare.Dishwasher.Status.MachineCareReminder.RemainingProgramRuns:
-    name: Remaining Program Runs
-    name_de: Verbleibende Programmdurchläufe
-  Dishcare.Dishwasher.Status.ProgramPhase:
-    name: Program Phase
-    name_de: Programmphase
-  Dishcare.Dishwasher.Status.SilenceOnDemandRemainingTime:
-    name: Silence On Demand Remaining Time
-    name_de: Restzeit Leise nach Wunsch
+    enabled_by_default: false
   Dishcare.Dishwasher.Option.BrillianceDry:
     name: Brilliance dry
     name_de: Brillanz-Trocknung
     enabled_by_default: true
+  Dishcare.Dishwasher.Option.DelicateBasket:
+    name: Delicate Basket
+    name_de: Schonkorb
+    enabled_by_default: false
   Dishcare.Dishwasher.Option.EcoDry:
     name: Eco dry
     name_de: Eco-Trocknung
     enabled_by_default: true
+  Dishcare.Dishwasher.Option.EnergySafe:
+    name: Energy Safe
+    name_de: Energiesparen
+    enabled_by_default: false
   Dishcare.Dishwasher.Option.ExtraDry:
     name: Extra dry
     name_de: Extra-Trocknung
     enabled_by_default: true
+  Dishcare.Dishwasher.Option.ExtraRinse:
+    name: Extra Rinse
+    name_de: Extra-Spülen
+    enabled_by_default: false
+  Dishcare.Dishwasher.Option.FlexSpray.BackLeft:
+    name: Back Left
+    name_de: Hinten links
+    enabled_by_default: false
+  Dishcare.Dishwasher.Option.FlexSpray.BackRight:
+    name: Back Right
+    name_de: Hinten rechts
+    enabled_by_default: false
+  Dishcare.Dishwasher.Option.FlexSpray.FrontLeft:
+    name: Front Left
+    name_de: Vorne links
+    enabled_by_default: false
+  Dishcare.Dishwasher.Option.FlexSpray.FrontRight:
+    name: Front Right
+    name_de: Vorne rechts
+    enabled_by_default: false
+  Dishcare.Dishwasher.Option.FlexSpray.Type:
+    name: Type
+    name_de: Typ
+    enabled_by_default: false
   Dishcare.Dishwasher.Option.HalfLoad:
     name: Half load
     name_de: Halbe Beladung
     enabled_by_default: true
+  Dishcare.Dishwasher.Option.HolidayMode:
+    name: Holiday Mode
+    name_de: Urlaubsmodus
+    enabled_by_default: false
   Dishcare.Dishwasher.Option.HygienePlus:
     name: Hygiene +
     name_de: Hygiene +
@@ -1663,10 +2020,42 @@ features:
     name: Intensive zone
     name_de: Intensivzone
     enabled_by_default: true
+  Dishcare.Dishwasher.Option.LearningDishwasher.CleaningLevel:
+    name: Cleaning Level
+    name_de: Reinigungsstufe
+    enabled_by_default: false
+  Dishcare.Dishwasher.Option.LearningDishwasher.DryingLevel:
+    name: Drying Level
+    name_de: Trockenstufe
+    enabled_by_default: false
+  Dishcare.Dishwasher.Option.LearningDishwasher.DurationLevel:
+    name: Duration Level
+    name_de: Dauerstufe
+    enabled_by_default: false
+  Dishcare.Dishwasher.Option.Pretreatment:
+    name: Pretreatment
+    name_de: Vorbehandlung
+    enabled_by_default: false
+  Dishcare.Dishwasher.Option.SanitationUC:
+    name: Sanitation UC
+    name_de: Hygiene UC
+    enabled_by_default: false
   Dishcare.Dishwasher.Option.SilenceOnDemand:
     name: Silence on demand
     name_de: Stille auf Abruf
     enabled_by_default: true
+  Dishcare.Dishwasher.Option.StorageFunction:
+    name: Storage Function
+    name_de: Speicherfunktion
+    enabled_by_default: false
+  Dishcare.Dishwasher.Option.Turbo:
+    name: Turbo
+    name_de: Turbo
+    enabled_by_default: false
+  Dishcare.Dishwasher.Option.VarioSpeed:
+    name: Vario Speed
+    name_de: Vario Speed
+    enabled_by_default: false
   Dishcare.Dishwasher.Option.VarioSpeedPlus:
     name: Vario speed +
     name_de: Vario-Speed +
@@ -1675,260 +2064,325 @@ features:
     name: Zeolite dry
     name_de: Zeolith-Trocknung
     enabled_by_default: true
+  Dishcare.Dishwasher.Setting.DryingAssistantAllPrograms:
+    name: Drying assistant
+    name_de: Trocknungsassistent
+    entity_category: config
+    enabled_by_default: false
+  Dishcare.Dishwasher.Setting.EcoAsDefault:
+    name: Eco as default
+    name_de: Eco als Standard
+    entity_category: config
+    enabled_by_default: false
+  Dishcare.Dishwasher.Setting.ExtraDry:
+    name: Extra dry
+    name_de: Extra-Trocknung
+    entity_category: config
+    enabled_by_default: false
+  Dishcare.Dishwasher.Setting.HotWater:
+    name: Hot water connection
+    name_de: Warmwasseranschluss
+    entity_category: config
+    enabled_by_default: false
+  Dishcare.Dishwasher.Setting.InfoLight:
+    name: Info Light
+    name_de: Infolicht
+    enabled_by_default: false
+  Dishcare.Dishwasher.Setting.RinseAid:
+    name: Rinse aid
+    name_de: Klarspüler
+    entity_category: config
+    enabled_by_default: false
+  Dishcare.Dishwasher.Setting.SensitivityTurbidity:
+    name: Turbidity sensitivity
+    name_de: Trübungssensor-Empfindlichkeit
+    entity_category: config
+    enabled_by_default: false
+  Dishcare.Dishwasher.Setting.SilenceOnDemandDefaultTime:
+    name: Silence On Demand Default Time
+    name_de: Standardzeit Leise nach Wunsch
+    enabled_by_default: false
+  Dishcare.Dishwasher.Setting.SoundLevelSignal:
+    name: Sound Level Signal
+    name_de: Signaltonlautstärke
+    enabled_by_default: false
+  Dishcare.Dishwasher.Setting.SpeedOnDemand:
+    name: Speed On Demand
+    name_de: Beschleunigung nach Wunsch
+    enabled_by_default: false
+  Dishcare.Dishwasher.Setting.WaterHardness:
+    name: Water Hardness
+    name_de: Wasserhärte
+    enabled_by_default: false
+  Dishcare.Dishwasher.Status.EcoDryActive:
+    name: Eco Dry Active
+    name_de: Eco-Trocknung aktiv
+    enabled_by_default: false
+  Dishcare.Dishwasher.Status.MachineCareReminder.RemainingProgramRuns:
+    name: Remaining Program Runs
+    name_de: Verbleibende Programmdurchläufe
+    enabled_by_default: false
+  Dishcare.Dishwasher.Status.ProgramPhase:
+    name: Program Phase
+    name_de: Programmphase
+    enabled_by_default: false
+  Dishcare.Dishwasher.Status.SilenceOnDemandRemainingTime:
+    name: Silence On Demand Remaining Time
+    name_de: Restzeit Leise nach Wunsch
+    enabled_by_default: false
   # ---- HeatingVentilationAirConditioning.AirConditioner ----
   HeatingVentilationAirConditioning.AirConditioner.Option.FanSpeedMode:
     name: Fan Speed Mode
     name_de: Lüftergeschwindigkeitsmodus
+    enabled_by_default: false
   HeatingVentilationAirConditioning.AirConditioner.Option.FanSpeedPercentage:
     name: Fan Speed Percentage
     name_de: Lüftergeschwindigkeit in Prozent
+    enabled_by_default: false
   HeatingVentilationAirConditioning.AirConditioner.Option.SetpointTemperature:
     name: Setpoint Temperature
     name_de: Solltemperatur
+    enabled_by_default: false
   # ---- LaundryCare.Common ----
-  LaundryCare.Common.Option.LoadRecommendation:
-    name: Load Recommendation
-    name_de: Beladungsempfehlung
-  LaundryCare.Common.Option.LowTemperatureHygiene:
-    name: Low Temperature Hygiene
-    name_de: Niedrigtemperatur-Hygiene
-  LaundryCare.Common.Option.ProcessPhase:
-    name: Process Phase
-    name_de: Prozessphase
-  LaundryCare.Common.Option.ReferToProgram:
-    name: Refer To Program
-    name_de: Programmreferenz
-  LaundryCare.Common.Option.SpeedPerfect:
-    name: Speed Perfect
-    name_de: SpeedPerfect
-  LaundryCare.Common.Option.VarioPerfect:
-    name: Vario perfect
-    name_de: VarioPerfect
-    enabled_by_default: true
   LaundryCare.Common.Event.DelayedShutdown:
     name: Delayed Shutdown
     name_de: Verzögerte Abschaltung
+    enabled_by_default: false
   LaundryCare.Common.Event.DelayedShutdownCanceled:
     name: Delayed Shutdown Canceled
     name_de: Verzögerte Abschaltung abgebrochen
+    enabled_by_default: false
   LaundryCare.Common.Event.DoorLock.WaterLevelTooHigh:
     name: Water Level Too High
     name_de: Wasserstand zu hoch
+    enabled_by_default: false
   LaundryCare.Common.Event.DoorNotLockable:
     name: Door Not Lockable
     name_de: Tür nicht verriegelbar
+    enabled_by_default: false
   LaundryCare.Common.Event.DoorNotUnlockable:
     name: Door Not Unlockable
     name_de: Tür nicht entriegelbar
+    enabled_by_default: false
   LaundryCare.Common.Event.DoorOpen:
     name: Door Open
     name_de: Tür offen
+    enabled_by_default: false
   LaundryCare.Common.Event.FatalErrorOccured:
     name: Fatal Error Occured
     name_de: Schwerwiegender Fehler aufgetreten
+    enabled_by_default: false
   LaundryCare.Common.Event.FoamDetection:
     name: Foam Detection
     name_de: Schaumerkennung
+    enabled_by_default: false
   LaundryCare.Common.Event.SupplyPower.BlackedOut:
     name: Blacked Out
     name_de: Stromausfall
+    enabled_by_default: false
   LaundryCare.Common.Event.SupplyPower.SupplyVoltageTooLow:
     name: Supply Voltage Too Low
     name_de: Versorgungsspannung zu niedrig
-  LaundryCare.Common.Setting.AutoPowerOff:
-    name: Auto Power Off
-    name_de: Automatische Abschaltung
-  LaundryCare.Common.Setting.Brightness:
-    name: Brightness
-    name_de: Helligkeit
-  LaundryCare.Common.Setting.BrightnessLevel:
-    name: Brightness Level
-    name_de: Helligkeitsstufe
-  LaundryCare.Common.Setting.DoorLightRing.Active:
-    name: Active
-    name_de: Aktiv
-  LaundryCare.Common.Setting.DoorLightRing.ActiveMode:
-    name: Active Mode
-    name_de: Aktiver Modus
-  LaundryCare.Common.Setting.DoorLightRing.Brightness:
-    name: Brightness
-    name_de: Helligkeit
-  LaundryCare.Common.Setting.DoorLightRing.BrightnessLevel:
-    name: Brightness Level
-    name_de: Helligkeitsstufe
-  LaundryCare.Common.Setting.DrumLight.Active:
-    name: Active
-    name_de: Aktiv
-  LaundryCare.Common.Setting.EndSignal:
-    name: End Signal
-    name_de: Endsignal
-  LaundryCare.Common.Setting.EndSignalVolume:
-    name: End Signal Volume
-    name_de: Endsignal-Lautstärke
-  LaundryCare.Common.Setting.KeySignalVolume:
-    name: Key Signal Volume
-    name_de: Tastensignal-Lautstärke
-  LaundryCare.Common.Setting.Sound.Mute:
-    name: Mute
-    name_de: Stumm
-  LaundryCare.Common.Setting.Sound.Volume:
-    name: Volume
-    name_de: Lautstärke
-  LaundryCare.Common.Setting.SupplyPower.PowerRating:
-    name: Power Rating
-    name_de: Nennleistung
-  LaundryCare.Common.Setting.TimeLight.Active:
-    name: Active
-    name_de: Aktiv
-  LaundryCare.Common.Setting.WrinkleGuard:
-    name: Wrinkle Guard
-    name_de: Knitterschutz
-  LaundryCare.Common.Status.Laundry.Reload:
-    name: Reload
-    name_de: Nachlegen
-  LaundryCare.Common.Status.Laundry.ReloadVersion:
-    name: Reload Version
-    name_de: Nachlegen-Version
-  LaundryCare.Common.Status.Version.E2e.RedBox:
-    name: Red Box
-    name_de: Red Box
-  LaundryCare.Common.Status.Version.E2e.Scope:
-    name: Scope
-    name_de: Scope
-  LaundryCare.Common.Status.Version.Smm.BusinessLogicFw:
-    name: Business Logic Fw
-    name_de: Business-Logik-Firmware
-  LaundryCare.Common.Status.Version.Smm.DomainFw:
-    name: Domain Fw
-    name_de: Domain-Firmware
-  LaundryCare.Common.Status.Version.Smm.FcvCfg:
-    name: Fcv Cfg
-    name_de: Fcv Cfg
-  LaundryCare.Common.Status.Version.Smm.FssCfg:
-    name: Fss Cfg
-    name_de: Fss Cfg
-  LaundryCare.Common.Status.Version.Smm.FuiCfg:
-    name: Fui Cfg
-    name_de: Fui Cfg
-  LaundryCare.Common.Status.Version.Smm.HcFw:
-    name: Hc Fw
-    name_de: Hc Fw
-  LaundryCare.Common.Status.Version.Smm.IaboCfg:
-    name: Iabo Cfg
-    name_de: Iabo Cfg
-  LaundryCare.Common.Status.Version.Smm.OperatingSystem:
-    name: Operating System
-    name_de: Betriebssystem
-  LaundryCare.Common.Status.Version.Smm.UiLogicFw:
-    name: Ui Logic Fw
-    name_de: UI-Logik-Firmware
-  LaundryCare.Common.Status.Version.Smm.VarCfg:
-    name: Var Cfg
-    name_de: Var Cfg
+    enabled_by_default: false
+  LaundryCare.Common.Option.LoadRecommendation:
+    name: Load Recommendation
+    name_de: Beladungsempfehlung
+    enabled_by_default: false
+  LaundryCare.Common.Option.LowTemperatureHygiene:
+    name: Low Temperature Hygiene
+    name_de: Niedrigtemperatur-Hygiene
+    enabled_by_default: false
+  LaundryCare.Common.Option.ProcessPhase:
+    name: Process Phase
+    name_de: Prozessphase
+    enabled_by_default: false
+  LaundryCare.Common.Option.ReferToProgram:
+    name: Refer To Program
+    name_de: Programmreferenz
+    enabled_by_default: false
   LaundryCare.Common.Option.SilentMode:
     name: Silent mode
     name_de: Leise-Modus
     enabled_by_default: true
-  # ---- LaundryCare.Dryer ----
-  LaundryCare.Dryer.Option.ConnectedDry.OriginalProgramTime:
-    name: Original Program Time
-    name_de: Ursprüngliche Programmdauer
-  LaundryCare.Dryer.Option.DryingTargetAdjustment:
-    name: Drying Target Adjustment
-    name_de: Trockenziel-Anpassung
-  LaundryCare.Dryer.Option.Gentle:
-    name: Gentle
-    name_de: Schonend
-  LaundryCare.Dryer.Option.HalfLoad:
-    name: Half Load
-    name_de: Halbe Beladung
-  LaundryCare.Dryer.Option.ProcessPhase:
-    name: Process Phase
-    name_de: Prozessphase
-  LaundryCare.Dryer.Option.Refresher:
-    name: Refresher
-    name_de: Auffrischen
-  LaundryCare.Dryer.Option.WrinkleGuard:
+  LaundryCare.Common.Option.SpeedPerfect:
+    name: Speed Perfect
+    name_de: SpeedPerfect
+    enabled_by_default: false
+  LaundryCare.Common.Option.VarioPerfect:
+    name: Vario perfect
+    name_de: VarioPerfect
+    enabled_by_default: true
+  LaundryCare.Common.Setting.AutoPowerOff:
+    name: Auto Power Off
+    name_de: Automatische Abschaltung
+    enabled_by_default: false
+  LaundryCare.Common.Setting.Brightness:
+    name: Brightness
+    name_de: Helligkeit
+    enabled_by_default: false
+  LaundryCare.Common.Setting.BrightnessLevel:
+    name: Brightness Level
+    name_de: Helligkeitsstufe
+    enabled_by_default: false
+  LaundryCare.Common.Setting.DoorLightRing.Active:
+    name: Active
+    name_de: Aktiv
+    enabled_by_default: false
+  LaundryCare.Common.Setting.DoorLightRing.ActiveMode:
+    name: Active Mode
+    name_de: Aktiver Modus
+    enabled_by_default: false
+  LaundryCare.Common.Setting.DoorLightRing.Brightness:
+    name: Brightness
+    name_de: Helligkeit
+    enabled_by_default: false
+  LaundryCare.Common.Setting.DoorLightRing.BrightnessLevel:
+    name: Brightness Level
+    name_de: Helligkeitsstufe
+    enabled_by_default: false
+  LaundryCare.Common.Setting.DrumLight.Active:
+    name: Active
+    name_de: Aktiv
+    enabled_by_default: false
+  LaundryCare.Common.Setting.EndSignal:
+    name: End Signal
+    name_de: Endsignal
+    enabled_by_default: false
+  LaundryCare.Common.Setting.EndSignalVolume:
+    name: End Signal Volume
+    name_de: Endsignal-Lautstärke
+    enabled_by_default: false
+  LaundryCare.Common.Setting.KeySignalVolume:
+    name: Key Signal Volume
+    name_de: Tastensignal-Lautstärke
+    enabled_by_default: false
+  LaundryCare.Common.Setting.Sound.Mute:
+    name: Mute
+    name_de: Stumm
+    enabled_by_default: false
+  LaundryCare.Common.Setting.Sound.Volume:
+    name: Volume
+    name_de: Lautstärke
+    enabled_by_default: false
+  LaundryCare.Common.Setting.SupplyPower.PowerRating:
+    name: Power Rating
+    name_de: Nennleistung
+    enabled_by_default: false
+  LaundryCare.Common.Setting.TimeLight.Active:
+    name: Active
+    name_de: Aktiv
+    enabled_by_default: false
+  LaundryCare.Common.Setting.WrinkleGuard:
     name: Wrinkle Guard
     name_de: Knitterschutz
-  LaundryCare.Dryer.Option.DryingTarget:
-    name: Drying target
-    name_de: Trockenziel
-    enabled_by_default: true
+    enabled_by_default: false
+  LaundryCare.Common.Status.Laundry.Reload:
+    name: Reload
+    name_de: Nachlegen
+    enabled_by_default: false
+  LaundryCare.Common.Status.Laundry.ReloadVersion:
+    name: Reload Version
+    name_de: Nachlegen-Version
+    enabled_by_default: false
+  LaundryCare.Common.Status.Version.E2e.RedBox:
+    name: Red Box
+    name_de: Red Box
+    enabled_by_default: false
+  LaundryCare.Common.Status.Version.E2e.Scope:
+    name: Scope
+    name_de: Scope
+    enabled_by_default: false
+  LaundryCare.Common.Status.Version.Smm.BusinessLogicFw:
+    name: Business Logic Fw
+    name_de: Business-Logik-Firmware
+    enabled_by_default: false
+  LaundryCare.Common.Status.Version.Smm.DomainFw:
+    name: Domain Fw
+    name_de: Domain-Firmware
+    enabled_by_default: false
+  LaundryCare.Common.Status.Version.Smm.FcvCfg:
+    name: Fcv Cfg
+    name_de: Fcv Cfg
+    enabled_by_default: false
+  LaundryCare.Common.Status.Version.Smm.FssCfg:
+    name: Fss Cfg
+    name_de: Fss Cfg
+    enabled_by_default: false
+  LaundryCare.Common.Status.Version.Smm.FuiCfg:
+    name: Fui Cfg
+    name_de: Fui Cfg
+    enabled_by_default: false
+  LaundryCare.Common.Status.Version.Smm.HcFw:
+    name: Hc Fw
+    name_de: Hc Fw
+    enabled_by_default: false
+  LaundryCare.Common.Status.Version.Smm.IaboCfg:
+    name: Iabo Cfg
+    name_de: Iabo Cfg
+    enabled_by_default: false
+  LaundryCare.Common.Status.Version.Smm.OperatingSystem:
+    name: Operating System
+    name_de: Betriebssystem
+    enabled_by_default: false
+  LaundryCare.Common.Status.Version.Smm.UiLogicFw:
+    name: Ui Logic Fw
+    name_de: UI-Logik-Firmware
+    enabled_by_default: false
+  LaundryCare.Common.Status.Version.Smm.VarCfg:
+    name: Var Cfg
+    name_de: Var Cfg
+    enabled_by_default: false
+  # ---- LaundryCare.Dryer ----
   LaundryCare.Dryer.Event.DryingProcessFinished:
     name: Drying process finished
     name_de: Trocknen beendet
     device_class: enum
     enabled_by_default: true
-  # ---- LaundryCare.Washer ----
-  LaundryCare.Washer.Option.EISA:
-    name: EISA
-    name_de: EISA
-  LaundryCare.Washer.Option.IDos1.Active:
-    name: Active
-    name_de: Aktiv
-  LaundryCare.Washer.Option.IDos1DosingLevel:
-    name: IDos 1 Dosing Level
-    name_de: i-Dos 1 Dosierstufe
-  LaundryCare.Washer.Option.IDos2.Active:
-    name: Active
-    name_de: Aktiv
-  LaundryCare.Washer.Option.IDos2DosingLevel:
-    name: IDos 2 Dosing Level
-    name_de: i-Dos 2 Dosierstufe
-  LaundryCare.Washer.Option.MultipleSoak:
-    name: Multiple Soak
-    name_de: Mehrfaches Einweichen
-  LaundryCare.Washer.Option.ProcessPhase:
+  LaundryCare.Dryer.Option.ConnectedDry.OriginalProgramTime:
+    name: Original Program Time
+    name_de: Ursprüngliche Programmdauer
+    enabled_by_default: false
+  LaundryCare.Dryer.Option.DryingTarget:
+    name: Drying target
+    name_de: Trockenziel
+    enabled_by_default: true
+  LaundryCare.Dryer.Option.DryingTargetAdjustment:
+    name: Drying Target Adjustment
+    name_de: Trockenziel-Anpassung
+    enabled_by_default: false
+  LaundryCare.Dryer.Option.Gentle:
+    name: Gentle
+    name_de: Schonend
+    enabled_by_default: false
+  LaundryCare.Dryer.Option.HalfLoad:
+    name: Half Load
+    name_de: Halbe Beladung
+    enabled_by_default: false
+  LaundryCare.Dryer.Option.ProcessPhase:
     name: Process Phase
     name_de: Prozessphase
-  LaundryCare.Washer.Option.RinsePlus1:
-    name: Rinse Plus 1
-    name_de: Spülen Plus 1
-  LaundryCare.Washer.Option.SilentWash:
-    name: Silent Wash
-    name_de: Leises Waschen
-  LaundryCare.Washer.Option.SpeedPerfect:
-    name: Speed Perfect
-    name_de: Speed Perfect
-  LaundryCare.Washer.Option.WaterAndRinsePlus1:
-    name: Water And Rinse Plus 1
-    name_de: Wasser und Spülen Plus 1
-  LaundryCare.Washer.Setting.IDos1BaseLevel:
-    name: i-Dos 1 base level
-    name_de: i-Dos 1 Grunddosierung
-    device_class: volume
-    enabled_by_default: true
-  LaundryCare.Washer.Setting.IDos2BaseLevel:
-    name: i-Dos 2 base level
-    name_de: i-Dos 2 Grunddosierung
-    device_class: volume
-    enabled_by_default: true
-  LaundryCare.Washer.Option.RinsePlus:
-    name: Extra rinse
-    name_de: Extra-Spülen
-    enabled_by_default: true
-  LaundryCare.Washer.Option.SpinSpeed:
-    name: Spin speed
-    name_de: Schleuderdrehzahl
-    enabled_by_default: true
-  LaundryCare.Washer.Option.Stains:
-    name: Auto stain
-    name_de: Fleckenautomatik
-    enabled_by_default: true
-  LaundryCare.Washer.Option.Temperature:
-    name: Temperature
-    name_de: Temperatur
-    enabled_by_default: true
+    enabled_by_default: false
+  LaundryCare.Dryer.Option.Refresher:
+    name: Refresher
+    name_de: Auffrischen
+    enabled_by_default: false
+  LaundryCare.Dryer.Option.WrinkleGuard:
+    name: Wrinkle Guard
+    name_de: Knitterschutz
+    enabled_by_default: false
+  # ---- LaundryCare.Washer ----
   LaundryCare.Washer.Event.Circulation.Pump.ErrorLockedRotor:
     name: Error Locked Rotor
     name_de: Fehler blockierter Rotor
+    enabled_by_default: false
   LaundryCare.Washer.Event.Circulation.Pump.ErrorMaxTorque:
     name: Error Max Torque
     name_de: Fehler maximales Drehmoment
+    enabled_by_default: false
   LaundryCare.Washer.Event.DrumCleanReminder:
     name: Drum Clean Reminder
     name_de: Trommelreinigungserinnerung
+    enabled_by_default: false
   LaundryCare.Washer.Event.IDos1FillLevelPoor:
     name: Poor i-Dos 1 fill level
     name_de: Niedriger Füllstand von i-Dos 1
@@ -1942,101 +2396,71 @@ features:
   LaundryCare.Washer.Event.PumpError:
     name: Pump Error
     name_de: Pumpenfehler
+    enabled_by_default: false
   LaundryCare.Washer.Event.ReleaseRinseHoldPending:
     name: Release Rinse Hold Pending
     name_de: Spülstopp-Freigabe ausstehend
+    enabled_by_default: false
   LaundryCare.Washer.Event.Soak.PauseEntered:
     name: Pause Entered
     name_de: Pause begonnen
+    enabled_by_default: false
   LaundryCare.Washer.Event.Soak.PauseLeft:
     name: Pause Left
     name_de: Pause beendet
+    enabled_by_default: false
   LaundryCare.Washer.Event.Spin.SpinAbort:
     name: Spin Abort
     name_de: Schleudern abgebrochen
+    enabled_by_default: false
   LaundryCare.Washer.Event.WaterSupply.WarmWaterAbsent:
     name: Warm Water Absent
     name_de: Warmwasser fehlt
+    enabled_by_default: false
   LaundryCare.Washer.Option.Disinfectant:
     name: Disinfectant
     name_de: Desinfektionsmittel
+    enabled_by_default: false
+  LaundryCare.Washer.Option.EISA:
+    name: EISA
+    name_de: EISA
+    enabled_by_default: false
   LaundryCare.Washer.Option.HandSoak:
     name: Hand Soak
     name_de: Hand-Einweichen
+    enabled_by_default: false
   LaundryCare.Washer.Option.HygienicSteam:
     name: Hygienic Steam
     name_de: Hygienedampf
+    enabled_by_default: false
   LaundryCare.Washer.Option.HygienicSteamIntensity:
     name: Hygienic Steam Intensity
     name_de: Hygienedampf-Intensität
-  LaundryCare.Washer.Option.OzoneTextileType:
-    name: Ozone Textile Type
-    name_de: Ozon-Textilart
-  LaundryCare.Washer.Option.PreTreatment:
-    name: Pre Treatment
-    name_de: Vorbehandlung
-  LaundryCare.Washer.Option.RinsePlus3:
-    name: Rinse Plus 3
-    name_de: Spülen Plus 3
-  LaundryCare.Washer.Option.SmartSoak:
-    name: Smart Soak
-    name_de: Smart-Einweichen
-  LaundryCare.Washer.Option.SoakDuration:
-    name: Soak Duration
-    name_de: Einweichdauer
-  LaundryCare.Washer.Option.SoakPause:
-    name: Soak Pause
-    name_de: Einweichpause
-  LaundryCare.Washer.Option.SoakTemperature:
-    name: Soak Temperature
-    name_de: Einweichtemperatur
-  LaundryCare.Washer.Option.WaterAndRinsePlus:
-    name: Water And Rinse Plus
-    name_de: Wasser und Spülen Plus
-  LaundryCare.Washer.Setting.EnableDrumCleanReminder:
-    name: Enable Drum Clean Reminder
-    name_de: Trommelreinigungserinnerung aktivieren
-  LaundryCare.Washer.Status.Detergent.All.Consumed:
-    name: Consumed
-    name_de: Verbraucht
-  LaundryCare.Washer.Status.Detergent.Last.Consumed:
-    name: Consumed
-    name_de: Verbraucht
-  LaundryCare.Washer.Status.Dos.System:
-    name: System
-    name_de: System
-  LaundryCare.Washer.Status.ProcessingData.LaundryLoad:
-    name: Laundry Load
-    name_de: Wäschemenge
-  LaundryCare.Washer.Status.ProcessingData.PeakFinalSpinSpeed:
-    name: Peak Final Spin Speed
-    name_de: Maximale Endschleuderdrehzahl
-  LaundryCare.Washer.Status.ProcessingData.PeakFinalSpinSpeedDuration:
-    name: Peak Final Spin Speed Duration
-    name_de: Dauer maximale Endschleuderdrehzahl
-  LaundryCare.Washer.Status.ProcessingData.TextileType:
-    name: Textile Type
-    name_de: Textilart
-  LaundryCare.Washer.Status.Soak.PauseRemainingTime:
-    name: Pause Remaining Time
-    name_de: Verbleibende Pausenzeit
-  LaundryCare.Washer.Status.Soak.Version:
-    name: Version
-    name_de: Version
-  LaundryCare.Washer.Status.Softener.All.Consumed:
-    name: Consumed
-    name_de: Verbraucht
-  LaundryCare.Washer.Status.Softener.Last.Consumed:
-    name: Consumed
-    name_de: Verbraucht
+    enabled_by_default: false
+  LaundryCare.Washer.Option.IDos1.Active:
+    name: Active
+    name_de: Aktiv
+    enabled_by_default: false
   LaundryCare.Washer.Option.IDos1Active:
     name: i-Dos 1 Active
     name_de: i-Dos 1 aktiv
     enabled_by_default: true
+  LaundryCare.Washer.Option.IDos1DosingLevel:
+    name: IDos 1 Dosing Level
+    name_de: i-Dos 1 Dosierstufe
+    enabled_by_default: false
+  LaundryCare.Washer.Option.IDos2.Active:
+    name: Active
+    name_de: Aktiv
+    enabled_by_default: false
   LaundryCare.Washer.Option.IDos2Active:
     name: i-Dos 2 Active
     name_de: i-Dos 2 aktiv
     enabled_by_default: true
+  LaundryCare.Washer.Option.IDos2DosingLevel:
+    name: IDos 2 Dosing Level
+    name_de: i-Dos 2 Dosierstufe
+    enabled_by_default: false
   LaundryCare.Washer.Option.IntensivePlus:
     name: Intensive +
     name_de: Intensiv +
@@ -2049,36 +2473,273 @@ features:
     name: Mini load
     name_de: Mini-Beladung
     enabled_by_default: true
+  LaundryCare.Washer.Option.MultipleSoak:
+    name: Multiple Soak
+    name_de: Mehrfaches Einweichen
+    enabled_by_default: false
+  LaundryCare.Washer.Option.OzoneTextileType:
+    name: Ozone Textile Type
+    name_de: Ozon-Textilart
+    enabled_by_default: false
+  LaundryCare.Washer.Option.PreTreatment:
+    name: Pre Treatment
+    name_de: Vorbehandlung
+    enabled_by_default: false
   LaundryCare.Washer.Option.Prewash:
     name: Prewash
     name_de: Vorwäsche
     enabled_by_default: true
+  LaundryCare.Washer.Option.ProcessPhase:
+    name: Process Phase
+    name_de: Prozessphase
+    enabled_by_default: false
   LaundryCare.Washer.Option.RinseHold:
     name: Rinse hold
     name_de: Spülstopp
     enabled_by_default: true
+  LaundryCare.Washer.Option.RinsePlus:
+    name: Extra rinse
+    name_de: Extra-Spülen
+    enabled_by_default: true
+  LaundryCare.Washer.Option.RinsePlus1:
+    name: Rinse Plus 1
+    name_de: Spülen Plus 1
+    enabled_by_default: false
+  LaundryCare.Washer.Option.RinsePlus3:
+    name: Rinse Plus 3
+    name_de: Spülen Plus 3
+    enabled_by_default: false
+  LaundryCare.Washer.Option.SilentWash:
+    name: Silent Wash
+    name_de: Leises Waschen
+    enabled_by_default: false
+  LaundryCare.Washer.Option.SmartSoak:
+    name: Smart Soak
+    name_de: Smart-Einweichen
+    enabled_by_default: false
   LaundryCare.Washer.Option.Soak:
     name: Soaking
     name_de: Einweichen
     enabled_by_default: true
+  LaundryCare.Washer.Option.SoakDuration:
+    name: Soak Duration
+    name_de: Einweichdauer
+    enabled_by_default: false
+  LaundryCare.Washer.Option.SoakPause:
+    name: Soak Pause
+    name_de: Einweichpause
+    enabled_by_default: false
+  LaundryCare.Washer.Option.SoakTemperature:
+    name: Soak Temperature
+    name_de: Einweichtemperatur
+    enabled_by_default: false
+  LaundryCare.Washer.Option.SpeedPerfect:
+    name: Speed Perfect
+    name_de: Speed Perfect
+    enabled_by_default: false
+  LaundryCare.Washer.Option.SpinSpeed:
+    name: Spin speed
+    name_de: Schleuderdrehzahl
+    enabled_by_default: true
+  LaundryCare.Washer.Option.Stains:
+    name: Auto stain
+    name_de: Fleckenautomatik
+    enabled_by_default: true
+  LaundryCare.Washer.Option.Temperature:
+    name: Temperature
+    name_de: Temperatur
+    enabled_by_default: true
+  LaundryCare.Washer.Option.WaterAndRinsePlus:
+    name: Water And Rinse Plus
+    name_de: Wasser und Spülen Plus
+    enabled_by_default: false
+  LaundryCare.Washer.Option.WaterAndRinsePlus1:
+    name: Water And Rinse Plus 1
+    name_de: Wasser und Spülen Plus 1
+    enabled_by_default: false
   LaundryCare.Washer.Option.WaterPlus:
     name: Water +
     name_de: Wasser +
     enabled_by_default: true
+  LaundryCare.Washer.Setting.EnableDrumCleanReminder:
+    name: Enable Drum Clean Reminder
+    name_de: Trommelreinigungserinnerung aktivieren
+    enabled_by_default: false
+  LaundryCare.Washer.Setting.IDos1BaseLevel:
+    name: i-Dos 1 base level
+    name_de: i-Dos 1 Grunddosierung
+    device_class: volume
+    enabled_by_default: true
+  LaundryCare.Washer.Setting.IDos2BaseLevel:
+    name: i-Dos 2 base level
+    name_de: i-Dos 2 Grunddosierung
+    device_class: volume
+    enabled_by_default: true
+  LaundryCare.Washer.Status.Detergent.All.Consumed:
+    name: Consumed
+    name_de: Verbraucht
+    enabled_by_default: false
+  LaundryCare.Washer.Status.Detergent.Last.Consumed:
+    name: Consumed
+    name_de: Verbraucht
+    enabled_by_default: false
+  LaundryCare.Washer.Status.Dos.System:
+    name: System
+    name_de: System
+    enabled_by_default: false
+  LaundryCare.Washer.Status.ProcessingData.LaundryLoad:
+    name: Laundry Load
+    name_de: Wäschemenge
+    enabled_by_default: false
+  LaundryCare.Washer.Status.ProcessingData.PeakFinalSpinSpeed:
+    name: Peak Final Spin Speed
+    name_de: Maximale Endschleuderdrehzahl
+    enabled_by_default: false
+  LaundryCare.Washer.Status.ProcessingData.PeakFinalSpinSpeedDuration:
+    name: Peak Final Spin Speed Duration
+    name_de: Dauer maximale Endschleuderdrehzahl
+    enabled_by_default: false
+  LaundryCare.Washer.Status.ProcessingData.TextileType:
+    name: Textile Type
+    name_de: Textilart
+    enabled_by_default: false
+  LaundryCare.Washer.Status.Soak.PauseRemainingTime:
+    name: Pause Remaining Time
+    name_de: Verbleibende Pausenzeit
+    enabled_by_default: false
+  LaundryCare.Washer.Status.Soak.Version:
+    name: Version
+    name_de: Version
+    enabled_by_default: false
+  LaundryCare.Washer.Status.Softener.All.Consumed:
+    name: Consumed
+    name_de: Verbraucht
+    enabled_by_default: false
+  LaundryCare.Washer.Status.Softener.Last.Consumed:
+    name: Consumed
+    name_de: Verbraucht
+    enabled_by_default: false
   # ---- LaundryCare.WasherDryer ----
   LaundryCare.WasherDryer.Option.DryingTarget:
     name: Drying Target
     name_de: Trockenziel
+    enabled_by_default: false
   LaundryCare.WasherDryer.Option.LowTemperatureHygiene:
     name: Low Temperature Hygiene
     name_de: Niedrigtemperatur-Hygiene
+    enabled_by_default: false
   LaundryCare.WasherDryer.Option.ProgramMode:
     name: Program Mode
     name_de: Programmmodus
+    enabled_by_default: false
   LaundryCare.WasherDryer.Option.WrinkleGuardBoost:
     name: Wrinkle Guard Boost
     name_de: Knitterschutz-Boost
+    enabled_by_default: false
   # ---- Refrigeration.Common ----
+  Refrigeration.Common.Setting.BottleCooler.SetpointTemperature:
+    name: Bottle cooler temperature
+    name_de: Flaschenkühler-Temperatur
+    device_class: temperature
+    enabled_by_default: true
+  Refrigeration.Common.Setting.ChillerCommon.SetpointTemperature:
+    name: Chiller temperature
+    name_de: Chiller-Temperatur
+    device_class: temperature
+    enabled_by_default: true
+  Refrigeration.Common.Setting.ChillerLeft.SetpointTemperature:
+    name: Chiller left temperature
+    name_de: Chiller-Temperatur links
+    device_class: temperature
+    enabled_by_default: true
+  Refrigeration.Common.Setting.ChillerRight.SetpointTemperature:
+    name: Chiller right temperature
+    name_de: Chiller-Temperatur rechts
+    device_class: temperature
+    enabled_by_default: true
+  Refrigeration.Common.Setting.Dispenser.Enabled:
+    name: Dispenser
+    name_de: Dispenser
+    enabled_by_default: true
+  Refrigeration.Common.Setting.Door.AssistantForceFreezer:
+    name: Assistant Force Freezer
+    name_de: Assistent Kraft Gefrierschrank
+    enabled_by_default: false
+  Refrigeration.Common.Setting.Door.AssistantForceFridge:
+    name: Assistant Force Fridge
+    name_de: Assistent Kraft Kühlschrank
+    enabled_by_default: false
+  Refrigeration.Common.Setting.Door.AssistantFreezer:
+    name: Freezer door assistant
+    name_de: Türassistent Gefrierschrank
+    enabled_by_default: true
+  Refrigeration.Common.Setting.Door.AssistantFridge:
+    name: Fridge door assistant
+    name_de: Türassistent Kühlschrank
+    enabled_by_default: true
+  Refrigeration.Common.Setting.Door.AssistantTimeoutFreezer:
+    name: Assistant Timeout Freezer
+    name_de: Assistent Zeitüberschreitung Gefrierschrank
+    enabled_by_default: false
+  Refrigeration.Common.Setting.Door.AssistantTimeoutFridge:
+    name: Assistant Timeout Fridge
+    name_de: Assistent Zeitüberschreitung Kühlschrank
+    enabled_by_default: false
+  Refrigeration.Common.Setting.Door.AssistantTriggerFreezer:
+    name: Assistant Trigger Freezer
+    name_de: Assistent Auslöser Gefrierschrank
+    enabled_by_default: false
+  Refrigeration.Common.Setting.Door.AssistantTriggerFridge:
+    name: Assistant Trigger Fridge
+    name_de: Assistent Auslöser Kühlschrank
+    enabled_by_default: false
+  Refrigeration.Common.Setting.EcoMode:
+    name: Eco mode
+    name_de: Eco-Modus
+    enabled_by_default: true
+  Refrigeration.Common.Setting.FreshMode:
+    name: Fresh mode
+    name_de: Frische-Modus
+    enabled_by_default: true
+  Refrigeration.Common.Setting.Light.External.Brightness:
+    name: Brightness
+    name_de: Helligkeit
+    enabled_by_default: false
+  Refrigeration.Common.Setting.Light.External.Power:
+    name: External light
+    name_de: Außenbeleuchtung
+    enabled_by_default: true
+  Refrigeration.Common.Setting.Light.Internal.Brightness:
+    name: Brightness
+    name_de: Helligkeit
+    enabled_by_default: false
+  Refrigeration.Common.Setting.Light.Internal.Power:
+    name: Internal light
+    name_de: Innenbeleuchtung
+    enabled_by_default: true
+  Refrigeration.Common.Setting.SabbathMode:
+    name: Sabbath mode
+    name_de: Sabbat-Modus
+    enabled_by_default: true
+  Refrigeration.Common.Setting.VacationMode:
+    name: Vacation mode
+    name_de: Urlaubsmodus
+    enabled_by_default: true
+  Refrigeration.Common.Setting.WineCompartment.SetpointTemperature:
+    name: Wine compartment temperature
+    name_de: Weinfach-Temperatur
+    device_class: temperature
+    enabled_by_default: true
+  Refrigeration.Common.Setting.WineCompartment2.SetpointTemperature:
+    name: Wine compartment 2 temperature
+    name_de: Weinfach 2 Temperatur
+    device_class: temperature
+    enabled_by_default: true
+  Refrigeration.Common.Setting.WineCompartment3.SetpointTemperature:
+    name: Wine compartment 3 temperature
+    name_de: Weinfach 3 Temperatur
+    device_class: temperature
+    enabled_by_default: true
   Refrigeration.Common.Status.Door.BottleCooler:
     name: Bottle cooler door
     name_de: Flaschenkühler-Tür
@@ -2119,123 +2780,20 @@ features:
     name_de: Kühlschranktür
     device_class: door
     enabled_by_default: true
+  Refrigeration.Common.Status.Door.Refrigerator2:
+    name: Refrigerator 2
+    name_de: Kühlschrank 2
+    enabled_by_default: false
+  Refrigeration.Common.Status.Door.Refrigerator3:
+    name: Refrigerator 3
+    name_de: Kühlschrank 3
+    enabled_by_default: false
   Refrigeration.Common.Status.Door.WineCompartment:
     name: Wine compartment door
     name_de: Weinfach-Tür
     device_class: door
     enabled_by_default: true
-  Refrigeration.Common.Setting.Light.External.Power:
-    name: External light
-    name_de: Außenbeleuchtung
-    enabled_by_default: true
-  Refrigeration.Common.Setting.Light.Internal.Power:
-    name: Internal light
-    name_de: Innenbeleuchtung
-    enabled_by_default: true
-  Refrigeration.Common.Setting.BottleCooler.SetpointTemperature:
-    name: Bottle cooler temperature
-    name_de: Flaschenkühler-Temperatur
-    device_class: temperature
-    enabled_by_default: true
-  Refrigeration.Common.Setting.ChillerCommon.SetpointTemperature:
-    name: Chiller temperature
-    name_de: Chiller-Temperatur
-    device_class: temperature
-    enabled_by_default: true
-  Refrigeration.Common.Setting.ChillerLeft.SetpointTemperature:
-    name: Chiller left temperature
-    name_de: Chiller-Temperatur links
-    device_class: temperature
-    enabled_by_default: true
-  Refrigeration.Common.Setting.ChillerRight.SetpointTemperature:
-    name: Chiller right temperature
-    name_de: Chiller-Temperatur rechts
-    device_class: temperature
-    enabled_by_default: true
-  Refrigeration.Common.Setting.WineCompartment.SetpointTemperature:
-    name: Wine compartment temperature
-    name_de: Weinfach-Temperatur
-    device_class: temperature
-    enabled_by_default: true
-  Refrigeration.Common.Setting.WineCompartment2.SetpointTemperature:
-    name: Wine compartment 2 temperature
-    name_de: Weinfach 2 Temperatur
-    device_class: temperature
-    enabled_by_default: true
-  Refrigeration.Common.Setting.WineCompartment3.SetpointTemperature:
-    name: Wine compartment 3 temperature
-    name_de: Weinfach 3 Temperatur
-    device_class: temperature
-    enabled_by_default: true
-  Refrigeration.Common.Status.Door.Refrigerator2:
-    name: Refrigerator 2
-    name_de: Kühlschrank 2
-  Refrigeration.Common.Status.Door.Refrigerator3:
-    name: Refrigerator 3
-    name_de: Kühlschrank 3
-  Refrigeration.Common.Setting.Dispenser.Enabled:
-    name: Dispenser
-    name_de: Dispenser
-    enabled_by_default: true
-  Refrigeration.Common.Setting.Door.AssistantForceFreezer:
-    name: Assistant Force Freezer
-    name_de: Assistent Kraft Gefrierschrank
-  Refrigeration.Common.Setting.Door.AssistantForceFridge:
-    name: Assistant Force Fridge
-    name_de: Assistent Kraft Kühlschrank
-  Refrigeration.Common.Setting.Door.AssistantFreezer:
-    name: Freezer door assistant
-    name_de: Türassistent Gefrierschrank
-    enabled_by_default: true
-  Refrigeration.Common.Setting.Door.AssistantFridge:
-    name: Fridge door assistant
-    name_de: Türassistent Kühlschrank
-    enabled_by_default: true
-  Refrigeration.Common.Setting.Door.AssistantTimeoutFreezer:
-    name: Assistant Timeout Freezer
-    name_de: Assistent Zeitüberschreitung Gefrierschrank
-  Refrigeration.Common.Setting.Door.AssistantTimeoutFridge:
-    name: Assistant Timeout Fridge
-    name_de: Assistent Zeitüberschreitung Kühlschrank
-  Refrigeration.Common.Setting.Door.AssistantTriggerFreezer:
-    name: Assistant Trigger Freezer
-    name_de: Assistent Auslöser Gefrierschrank
-  Refrigeration.Common.Setting.Door.AssistantTriggerFridge:
-    name: Assistant Trigger Fridge
-    name_de: Assistent Auslöser Kühlschrank
-  Refrigeration.Common.Setting.EcoMode:
-    name: Eco mode
-    name_de: Eco-Modus
-    enabled_by_default: true
-  Refrigeration.Common.Setting.FreshMode:
-    name: Fresh mode
-    name_de: Frische-Modus
-    enabled_by_default: true
-  Refrigeration.Common.Setting.Light.External.Brightness:
-    name: Brightness
-    name_de: Helligkeit
-  Refrigeration.Common.Setting.Light.Internal.Brightness:
-    name: Brightness
-    name_de: Helligkeit
-  Refrigeration.Common.Setting.SabbathMode:
-    name: Sabbath mode
-    name_de: Sabbat-Modus
-    enabled_by_default: true
-  Refrigeration.Common.Setting.VacationMode:
-    name: Vacation mode
-    name_de: Urlaubsmodus
-    enabled_by_default: true
   # ---- Refrigeration.FridgeFreezer ----
-  Refrigeration.FridgeFreezer.Setting.SetpointTemperatureFreezer:
-    name: Freezer temperature
-    name_de: Gefrierschrank-Temperatur
-    device_class: temperature
-    enabled_by_default: true
-  Refrigeration.FridgeFreezer.Setting.SetpointTemperatureRefrigerator:
-    name: Refrigerator temperature
-    name_de: Kühlschrank-Temperatur
-    device_class: temperature
-    enabled_by_default: true
   Refrigeration.FridgeFreezer.Event.DoorAlarmFreezer:
     name: Freezer door alarm
     name_de: Türalarm Gefrierschrank
@@ -2251,6 +2809,16 @@ features:
     name_de: Temperaturalarm Gefrierschrank
     device_class: enum
     enabled_by_default: true
+  Refrigeration.FridgeFreezer.Setting.SetpointTemperatureFreezer:
+    name: Freezer temperature
+    name_de: Gefrierschrank-Temperatur
+    device_class: temperature
+    enabled_by_default: true
+  Refrigeration.FridgeFreezer.Setting.SetpointTemperatureRefrigerator:
+    name: Refrigerator temperature
+    name_de: Kühlschrank-Temperatur
+    device_class: temperature
+    enabled_by_default: true
   Refrigeration.FridgeFreezer.Setting.SuperModeFreezer:
     name: Freezer super mode
     name_de: Super-Modus Gefrierschrank
@@ -2263,52 +2831,4 @@ features:
   StopProgram:
     name: Stop Program
     name_de: Programm stoppen
-
-  # ---- curated extras: features our daemon exposes that the official set omits ----
-  BSH.Common.Setting.RemoteControlLevel:
-    name: Remote control level
-    name_de: Fernsteuerungsstufe
-    entity_category: config
-  BSH.Common.Status.BackendConnected:
-    name: Cloud connected
-    name_de: Cloud verbunden
-    entity_category: diagnostic
-  BSH.Common.Setting.AllowBackendConnection:
-    name: Allow cloud connection
-    name_de: Cloud-Verbindung erlauben
-    entity_category: config
-  BSH.Common.Status.Program.All.Count.Started:
-    name: Programs started
-    name_de: Programme gestartet
-    state_class: total_increasing
-    entity_category: diagnostic
-  Dishcare.Dishwasher.Setting.RinseAid:
-    name: Rinse aid
-    name_de: Klarspüler
-    entity_category: config
-  Dishcare.Dishwasher.Setting.HotWater:
-    name: Hot water connection
-    name_de: Warmwasseranschluss
-    entity_category: config
-  Dishcare.Dishwasher.Setting.EcoAsDefault:
-    name: Eco as default
-    name_de: Eco als Standard
-    entity_category: config
-  Dishcare.Dishwasher.Setting.SensitivityTurbidity:
-    name: Turbidity sensitivity
-    name_de: Trübungssensor-Empfindlichkeit
-    entity_category: config
-  Dishcare.Dishwasher.Setting.DryingAssistantAllPrograms:
-    name: Drying assistant
-    name_de: Trocknungsassistent
-    entity_category: config
-  Dishcare.Dishwasher.Setting.ExtraDry:
-    name: Extra dry
-    name_de: Extra-Trocknung
-    entity_category: config
-  Cooking.Hob.Status.Zone001.PowerLevel:
-    name: Zone 1 power level
-    name_de: Zone 1 Leistungsstufe
-  Cooking.Hob.Status.Zone002.PowerLevel:
-    name: Zone 2 power level
-    name_de: Zone 2 Leistungsstufe
+    enabled_by_default: false

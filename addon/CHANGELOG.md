@@ -5,6 +5,30 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-06-27
+
+### Changed
+- **`HASS_DISCOVERY: curated` is now the default** (add-on `hass_discovery`), and
+  the curated set is aligned with the official Home Assistant `home_connect`
+  integration: only the official-catalogue features are enabled-by-default, so a
+  typical three-appliance setup drops from ~590 created entities to ~60 (the
+  native integration creates ~74). `full` still exposes every feature. Stale
+  entities from earlier runs are removed automatically by the discovery
+  orphan-cleanup once the daemon publishes the curated set.
+
+### Added
+- **Program controls** ("choose, then start"): a synthetic *Start program* /
+  *Stop program* button per appliance that runs programs. Start posts the program
+  chosen in the *Selected program* select to `/ro/activeProgram` (the appliances
+  expose no start command of their own); Stop aborts the active program.
+- The remaining untranslated program/recipe names — the hob frying-sensor recipes
+  (Speck, Béchamelsauce, Käsesauce, …) and a few washer programs — are now German
+  too (~65 added; the enum catalogue is ~765 members).
+
+### Fixed
+- The active/selected program publishes empty while idle instead of the raw uid
+  `0`, so a program select shows "no selection" rather than a number.
+
 ## [0.5.3] - 2026-06-27
 
 ### Added

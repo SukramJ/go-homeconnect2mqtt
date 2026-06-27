@@ -58,6 +58,10 @@ func (b *Bridge) handleSet(parent context.Context, d *Device, topic string, payl
 	rel = strings.TrimSuffix(rel, "/set")
 	value := strings.TrimSpace(string(payload))
 
+	if b.handleProgramControl(parent, d, rel) {
+		return // a synthetic start/stop control, not a feature write
+	}
+
 	entity, ok := b.resolveEntity(d, rel)
 	if !ok {
 		b.logger.Warn("bridge.command_unknown_feature", slog.String("device", d.name), slog.String("topic", topic))
@@ -124,6 +128,52 @@ func (b *Bridge) writeWithWindow(ctx context.Context, d *Device, e *homeconnect.
 		case <-time.After(b.cmdRetryDelay):
 		}
 	}
+}
+
+// Synthetic program-control topics (published by the discovery layer; they back
+// no device feature). Start posts the selected program to /ro/activeProgram.
+const (
+	controlStartProgram = "_control/start_program"
+	controlStopProgram  = "_control/stop_program"
+)
+
+// handleProgramControl runs a synthetic start/stop control, reporting whether
+// rel was one (so the caller skips the feature-write path).
+func (b *Bridge) handleProgramControl(parent context.Context, d *Device, rel string) bool {
+	if rel != controlStartProgram && rel != controlStopProgram {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(parent, b.cfg.SendTimeoutDuration()+b.cmdRetryDelay*time.Duration(b.cmdRetries+1))
+	defer cancel()
+	switch rel {
+	case controlStartProgram:
+		b.startSelectedProgram(ctx, d)
+	case controlStopProgram:
+		b.runProgramCall(ctx, d, "stop", func() error { _, err := d.app.StopActiveProgram(ctx); return err })
+	}
+	return true
+}
+
+// startSelectedProgram starts the program currently chosen in the
+// selected-program select (the appliances expose no start command; we post the
+// selected program to /ro/activeProgram via the device's start strategy).
+func (b *Bridge) startSelectedProgram(ctx context.Context, d *Device) {
+	sp, ok := d.app.EntityByName("BSH.Common.Root.SelectedProgram")
+	if !ok {
+		b.logger.Warn("bridge.no_selected_program", slog.String("device", d.name))
+		return
+	}
+	sel, ok := sp.Value().(string)
+	if !ok || sel == "" {
+		b.logger.Warn("bridge.no_program_selected", slog.String("device", d.name))
+		return
+	}
+	uid, ok := b.resolveProgramUID(d, sel)
+	if !ok {
+		b.logger.Warn("bridge.unknown_program", slog.String("device", d.name), slog.String("program", sel))
+		return
+	}
+	b.startProgram(ctx, d, uid, sel)
 }
 
 func (b *Bridge) startProgram(ctx context.Context, d *Device, programUID int, value string) {

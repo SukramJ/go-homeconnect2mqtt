@@ -209,7 +209,55 @@ func (d *Discovery) PublishDevice(ctx context.Context, device string, info profi
 			d.logger.Warn("hass.publish", slog.String("topic", topic), slog.String("err", err.Error()))
 		}
 	}
+	d.publishProgramControls(ctx, device, entities, dev, published)
 	return published
+}
+
+// publishProgramControls emits synthetic Start/Stop buttons for appliances that
+// run programs. The appliances expose no start command of their own, so the user
+// stages a program with the selected-program select and then presses Start
+// (which posts the selected program to /ro/activeProgram); Stop aborts it.
+func (d *Discovery) publishProgramControls(ctx context.Context, device string, entities []*homeconnect.Entity, dev deviceBlock, published map[string]bool) {
+	hasProgram := false
+	for _, e := range entities {
+		if e.Desc.Kind == profile.KindActiveProgram || e.Desc.Kind == profile.KindSelectedProgram {
+			hasProgram = true
+			break
+		}
+	}
+	if !hasProgram {
+		return
+	}
+	base := d.rootTopic + "/" + device
+	controls := []struct{ key, nameEN, nameDE string }{
+		{"start_program", "Start program", "Programm starten"},
+		{"stop_program", "Stop program", "Programm stoppen"},
+	}
+	for _, c := range controls {
+		name := c.nameEN
+		if d.lang == "de" {
+			name = c.nameDE
+		}
+		payload := map[string]any{
+			"unique_id":          dev.idPrefix + "_" + c.key,
+			"name":               name,
+			"default_entity_id":  "button." + slugify(device+"_"+c.key),
+			"command_topic":      base + "/_control/" + c.key + "/set",
+			"payload_press":      "PRESS",
+			"availability_topic": base + "/availability",
+			"device":             dev.block,
+		}
+		b, err := json.Marshal(payload)
+		if err != nil {
+			d.logger.Warn("hass.marshal", slog.String("feature", c.key), slog.String("err", err.Error()))
+			continue
+		}
+		topic := d.baseTopic + "/button/" + sanitize(device) + "/" + c.key + "/config"
+		published[topic] = true
+		if err := d.mqtt.Publish(ctx, topic, b, d.qos, true); err != nil {
+			d.logger.Warn("hass.publish", slog.String("topic", topic), slog.String("err", err.Error()))
+		}
+	}
 }
 
 // DeviceConfigFilter is the MQTT filter matching a device's discovery config
