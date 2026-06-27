@@ -25,7 +25,10 @@ elif bashio::services.available 'mqtt'; then
   host="$(bashio::services 'mqtt' 'host')"
   port="$(bashio::services 'mqtt' 'port')"
   scheme="tcp"
-  if bashio::services 'mqtt' 'ssl'; then
+  # bashio::services prints the value ("true"/"false") AND exits 0, so the
+  # value must be tested explicitly — using it as an `if` condition is always
+  # true and would force ssl:// against a plaintext broker.
+  if [ "$(bashio::services 'mqtt' 'ssl')" = "true" ]; then
     scheme="ssl"
   fi
   export HC2M_MQTT_SERVER="${scheme}://${host}:${port}"
