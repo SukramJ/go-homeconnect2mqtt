@@ -13,6 +13,8 @@ func TestEnumLabel(t *testing.T) {
 		{"DelayedStart", "de", "Startvorwahl"},       // CamelCase, normalized
 		{"Double_Shot", "de", "Double Shot"},         // separators normalized away
 		{"NoSuchMemberXyz", "de", "NoSuchMemberXyz"}, // uncatalogued -> unchanged
+		{"60", "de", "60"},                           // bare number -> never translated
+		{"90", "de", "90"},                           // (collided with a program leaf before)
 		{"Run", "en", "Run"},                         // english display -> unchanged
 		{"Run", "fr", "Run"},                         // unsupported lang -> unchanged
 	}

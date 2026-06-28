@@ -40,10 +40,26 @@ var enumENGen = func() map[string]string {
 	return m
 }()
 
+// isNumeric reports whether s is a bare number ("60", "90", "001"). Such values
+// are power levels / indices / durations and must never be "translated": a flat
+// catalogue cannot tell a hob power level "60" from a program leaf "60".
+func isNumeric(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
 // EnumLabel returns the localized label for an enum member name, or the name
-// unchanged when the language is not localized or the value is uncatalogued.
+// unchanged when the language is not localized, the value is numeric, or it is
+// uncatalogued.
 func EnumLabel(name, lang string) string {
-	if lang == "de" {
+	if lang == "de" && !isNumeric(name) {
 		if de, ok := enumDEGen[norm(name)]; ok {
 			return de
 		}
@@ -53,10 +69,10 @@ func EnumLabel(name, lang string) string {
 
 // EnumValue maps a (possibly localized) label back to the English enum member
 // name for the write path, or returns the label unchanged when it is already
-// English / uncatalogued. The result is matched case-insensitively against the
-// device's enumeration downstream, so the returned casing is not significant.
+// English / numeric / uncatalogued. The result is matched case-insensitively
+// against the device's enumeration downstream, so the casing is not significant.
 func EnumValue(label, lang string) string {
-	if lang == "de" {
+	if lang == "de" && !isNumeric(label) {
 		if en, ok := enumENGen[norm(label)]; ok {
 			return en
 		}
