@@ -5,6 +5,16 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-28
+
+### Added
+- `HASS_DISCOVERY_REFRESH` (add-on `hass_discovery_refresh`): a one-shot migration
+  flag. On start the daemon clears every retained discovery config it owns, waits
+  for Home Assistant to drop the entities, then the device workers re-create them
+  — so HA picks up changes it caches at first registration (entity **category**,
+  name), which a plain re-publish does not update. Turn it back off after one run.
+  Resets per-entity room/custom-name; entity ids and automations are preserved.
+
 ## [0.6.3] - 2026-06-28
 
 ### Fixed

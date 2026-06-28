@@ -34,6 +34,7 @@ For a standard Home Assistant install with the Mosquitto broker:
 | `mqtt_topic` | str | `homeconnect` | Base MQTT topic for published appliance state. |
 | `hass_enable` | bool | `true` | Publish Home Assistant MQTT discovery so entities appear automatically. |
 | `hass_discovery` | list(full\|curated) | `curated` | `curated` (default) publishes only the primary set, aligned with the entities the official Home Connect integration creates (~60 instead of ~590 across three appliances); `full` exposes every feature (the long tail disabled-by-default + categorized as diagnostic/config). |
+| `hass_discovery_refresh` | bool | `false` | One-shot migration. On start the add-on clears all its retained discovery configs and re-creates the entities, so Home Assistant picks up changes it caches at first registration (entity **category**, name). Set it `true`, restart, then set it back to `false`. Resets per-entity room/custom-name; entity ids and automations are preserved. |
 | `language` | list(en\|de) | `en` | Friendly-name language. Entity **names** are localized; entity **ids** stay English and language-independent. |
 | `web_enable` | bool | `true` | Enable the read-only diagnostic web UI (served via Ingress). |
 | `debug` | bool | `false` | Verbose logging. |

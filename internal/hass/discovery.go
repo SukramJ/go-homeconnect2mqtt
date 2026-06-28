@@ -267,6 +267,12 @@ func (d *Discovery) DeviceConfigFilter(device string) string {
 	return d.baseTopic + "/+/" + sanitize(device) + "/+/config"
 }
 
+// ConfigFilter matches every discovery config topic the daemon may own
+// (homeassistant/+/+/+/config), for a global refresh that clears them all.
+func (d *Discovery) ConfigFilter() string {
+	return d.baseTopic + "/+/+/+/config"
+}
+
 // IsOwnConfig reports whether a retained HA discovery config payload was
 // published by this daemon (its unique_id is in our `homeconnect_` namespace
 // and its state topic is under our root), so orphan cleanup never touches
