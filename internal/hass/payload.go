@@ -125,12 +125,16 @@ func entityCategoryFor(e *homeconnect.Entity) string {
 		return ""
 	}
 	switch e.Desc.Kind {
-	case profile.KindSetting:
+	case profile.KindSetting, profile.KindOption:
+		// A writable setting/option is a control -> Configuration; a read-only
+		// one is informational -> Diagnostic.
 		if e.Desc.Writable() {
 			return categoryConfig
 		}
 		return categoryDiagnostic
-	case profile.KindStatus, profile.KindOption, profile.KindEvent, profile.KindCommand:
+	case profile.KindCommand:
+		return categoryConfig // a button/action is a control
+	case profile.KindStatus, profile.KindEvent:
 		return categoryDiagnostic
 	default:
 		return ""
