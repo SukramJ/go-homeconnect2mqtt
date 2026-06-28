@@ -5,6 +5,16 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-06-28
+
+### Fixed
+- Numeric enum values are no longer mistranslated. A bare number ("60", "90") in
+  a dropdown — e.g. a hob power level — collided in the flat enum catalogue with a
+  program leaf that normalized to the same number, so the hob power level "60"
+  showed "Waschen und trocknen (60 min)". Numbers now always pass through
+  untranslated (a number stays a number), and the offending numeric catalogue
+  keys were removed. Named levels (Boost, Warmhalten, Aus) stay translated.
+
 ## [0.6.2] - 2026-06-28
 
 ### Fixed
