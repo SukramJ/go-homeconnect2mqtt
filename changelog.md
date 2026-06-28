@@ -5,6 +5,16 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-06-28
+
+### Fixed
+- Entity category: writable controls are now `config` (the Configuration section)
+  instead of `diagnostic`. Writable **options** (and command buttons) were
+  miscategorized as diagnostic, so hob controls like zone selector, power level,
+  frying-sensor level, duration and join-zone landed under Diagnostic instead of
+  Configuration. Read-only settings/options/status/events stay diagnostic; the
+  main set stays primary.
+
 ## [0.6.1] - 2026-06-27
 
 ### Added

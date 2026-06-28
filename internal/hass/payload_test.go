@@ -62,6 +62,10 @@ func TestCurationHeuristics(t *testing.T) {
 	if cat, en := get("BSH.Common.Setting.ChildLock"); cat != categoryConfig || en {
 		t.Errorf("ChildLock cat=%q enabled=%v, want config+disabled", cat, en)
 	}
+	// Writable option is a control too -> config, not diagnostic.
+	if cat, _ := get("BSH.Common.Option.Duration"); cat != categoryConfig {
+		t.Errorf("Duration (writable option) cat=%q, want config", cat)
+	}
 	// Non-primary read-only status: diagnostic.
 	if cat, en := get("BSH.Common.Status.Temp"); cat != categoryDiagnostic || en {
 		t.Errorf("Temp cat=%q enabled=%v, want diagnostic+disabled", cat, en)
