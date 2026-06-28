@@ -16,6 +16,59 @@ import (
 // after subscribing; the broker delivers them right after the subscribe.
 const reconcileCollectWindow = 2 * time.Second
 
+// refreshSettleDelay is how long we wait after clearing all discovery configs so
+// Home Assistant removes the entities before the workers re-publish them.
+const refreshSettleDelay = 3 * time.Second
+
+// refreshDiscoveryOnce, when HASS_DISCOVERY_REFRESH is set, clears every retained
+// discovery config this daemon owns and waits, so the per-device workers then
+// re-create the entities from scratch. This is the only way to push changes Home
+// Assistant caches at first registration (entity_category, name). It is a
+// one-shot, operator-triggered migration — turn the flag off after one run.
+func (b *Bridge) refreshDiscoveryOnce(ctx context.Context) {
+	if !b.cfg.HASSDiscoveryRefresh || b.hass == nil {
+		return
+	}
+	filter := b.hass.ConfigFilter()
+	var mu sync.Mutex
+	retained := map[string][]byte{}
+	if err := b.mqtt.Subscribe(ctx, filter, mqtt.QoS0, func(topic string, payload []byte) {
+		mu.Lock()
+		retained[topic] = append([]byte(nil), payload...)
+		mu.Unlock()
+	}); err != nil {
+		b.logger.Warn("bridge.refresh_subscribe", slog.String("err", err.Error()))
+		return
+	}
+	select {
+	case <-ctx.Done():
+		_ = b.mqtt.Unsubscribe(context.WithoutCancel(ctx), filter)
+		return
+	case <-time.After(reconcileCollectWindow):
+	}
+	_ = b.mqtt.Unsubscribe(ctx, filter)
+
+	cleared := 0
+	mu.Lock()
+	for topic, payload := range retained {
+		if len(payload) == 0 || !b.hass.IsOwnConfig(payload) {
+			continue
+		}
+		pctx, cancel := context.WithTimeout(ctx, publishTimeout)
+		if err := b.mqtt.Publish(pctx, topic, nil, b.qos, true); err == nil {
+			cleared++
+		}
+		cancel()
+	}
+	mu.Unlock()
+	b.logger.Info("bridge.discovery_refresh", slog.Int("cleared", cleared))
+	// Let HA drop the entities before the workers re-publish fresh configs.
+	select {
+	case <-ctx.Done():
+	case <-time.After(refreshSettleDelay):
+	}
+}
+
 // reconcileOrphans clears this daemon's retained Home Assistant discovery
 // configs for a device that are no longer in the just-published set — features
 // now excluded, renamed, re-platformed, or dropped by curated mode — so they

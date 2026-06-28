@@ -111,6 +111,7 @@ func (b *Bridge) Run(ctx context.Context) error {
 	if err := b.subscribeCommands(ctx); err != nil {
 		return fmt.Errorf("bridge: subscribe commands: %w", err)
 	}
+	b.refreshDiscoveryOnce(ctx) // one-shot HASS_DISCOVERY_REFRESH migration
 	g, gctx := errgroup.WithContext(ctx)
 	for _, d := range b.devices {
 		g.Go(func() error {

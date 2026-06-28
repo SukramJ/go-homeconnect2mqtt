@@ -9,7 +9,7 @@
 # To build locally from addon/Dockerfile instead of pulling GHCR, delete the
 # `image:` key below — the Supervisor then consults addon/build.yaml.
 name: go-homeconnect2mqtt
-version: "0.6.3"
+version: "0.7.0"
 slug: go_homeconnect2mqtt
 description: >-
   Local, cloud-free Home Connect (Bosch/Siemens/Gaggenau/Neff) to MQTT bridge
@@ -52,6 +52,7 @@ options:
   mqtt_topic: homeconnect
   hass_enable: true
   hass_discovery: curated
+  hass_discovery_refresh: false
   language: en
   web_enable: true
   debug: false
@@ -73,6 +74,7 @@ schema:
   mqtt_topic: str
   hass_enable: bool
   hass_discovery: "list(full|curated)"
+  hass_discovery_refresh: "bool?"
   language: "list(en|de)"
   web_enable: bool
   debug: bool

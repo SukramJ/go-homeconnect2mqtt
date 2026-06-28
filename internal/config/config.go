@@ -44,6 +44,11 @@ type Config struct {
 	HASSBaseTopic      string `yaml:"HASS_BASE_TOPIC"`
 	HASSBirthGracetime int    `yaml:"HASS_BIRTH_GRACETIME"` // seconds
 	HASSDiscovery      string `yaml:"HASS_DISCOVERY"`       // full | curated
+	// HASSDiscoveryRefresh is a one-shot migration flag: on start the daemon
+	// clears every retained discovery config it owns and re-creates the entities,
+	// so Home Assistant picks up changes it caches at first registration
+	// (entity_category, name). Turn it off again after one run.
+	HASSDiscoveryRefresh bool `yaml:"HASS_DISCOVERY_REFRESH"`
 
 	// --- Connection / resilience (see docs/05-resilience.md) ---
 	AppName          string `yaml:"APP_NAME"`
