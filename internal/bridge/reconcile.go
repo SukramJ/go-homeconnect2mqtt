@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/mqtt"
+	"github.com/SukramJ/go-mqtt"
 )
 
 // reconcileCollectWindow is how long we collect retained discovery configs

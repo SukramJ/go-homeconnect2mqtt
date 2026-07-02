@@ -7,8 +7,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/SukramJ/go-mqtt"
+
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/mqtt"
 )
 
 type reconcileNoopPub struct{}

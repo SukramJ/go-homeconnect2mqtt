@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/mqtt"
+	"github.com/SukramJ/go-mqtt"
 )
 
 func newDisc() *Discovery {

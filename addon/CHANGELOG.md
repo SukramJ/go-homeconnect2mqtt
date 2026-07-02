@@ -5,6 +5,26 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-02
+
+### Changed
+- The MQTT client is now sourced from the shared
+  [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt) module
+  (v0.1.0) instead of the locally vendored `internal/mqtt`. The client used to
+  be duplicated four times over across the `go-*2mqtt` bridges
+  (`go-mtec2mqtt`, `go-daikin2mqtt`, `go-homeconnect2mqtt`, `go-zendure2mqtt`);
+  it now lives once, so a fix lands in one place and every bridge picks it up
+  via `go get -u`. Behaviour is unchanged — the module is a superset of this
+  repo's own `internal/mqtt` and keeps the `loopDone` teardown fix (`Stop()`
+  now waits for the reconnect loop to exit before returning).
+
+### Security / Fixed (inherited from the shared module)
+- MQTT frames now carry a 1 MiB frame-size cap that rejects an oversized
+  `remaining length` before allocating a body buffer, closing an OOM/DoS
+  vector against a malicious or malfunctioning broker.
+- Broker-rejected subscriptions (SUBACK failure return codes) are now
+  surfaced and logged instead of being silently ignored.
+
 ## [0.7.1] - 2026-07-02
 
 ### Fixed
