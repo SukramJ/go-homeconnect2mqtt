@@ -30,7 +30,7 @@ With thanks to the projects this work learned from:
 | [`chris-mc1/homeconnect_local_hass`](https://github.com/chris-mc1/homeconnect_local_hass) | Mapping / onboarding / resilience concepts (reimplemented) | MIT |
 | [`bruestel/homeconnect-profile-downloader`](https://github.com/bruestel/homeconnect-profile-downloader) | External tool to obtain the profile archive (output consumed only; **not** reimplemented) | MIT |
 | `SukramJ/go-mtec2mqtt` | Sister project: structure, conventions, reusable infrastructure | MIT |
-| `SukramJ/openccu-loom` | Origin of the pure-Go MQTT client (`internal/mqtt`) | MIT |
+| `SukramJ/openccu-loom` | Origin of the pure-Go MQTT client, now the `github.com/SukramJ/go-mqtt` module | MIT |
 
 ## Clean-room statement (`homeconnect_websocket`)
 
@@ -52,14 +52,16 @@ section can be relaxed to a normal attribution.
 
 ## Bundled / dependency licenses
 
-Reused first-party code keeps its original copyright header
-(`internal/mqtt/*` → "OpenCCU-Loom authors", MIT).
+The pure-Go MQTT client is no longer vendored first-party code; it is
+consumed as an external dependency, `github.com/SukramJ/go-mqtt`, which
+keeps its original copyright ("OpenCCU-Loom authors", MIT).
 
 Go module dependencies (all permissive):
 
 | Module | License |
 |---|---|
 | `github.com/coder/websocket` | ISC |
+| `github.com/SukramJ/go-mqtt` | MIT |
 | `golang.org/x/sync` | BSD-3-Clause |
 | `gopkg.in/yaml.v3` | MIT / Apache-2.0 |
 
