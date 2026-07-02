@@ -5,6 +5,13 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-07-02
+
+### Docs
+- Retargeted stale `internal/mqtt` documentation references (`NOTICE.md`,
+  `docs/06-architecture.md`, `docs/09-implementation-plan.md`) to the
+  extracted `github.com/SukramJ/go-mqtt` module. No functional change.
+
 ## [0.8.0] - 2026-07-02
 
 ### Changed

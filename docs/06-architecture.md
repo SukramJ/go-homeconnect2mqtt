@@ -1,9 +1,10 @@
 # go-homeconnect2mqtt — Architecture & Concept
 
-> Design of the Go implementation. Reusable infrastructure (Makefile, `internal/mqtt`,
-> `internal/config`, Dockerfile, CI, the optional web/state UI) lives directly in this
-> repository, following a consistent structure, consistent conventions, and a consistent
-> resilience philosophy. Home Connect ⇒ MQTT, purely local, without cloud in normal operation.
+> Design of the Go implementation. Reusable infrastructure (Makefile, `internal/config`,
+> Dockerfile, CI, the optional web/state UI) lives directly in this repository, plus the
+> shared `go-mqtt` module pulled in as a dependency, following a consistent structure,
+> consistent conventions, and a consistent resilience philosophy. Home Connect ⇒ MQTT,
+> purely local, without cloud in normal operation.
 
 References: protocol → `01-protocol.md`, data model → `02-data-model.md`,
 onboarding → `03-profile-format.md`, mapping → `04-device-mapping.md`,

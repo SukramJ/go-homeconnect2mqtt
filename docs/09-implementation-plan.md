@@ -44,7 +44,7 @@ skeleton. All reusable infrastructure adopted from the sister project
 - [x] Global rename (module, binary names, `HC2M_` prefix, ClientID, AppDir)
 - [x] Directory skeleton (`06` §2)
 - [x] `internal/version/version.go`
-- [x] `internal/mqtt/` adopted verbatim incl. tests (path rewrite only; upstream headers kept)
+- [x] `internal/mqtt/` adopted verbatim incl. tests (path rewrite only; upstream headers kept) (later extracted to the `github.com/SukramJ/go-mqtt` module, v0.8.0)
 - [x] `internal/config/load.go` engine adopted; HC2M `config.go`/`defaults.go`/`validate.go` authored
 - [x] `Makefile`, `.golangci.yaml`, `Dockerfile`, `.dockerignore`, `.gitignore`, `.githooks/pre-commit`
 - [x] `CLAUDE.md` (English conventions)
