@@ -10,9 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SukramJ/go-mqtt"
+
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/mqtt"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
 

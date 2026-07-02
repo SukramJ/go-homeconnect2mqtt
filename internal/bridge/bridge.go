@@ -12,9 +12,10 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/SukramJ/go-mqtt"
+
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/mqtt"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/state"
 )
