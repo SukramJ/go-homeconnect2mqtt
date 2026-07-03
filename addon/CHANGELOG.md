@@ -5,6 +5,14 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-07-03
+
+### Fixed
+- Adopt go-mqtt v0.2.0 (retained MessageHandler flag, per-filter QoS replay,
+  hardened ping watchdog). Command and birth MQTT handlers now dispatch
+  asynchronously so blocking work no longer stalls the read loop and trips
+  spurious ping_timeout reconnects.
+
 ## [0.8.1] - 2026-07-02
 
 ### Docs
