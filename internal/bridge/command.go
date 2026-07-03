@@ -23,8 +23,20 @@ func (b *Bridge) subscribeCommands(ctx context.Context) error {
 	for _, d := range b.devices {
 		dev := d
 		filter := dev.topics.base + "/#"
-		if err := b.mqtt.Subscribe(ctx, filter, b.qos, func(topic string, payload []byte) {
-			b.handleSet(ctx, dev, topic, payload)
+		if err := b.mqtt.Subscribe(ctx, filter, b.qos, func(topic string, payload []byte, retained bool) {
+			if retained {
+				// Drop the broker's replay of the last retained command on
+				// (re)subscribe: without this, a stale command topic (or our
+				// own retained state loopback) re-fires the write on every
+				// reconnect. See [mqtt.MessageHandler] for the retained bit.
+				return
+			}
+			// handleSet makes blocking Home Connect cloud HTTP calls with
+			// retry/backoff loops; the adapter calls this handler
+			// synchronously inline in its read loop, so a blocking call here
+			// would stall PUBACK/PINGRESP processing and could trip a
+			// spurious ping_timeout. See [mqtt.MessageHandler].
+			go b.handleSet(ctx, dev, topic, payload)
 		}); err != nil {
 			return err
 		}
@@ -38,11 +50,20 @@ func (b *Bridge) subscribeBirth(ctx context.Context) error {
 	if b.hass == nil {
 		return nil
 	}
-	return b.mqtt.Subscribe(ctx, b.hass.BirthTopic(), b.qos, func(_ string, payload []byte) {
+	return b.mqtt.Subscribe(ctx, b.hass.BirthTopic(), b.qos, func(_ string, payload []byte, _ bool) {
+		// HA publishes homeassistant/status retained, so a retained replay
+		// on (re)subscribe must still trigger a discovery re-publish here
+		// (unlike subscribeCommands, this handler does not drop retained).
 		if strings.EqualFold(strings.TrimSpace(string(payload)), "online") {
-			for _, d := range b.devices {
-				b.publishDiscovery(ctx, d)
-			}
+			// publishDiscovery does per-device MQTT publishes; run the loop
+			// off the read-loop goroutine so it can't stall PUBACK/PINGRESP
+			// processing (the adapter calls this handler synchronously
+			// inline). See [mqtt.MessageHandler].
+			go func() {
+				for _, d := range b.devices {
+					b.publishDiscovery(ctx, d)
+				}
+			}()
 		}
 	})
 }
