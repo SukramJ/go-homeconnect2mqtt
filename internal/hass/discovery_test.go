@@ -22,7 +22,7 @@ type stubPub struct {
 
 func newStubPub() *stubPub { return &stubPub{pubs: map[string]string{}} }
 
-func (s *stubPub) Publish(_ context.Context, topic string, payload []byte, _ mqtt.QoS, _ bool) error {
+func (s *stubPub) Publish(_ context.Context, topic string, payload []byte, _ mqtt.QoS, _ bool, _ ...mqtt.PublishOption) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.pubs[topic] = string(payload)

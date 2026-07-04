@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SukramJ/go-mqtt"
+
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
@@ -23,8 +25,8 @@ func (b *Bridge) subscribeCommands(ctx context.Context) error {
 	for _, d := range b.devices {
 		dev := d
 		filter := dev.topics.base + "/#"
-		if err := b.mqtt.Subscribe(ctx, filter, b.qos, func(topic string, payload []byte, retained bool) {
-			if retained {
+		if _, err := b.mqtt.Subscribe(ctx, filter, b.qos, func(msg *mqtt.Message) {
+			if msg.Retain {
 				// Drop the broker's replay of the last retained command on
 				// (re)subscribe: without this, a stale command topic (or our
 				// own retained state loopback) re-fires the write on every
@@ -36,7 +38,7 @@ func (b *Bridge) subscribeCommands(ctx context.Context) error {
 			// synchronously inline in its read loop, so a blocking call here
 			// would stall PUBACK/PINGRESP processing and could trip a
 			// spurious ping_timeout. See [mqtt.MessageHandler].
-			go b.handleSet(ctx, dev, topic, payload)
+			go b.handleSet(ctx, dev, msg.Topic, msg.Payload)
 		}); err != nil {
 			return err
 		}
@@ -50,11 +52,11 @@ func (b *Bridge) subscribeBirth(ctx context.Context) error {
 	if b.hass == nil {
 		return nil
 	}
-	return b.mqtt.Subscribe(ctx, b.hass.BirthTopic(), b.qos, func(_ string, payload []byte, _ bool) {
+	_, err := b.mqtt.Subscribe(ctx, b.hass.BirthTopic(), b.qos, func(msg *mqtt.Message) {
 		// HA publishes homeassistant/status retained, so a retained replay
 		// on (re)subscribe must still trigger a discovery re-publish here
 		// (unlike subscribeCommands, this handler does not drop retained).
-		if strings.EqualFold(strings.TrimSpace(string(payload)), "online") {
+		if strings.EqualFold(strings.TrimSpace(string(msg.Payload)), "online") {
 			// publishDiscovery does per-device MQTT publishes; run the loop
 			// off the read-loop goroutine so it can't stall PUBACK/PINGRESP
 			// processing (the adapter calls this handler synchronously
@@ -66,6 +68,7 @@ func (b *Bridge) subscribeBirth(ctx context.Context) error {
 			}()
 		}
 	})
+	return err
 }
 
 // handleSet resolves an incoming "/set" command to a feature and applies

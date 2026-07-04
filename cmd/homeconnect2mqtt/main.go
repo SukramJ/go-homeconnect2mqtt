@@ -86,15 +86,17 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 
 	statusTopic := cfg.MQTTTopic + "/status"
 	client := mqtt.NewTCPClient(mqtt.TCPConfig{
-		BrokerURL:    cfg.MQTTServer,
-		ClientID:     config.ClientID,
-		Username:     cfg.MQTTLogin,
-		Password:     cfg.MQTTPassword,
-		WillTopic:    statusTopic,
-		WillPayload:  []byte("offline"),
-		WillRetain:   true,
-		CleanSession: true,
-		Logger:       logger,
+		BrokerURL:  cfg.MQTTServer,
+		ClientID:   config.ClientID,
+		Username:   cfg.MQTTLogin,
+		Password:   cfg.MQTTPassword,
+		CleanStart: true,
+		Will: &mqtt.Will{
+			Topic:   statusTopic,
+			Payload: []byte("offline"),
+			Retain:  true,
+		},
+		Logger: logger,
 	})
 	lc := mqtt.NewLifecycle(mqtt.LifecycleConfig{
 		InitialBackoff: cfg.ReconnectInitialDuration(),
