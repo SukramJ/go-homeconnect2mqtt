@@ -5,6 +5,30 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-07-04
+
+### Changed
+- Adopt [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt)
+  v1.0.0 (up from v0.2.0). **MQTT 5.0 is now the default wire protocol**
+  (3.1.1 remains selectable via `ProtocolVersion`); no bridge doc promises
+  MQTT 3.1.1-only broker support, and Home Assistant's bundled Mosquitto
+  already speaks v5. Reconnect handling is now event-driven rather than
+  polling, and the underlying client gains full QoS 0/1/2 support (this
+  bridge still only publishes/subscribes at QoS 0/1).
+- Subscriptions are now confirmed by the broker: `Subscribe` blocks until
+  the SUBACK arrives and returns a hard error on a broker-rejected filter,
+  instead of the previous fire-and-forget call that only logged a
+  rejection after the fact.
+- Publishing now fails fast against a dead connection
+  (`ErrNotConnected`/`ErrConnectionLost`) instead of blocking until a
+  timeout; command, birth-topic, and discovery-reconcile handlers were
+  migrated to the new `func(*mqtt.Message)` handler signature
+  (`msg.Topic`/`msg.Payload`/`msg.Retain`).
+- `TCPConfig.WillTopic`/`WillPayload`/`WillRetain` were replaced by a
+  single `Will: &mqtt.Will{...}` struct, and `CleanSession` was renamed
+  `CleanStart` (same wire bit). Both are internal wiring only — no add-on
+  option or environment variable changed.
+
 ## [0.8.2] - 2026-07-03
 
 ### Fixed
