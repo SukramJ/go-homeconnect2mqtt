@@ -93,8 +93,29 @@ func TestReconnectBackoffExponential(t *testing.T) {
 			t.Errorf("backoff[%d] = %v, want %v", i, got, w*time.Millisecond)
 		}
 	}
+
+	// connectFn never succeeds, so Run keeps retrying and keeps calling the
+	// fake sleep after the five backoffs we assert above. That sleep func is a
+	// select operand in Manager.wait, so Go evaluates it — performing its send
+	// to durs — before the select can observe ctx.Done(). Once durs fills, Run
+	// wedges on that send and never sees the cancellation, hanging the test
+	// under scheduler pressure. Keep draining durs until Run exits so the send
+	// always has room and the loop can reach its ctx.Err() check.
+	drained := make(chan struct{})
+	go func() {
+		defer close(drained)
+		for {
+			select {
+			case <-durs:
+			case <-done:
+				return
+			}
+		}
+	}()
+
 	cancel()
 	<-done
+	<-drained
 	if m.State() != StateClosed {
 		t.Errorf("final state = %q, want closed", m.State())
 	}
