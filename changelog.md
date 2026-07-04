@@ -5,6 +5,21 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-04
+
+### Added
+- Adopt the circuit breaker shipped with
+  [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt) v1.1.0
+  (up from v1.0.0, additive release): the bridge's publish path (device
+  state, discovery configs, orphan-reconcile cleanups) now fails fast with
+  `ErrCircuitOpen` during a degraded-broker phase (TCP link up, acks
+  missing) instead of each publish stalling on the ack timeout. 5
+  consecutive broker-side failures open the circuit, a single half-open
+  probe tests recovery after 30s, one success closes it again. State
+  transitions surface as a `homeconnect2mqtt.mqtt_breaker_state` warning
+  log. Subscriptions and the lifecycle-owned status-topic publishes are
+  not gated — the reconnect loop stays in charge of the link itself.
+
 ## [0.9.0] - 2026-07-04
 
 ### Changed
