@@ -110,6 +110,21 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	if err := lc.Start(ctx); err != nil {
 		return fmt.Errorf("mqtt: %w", err)
 	}
+	// Circuit breaker between the bridge and the broker: during a
+	// degraded-broker phase (TCP link up, acks missing) publishes fail
+	// fast with mqtt.ErrCircuitOpen instead of each stalling on the ack
+	// timeout, and bounded half-open probes test recovery. Defaults: 5
+	// consecutive broker-side failures open the circuit, recovery is
+	// probed after 30s. The lifecycle's reconnect loop stays in charge
+	// of the link itself; the status-topic publishes below intentionally
+	// bypass the breaker for the same reason.
+	breaker := mqtt.NewBreaker(client, mqtt.BreakerConfig{
+		OnStateChange: func(from, to mqtt.BreakerState) {
+			logger.Warn("homeconnect2mqtt.mqtt_breaker_state",
+				slog.String("from", from.String()),
+				slog.String("to", to.String()))
+		},
+	})
 	defer func() {
 		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -119,7 +134,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 
 	var disc *hass.Discovery
 	if cfg.HASSEnable {
-		disc = hass.New(client, cfg.HASSBaseTopic, cfg.MQTTTopic, mqtt.QoS(cfg.MQTTQoS), cfg.Language, cfg.HASSDiscovery == "curated", logger)
+		disc = hass.New(breaker, cfg.HASSBaseTopic, cfg.MQTTTopic, mqtt.QoS(cfg.MQTTQoS), cfg.Language, cfg.HASSDiscovery == "curated", logger)
 		if cat, err := mapping.Load(mappingPath); err != nil {
 			logger.Warn("mapping.load", slog.String("err", err.Error()))
 		} else {
@@ -133,7 +148,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 		store = state.New(nil)
 	}
 
-	br, err := bridge.New(bridge.Deps{Config: cfg, MQTT: client, Logger: logger, Devices: specs, HASS: disc, State: store})
+	br, err := bridge.New(bridge.Deps{Config: cfg, MQTT: &mqttSession{Breaker: breaker, Subscriber: client}, Logger: logger, Devices: specs, HASS: disc, State: store})
 	if err != nil {
 		return err
 	}
@@ -151,6 +166,20 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	g.Go(func() error { return webSrv.Run(gctx) })
 	return g.Wait()
 }
+
+// mqttSession is the MQTT surface handed to the bridge: Publish is
+// gated by the circuit breaker, while Subscribe/Unsubscribe go straight
+// to the client — subscriptions are startup-path calls with their own
+// SUBACK-bounded wait and must not be rejected during a publish-side
+// broker brownout.
+type mqttSession struct {
+	*mqtt.Breaker
+	mqtt.Subscriber
+}
+
+// Compile-time contract: the session satisfies the bridge's combined
+// MQTT dependency.
+var _ mqtt.Client = (*mqttSession)(nil)
 
 func loadConfig(configPath string) (*config.Config, error) {
 	if configPath == "" {
