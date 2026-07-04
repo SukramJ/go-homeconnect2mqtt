@@ -32,9 +32,9 @@ func (b *Bridge) refreshDiscoveryOnce(ctx context.Context) {
 	filter := b.hass.ConfigFilter()
 	var mu sync.Mutex
 	retained := map[string][]byte{}
-	if err := b.mqtt.Subscribe(ctx, filter, mqtt.QoS0, func(topic string, payload []byte, _ bool) {
+	if _, err := b.mqtt.Subscribe(ctx, filter, mqtt.QoS0, func(msg *mqtt.Message) {
 		mu.Lock()
-		retained[topic] = append([]byte(nil), payload...)
+		retained[msg.Topic] = append([]byte(nil), msg.Payload...)
 		mu.Unlock()
 	}); err != nil {
 		b.logger.Warn("bridge.refresh_subscribe", slog.String("err", err.Error()))
@@ -96,9 +96,9 @@ func (b *Bridge) reconcileOrphans(ctx context.Context, device string, published 
 		filter := b.hass.DeviceConfigFilter(device)
 		var mu sync.Mutex
 		retained := map[string][]byte{}
-		err := b.mqtt.Subscribe(ctx, filter, mqtt.QoS0, func(topic string, payload []byte, _ bool) {
+		_, err := b.mqtt.Subscribe(ctx, filter, mqtt.QoS0, func(msg *mqtt.Message) {
 			mu.Lock()
-			retained[topic] = append([]byte(nil), payload...)
+			retained[msg.Topic] = append([]byte(nil), msg.Payload...)
 			mu.Unlock()
 		})
 		if err != nil {

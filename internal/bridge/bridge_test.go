@@ -28,18 +28,18 @@ func newStubMQTT() *stubMQTT {
 	return &stubMQTT{pubs: map[string]string{}, subs: map[string]mqtt.MessageHandler{}}
 }
 
-func (s *stubMQTT) Publish(_ context.Context, topic string, payload []byte, _ mqtt.QoS, _ bool) error {
+func (s *stubMQTT) Publish(_ context.Context, topic string, payload []byte, _ mqtt.QoS, _ bool, _ ...mqtt.PublishOption) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.pubs[topic] = string(payload)
 	return nil
 }
 
-func (s *stubMQTT) Subscribe(_ context.Context, filter string, _ mqtt.QoS, h mqtt.MessageHandler) error {
+func (s *stubMQTT) Subscribe(_ context.Context, filter string, _ mqtt.QoS, h mqtt.MessageHandler, _ ...mqtt.SubscribeOption) (mqtt.SubscribeResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.subs[filter] = h
-	return nil
+	return mqtt.SubscribeResult{}, nil
 }
 
 func (s *stubMQTT) Unsubscribe(_ context.Context, filter string) error {

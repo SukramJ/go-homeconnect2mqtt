@@ -14,7 +14,9 @@ import (
 
 type reconcileNoopPub struct{}
 
-func (reconcileNoopPub) Publish(context.Context, string, []byte, mqtt.QoS, bool) error { return nil }
+func (reconcileNoopPub) Publish(context.Context, string, []byte, mqtt.QoS, bool, ...mqtt.PublishOption) error {
+	return nil
+}
 
 func TestOrphanTopics(t *testing.T) {
 	b := &Bridge{hass: hass.New(reconcileNoopPub{}, "homeassistant", "homeconnect", mqtt.QoS0, "en", false, nil)}

@@ -19,7 +19,7 @@ import (
 
 // Publisher is the subset of the MQTT client the discovery path needs.
 type Publisher interface {
-	Publish(ctx context.Context, topic string, payload []byte, qos mqtt.QoS, retain bool) error
+	Publish(ctx context.Context, topic string, payload []byte, qos mqtt.QoS, retain bool, opts ...mqtt.PublishOption) error
 }
 
 // Enricher supplies operator-configured per-feature overrides (implemented by
