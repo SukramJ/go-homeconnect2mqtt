@@ -5,6 +5,19 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-07-06
+
+### Fixed
+- Publish `object_id` alongside `default_entity_id` in every HA discovery
+  payload (entities and the program-control buttons). Current Home Assistant
+  releases do not yet honour `default_entity_id` reliably
+  ([home-assistant/core#157241](https://github.com/home-assistant/core/issues/157241)):
+  the seed is ignored and HA derives a generic `entity_id` from the localized
+  name instead. The deprecated-but-still-working `object_id` fixes that on
+  current HA, while `default_entity_id` keeps future HA correct. Both carry the
+  same English, language-independent seed; only the display `name` is localized
+  and `unique_id` stays independent.
+
 ## [0.10.0] - 2026-07-04
 
 ### Added

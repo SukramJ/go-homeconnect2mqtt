@@ -242,6 +242,7 @@ func (d *Discovery) publishProgramControls(ctx context.Context, device string, e
 		payload := map[string]any{
 			"unique_id":          dev.idPrefix + "_" + c.key,
 			"name":               name,
+			"object_id":          slugify(device + "_" + c.key),
 			"default_entity_id":  "button." + slugify(device+"_"+c.key),
 			"command_topic":      base + "/_control/" + c.key + "/set",
 			"payload_press":      "PRESS",
