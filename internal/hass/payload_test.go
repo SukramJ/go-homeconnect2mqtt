@@ -97,6 +97,11 @@ func TestDefaultEntityIDSlug(t *testing.T) {
 	if got := payload["default_entity_id"]; got != "sensor.geschirrspuler_bsh_common_status_operationstate" {
 		t.Errorf("default_entity_id = %v", got)
 	}
+	// object_id carries the same platform-less seed — current HA still honours
+	// it while default_entity_id is not yet reliably applied (HA #157241).
+	if got := payload["object_id"]; got != "geschirrspuler_bsh_common_status_operationstate" {
+		t.Errorf("object_id = %v", got)
+	}
 	// the heuristic English name (no enricher).
 	if got := payload["name"]; got != "Operation State" {
 		t.Errorf("name = %v, want Operation State", got)
@@ -128,9 +133,12 @@ func TestLocalizedName(t *testing.T) {
 		if p["name"] != tc.want {
 			t.Errorf("lang=%s name = %v, want %q", tc.lang, p["name"], tc.want)
 		}
-		// the id stays English regardless of language.
+		// the id stays English regardless of language (both seeds).
 		if p["default_entity_id"] != "sensor.dw_bsh_common_status_operationstate" {
 			t.Errorf("lang=%s default_entity_id = %v (must stay English)", tc.lang, p["default_entity_id"])
+		}
+		if p["object_id"] != "dw_bsh_common_status_operationstate" {
+			t.Errorf("lang=%s object_id = %v (must stay English)", tc.lang, p["object_id"])
 		}
 	}
 }
