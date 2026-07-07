@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -42,8 +43,12 @@ func TestParseArchiveDir(t *testing.T) {
 		"0606060606_DeviceDescription.xml": deviceDescriptionShort,
 		"0606060606_FeatureMapping.xml":    featureMappingShort,
 	}))
-	write("broken.zip", []byte("not a zip")) // skipped leniently, not fatal
-	write("notes.txt", []byte("ignore me"))  // not a zip
+	write("broken.zip", []byte("not a zip"))               // skipped leniently, not fatal
+	write("notes.txt", []byte("ignore me"))                // not a zip
+	write("bomb.zip", buildZipStored(t, map[string]string{ // oversized entry: skipped, not fatal
+		"x.json":   profileJSONTLS,
+		"huge.bin": strings.Repeat("\x00", maxEntrySize+1),
+	}))
 
 	profs, err := ParseArchiveDir(dir, slog.New(slog.DiscardHandler))
 	if err != nil {
@@ -97,5 +102,36 @@ func TestWriteInventory(t *testing.T) {
 	}
 	if got[0].DefaultHost != "NEFF-Dishwasher-0102030405" {
 		t.Errorf("defaultHost = %q", got[0].DefaultHost)
+	}
+}
+
+func TestWriteInventoryTightensExistingMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix permission bits are not honoured on Windows")
+	}
+	path := filepath.Join(t.TempDir(), "inventory.json")
+	// A pre-existing lax-mode file must not keep its mode once secrets are
+	// rewritten into it.
+	if err := os.WriteFile(path, []byte("stale"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	profs := []*DeviceProfile{{HaID: "0102030405", ConnectionType: ConnectionTLS, PSK64: "secret-psk"}}
+	if err := WriteInventory(path, profs); err != nil {
+		t.Fatalf("WriteInventory: %v", err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Errorf("inventory perms = %o, want 600 (holds secrets)", perm)
+	}
+	var got []InventoryEntry
+	data, _ := os.ReadFile(path)
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("stale content not replaced: %v", err)
+	}
+	if len(got) != 1 || got[0].PSK64 != "secret-psk" {
+		t.Errorf("unexpected content: %+v", got)
 	}
 }

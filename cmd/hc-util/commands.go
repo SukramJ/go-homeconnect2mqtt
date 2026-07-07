@@ -53,7 +53,7 @@ func parseCmd(args []string, stdout, stderr io.Writer) error {
 		return errors.New("parse: missing <profile.zip|dir>")
 	}
 	src := positionals[0]
-	logger := slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{}))
+	logger := newLogger(stderr)
 
 	info, err := os.Stat(src)
 	if err != nil {
@@ -68,6 +68,20 @@ func parseCmd(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
+	// Belt-and-braces against path traversal via a crafted haId (the archive
+	// parser already rejects unsafe haIds): the haId becomes a file name under
+	// --out and is echoed into the snippet/inventory, so drop anything that
+	// does not map to a plain file name.
+	kept := profiles[:0]
+	for _, p := range profiles {
+		if !safeProfileFileName(p.HaID) {
+			logger.Warn("parse.skip_profile",
+				slog.String("reason", "haId is not a safe file name"), slog.String("haId", p.HaID))
+			continue
+		}
+		kept = append(kept, p)
+	}
+	profiles = kept
 	if err := os.MkdirAll(*out, 0o755); err != nil { //nolint:gosec // operator dir
 		return fmt.Errorf("parse: mkdir %s: %w", *out, err)
 	}
@@ -105,12 +119,17 @@ func parseCmd(args []string, stdout, stderr io.Writer) error {
 	return nil
 }
 
+// safeProfileFileName reports whether haID can be used verbatim as a file
+// name inside the --out directory. It delegates to the profile package's
+// canonical validator so this belt and the parser's braces cannot drift.
+func safeProfileFileName(haID string) bool { return profile.ValidHaID(haID) }
+
 // dumpCmd lists every feature of a parsed description.
 func dumpCmd(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
 		return errors.New("dump: missing <device.json>")
 	}
-	desc, err := profile.LoadDescriptionJSON(args[0], slog.New(slog.NewTextHandler(stderr, nil)))
+	desc, err := profile.LoadDescriptionJSON(args[0], newLogger(stderr))
 	if err != nil {
 		return err
 	}
@@ -135,7 +154,7 @@ func connTestCmd(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	logger := slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{}))
+	logger := newLogger(stderr)
 	var failures int
 	for _, dc := range devices {
 		if err := testOne(dc, logger, stdout); err != nil {

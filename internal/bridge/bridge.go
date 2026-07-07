@@ -115,8 +115,17 @@ func (b *Bridge) Run(ctx context.Context) error {
 	b.refreshDiscoveryOnce(ctx) // one-shot HASS_DISCOVERY_REFRESH migration
 	g, gctx := errgroup.WithContext(ctx)
 	for _, d := range b.devices {
+		// One drain goroutine per device: entity-state publishes are
+		// decoupled from the appliance receive loop and one device's
+		// stuck publish never blocks another (docs/05-resilience.md).
+		// safePublish gives it the same panic blast-radius guarantee as
+		// the device worker.
 		g.Go(func() error {
-			return d.run(gctx, b.logger)
+			d.pub.run(gctx, b.safePublish)
+			return nil
+		})
+		g.Go(func() error {
+			return d.run(gctx, b)
 		})
 	}
 	b.logger.Info("bridge.started", slog.Int("devices", len(b.devices)))

@@ -94,10 +94,21 @@ type setRequest struct {
 	Value   any    `json:"value"`
 }
 
+// maxSetBodyBytes caps the POST /api/devices/{device}/set request body: a
+// set command is a tiny JSON object, so 1 MiB is generous while preventing
+// an oversized body from exhausting memory.
+const maxSetBodyBytes = 1 << 20
+
 func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
 	device := r.PathValue("device")
+	r.Body = http.MaxBytesReader(w, r.Body, maxSetBodyBytes)
 	var req setRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			writeError(w, "payload_too_large", http.StatusRequestEntityTooLarge, "request body too large", nil)
+			return
+		}
 		writeError(w, "bad_request", http.StatusBadRequest, "invalid JSON body", nil)
 		return
 	}

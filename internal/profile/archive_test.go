@@ -7,8 +7,11 @@ import (
 	"archive/zip"
 	"bytes"
 	"errors"
+	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -18,6 +21,27 @@ func buildZip(t *testing.T, files map[string]string) []byte {
 	zw := zip.NewWriter(&buf)
 	for name, content := range files {
 		w, err := zw.Create(name)
+		if err != nil {
+			t.Fatalf("zip create %s: %v", name, err)
+		}
+		if _, err := w.Write([]byte(content)); err != nil {
+			t.Fatalf("zip write %s: %v", name, err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatalf("zip close: %v", err)
+	}
+	return buf.Bytes()
+}
+
+// buildZipStored is buildZip with method Store (no deflate). The zip-bomb
+// tests move tens of MiB; skipping compression keeps them fast under -race.
+func buildZipStored(t *testing.T, files map[string]string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for name, content := range files {
+		w, err := zw.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Store})
 		if err != nil {
 			t.Fatalf("zip create %s: %v", name, err)
 		}
@@ -99,6 +123,92 @@ func TestParseArchiveNotAZip(t *testing.T) {
 	_, err := ParseArchiveBytes([]byte("not a zip"), nil)
 	if !errors.Is(err, ErrInvalidProfile) {
 		t.Errorf("expected ErrInvalidProfile, got %v", err)
+	}
+}
+
+// indexJSON builds a minimal device index referencing the shared XML fixtures.
+func indexJSON(haID string) string {
+	return fmt.Sprintf(`{"haId":%q,"deviceDescriptionFileName":"dd.xml",`+
+		`"featureMappingFileName":"fm.xml","connectionType":"AES","key":"a2V5","iv":"aXY"}`, haID)
+}
+
+func TestParseArchiveRejectsUnsafeHaID(t *testing.T) {
+	cases := []struct {
+		name string
+		haID string
+	}{
+		{"parent traversal", "../../../pwn"},
+		{"dot", "."},
+		{"dotdot", ".."},
+		{"forward slash", "a/b"},
+		{"backslash", `a\b`},
+		{"absolute", "/etc/pwn"},
+		{"empty", ""},
+		{"space", "ha id"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			zipData := buildZip(t, map[string]string{
+				"bad.json": indexJSON(tc.haID),
+				"dd.xml":   deviceDescriptionShort,
+				"fm.xml":   featureMappingShort,
+			})
+			// The unsafe profile is skipped (lenient loading); with nothing
+			// left, the archive as a whole is invalid.
+			_, err := ParseArchiveBytes(zipData, slog.New(slog.DiscardHandler))
+			if !errors.Is(err, ErrInvalidProfile) {
+				t.Errorf("haId %q: expected ErrInvalidProfile, got %v", tc.haID, err)
+			}
+		})
+	}
+}
+
+func TestParseArchiveSkipsUnsafeHaIDKeepsValid(t *testing.T) {
+	zipData := buildZip(t, map[string]string{
+		"bad.json":  indexJSON("../evil"),
+		"good.json": indexJSON("GOODDEVICE-01"),
+		"dd.xml":    deviceDescriptionShort,
+		"fm.xml":    featureMappingShort,
+	})
+	profiles, err := ParseArchiveBytes(zipData, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatalf("ParseArchiveBytes: %v", err)
+	}
+	if len(profiles) != 1 || profiles[0].HaID != "GOODDEVICE-01" {
+		t.Fatalf("expected only the valid profile, got %+v", profiles)
+	}
+}
+
+func TestParseArchiveZipBombEntry(t *testing.T) {
+	zipData := buildZipStored(t, map[string]string{
+		"0102030405.json":                  profileJSONAES,
+		"0102030405_DeviceDescription.xml": deviceDescriptionShort,
+		"0102030405_FeatureMapping.xml":    featureMappingShort,
+		"huge.bin":                         strings.Repeat("\x00", maxEntrySize+1),
+	})
+	_, err := ParseArchiveBytes(zipData, slog.New(slog.DiscardHandler))
+	if !errors.Is(err, ErrInvalidProfile) {
+		t.Fatalf("expected ErrInvalidProfile for oversized entry, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "huge.bin") {
+		t.Errorf("error should name the offending entry: %v", err)
+	}
+}
+
+func TestParseArchiveZipBombTotal(t *testing.T) {
+	// Five entries at exactly the per-entry limit pass individually but blow
+	// the whole-archive cap (5 * 16 MiB > 64 MiB).
+	files := map[string]string{}
+	chunk := strings.Repeat("\x00", maxEntrySize)
+	for i := range 5 {
+		files[fmt.Sprintf("part%d.bin", i)] = chunk
+	}
+	_, err := ParseArchiveBytes(buildZipStored(t, files), slog.New(slog.DiscardHandler))
+	if !errors.Is(err, ErrInvalidProfile) {
+		t.Fatalf("expected ErrInvalidProfile for oversized archive, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "archive declares") {
+		t.Errorf("expected the total-size guard to trip: %v", err)
 	}
 }
 

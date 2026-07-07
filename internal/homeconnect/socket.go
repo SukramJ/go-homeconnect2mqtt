@@ -71,6 +71,11 @@ type AESSocket struct {
 	url    string
 	crypto *AESCrypto
 
+	// sendMu orders Encrypt with the wire write: the TX chain (CBC IV +
+	// rolling HMAC, docs/01-protocol.md §3.2/§3.3) must advance in the
+	// exact order frames hit the wire, or the peer desyncs fatally.
+	sendMu sync.Mutex
+
 	mu   sync.Mutex
 	conn *websocket.Conn
 }
@@ -101,10 +106,15 @@ func (s *AESSocket) Connect(ctx context.Context) error {
 		return fmt.Errorf("homeconnect: dial %s: %w", s.url, err)
 	}
 	conn.SetReadLimit(readLimit)
+	// Chain reset and conn swap happen atomically w.r.t. Send (same lock),
+	// so an in-flight Send can never advance the fresh chain for a frame
+	// aimed at the stale connection.
+	s.sendMu.Lock()
 	s.crypto.Reset()
 	s.mu.Lock()
 	s.conn = conn
 	s.mu.Unlock()
+	s.sendMu.Unlock()
 	return nil
 }
 
@@ -117,8 +127,13 @@ func (s *AESSocket) currentConn() (*websocket.Conn, error) {
 	return s.conn, nil
 }
 
-// Send encrypts message and writes it as a binary frame.
+// Send encrypts message and writes it as a binary frame. Conn capture,
+// Encrypt and Write all happen under one lock so concurrent sends (or a
+// send racing a reconnect's chain reset) cannot put frames on the wire in
+// a different order than the crypto chain advanced.
 func (s *AESSocket) Send(ctx context.Context, message string) error {
+	s.sendMu.Lock()
+	defer s.sendMu.Unlock()
 	conn, err := s.currentConn()
 	if err != nil {
 		return err

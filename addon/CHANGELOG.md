@@ -5,6 +5,71 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-07
+
+Hardening release: an adversarially verified audit across untrusted input,
+secrets handling, concurrency and resource safety — every confirmed finding
+fixed, each fix covered by tests.
+
+### Security
+- Reject unsafe `haId` values from profile archives (`^[A-Za-z0-9._-]+$`,
+  no `.`/`..`): a crafted ZIP index could previously escape the `--out`
+  directory via `haId: "../../…"` and write files anywhere. Unsafe profiles
+  are skipped + logged per lenient loading; `hc-util parse` keeps a
+  belt-and-braces file-name check.
+- Cap ZIP inflation while parsing profile archives (16 MiB per entry,
+  64 MiB per archive, declared-size fast reject): a decompression bomb now
+  yields `ErrInvalidProfile` instead of OOMing the process; other archives
+  in the directory still load.
+- Cap the `POST /api/devices/{device}/set` body at 1 MiB (413
+  `payload_too_large`) and reap idle keep-alive connections
+  (`IdleTimeout` 120 s) on the diagnostics web server.
+- `WriteInventory` recreates the inventory file, so the documented 0600
+  mode holds even when a lax-permission file already exists at the path.
+- Structural redaction enforcement: `DeviceConfig`/`DeviceProfile`/
+  `InventoryEntry` implement `slog.LogValuer` (PSK/IV always masked) and
+  both binaries install a `ReplaceAttr` guard that masks any secret-keyed
+  log attribute (psk/iv/serialNumber/mac/shipSki/deviceID, all common
+  casings).
+
+### Fixed
+- A failed connect attempt now tears down its half-open connection: the
+  reconnect manager closes the connection on connect failure and a failed
+  session handshake self-cleans. Previously every retry against a
+  handshake-failing appliance leaked one socket + receive-loop goroutine,
+  and the stale loop raced the next attempt's session state.
+- The session receive loop runs on a connection-scoped context: setting
+  `ReconnectConfig.ConnectTimeout` no longer kills every successfully
+  established connection the moment the connect phase ends.
+- AES transport sends hold one lock across encrypt + wire write, so
+  concurrent commands can no longer put frames on the wire in a different
+  order than the CBC/HMAC chain advanced (an unrecoverable desync).
+- TLS-PSK (cgo) transport: the `Read`/`Write` pumps re-check `closed`
+  under the lock, fixing a potential SIGSEGV when `Close` frees the
+  OpenSSL objects while a blocking read is being unblocked.
+- A recovered device-worker panic no longer silently kills that device
+  until restart: the worker publishes offline, backs off (1 s doubling to
+  30 s) and re-enters its reconnect loop, so retained availability can no
+  longer stick at `online` with stale values.
+- Web server shutdown no longer stalls the full 5 s budget while an SSE
+  client is connected: open SSE streams are told to end when shutdown
+  starts (regular in-flight requests keep the full grace window), and a
+  shutdown error is logged + force-closed instead of discarded.
+
+### Added
+- Active WebSocket heartbeat: the `HEARTBEAT` config option (default 20 s)
+  is now actually wired — a failed ping drops the connection so a silently
+  dead appliance is detected within seconds instead of minutes of stale
+  `online` state.
+- Entity state publishes are decoupled from the appliance receive loop via
+  a per-device bounded FIFO publisher: an MQTT broker brownout can no
+  longer stall websocket frame processing. Every transition is preserved in
+  order (event pulses like `Present → Off` are never coalesced away); only
+  a full backlog (1024 entries) drops the oldest update, with a warning.
+- Panic isolation now also covers the appliance data path and the publish
+  drain goroutine: a malformed frame drops that frame (not the daemon),
+  and a panicking MQTT publish drops that publish (not the process).
+
 ## [0.10.1] - 2026-07-06
 
 ### Fixed

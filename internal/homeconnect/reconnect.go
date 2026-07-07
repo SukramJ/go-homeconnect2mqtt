@@ -114,6 +114,10 @@ func (m *Manager) Run(ctx context.Context) error {
 		}
 		m.setState(StateConnecting)
 		if err := m.connectOnce(ctx); err != nil {
+			// Release whatever the failed attempt left behind (a
+			// half-open socket, its receive loop); Close is nil-safe
+			// and idempotent on every transport.
+			_ = m.conn.Close()
 			m.setState(StateOffline)
 			m.logOffline(err)
 			if !m.wait(ctx, m.jittered(backoff)) {

@@ -6,10 +6,14 @@ package web
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/bridge"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
@@ -131,6 +135,101 @@ func TestSetBadRequest(t *testing.T) {
 		t.Errorf("bad body status = %d, want 400", resp.StatusCode)
 	}
 	_ = resp.Body.Close()
+}
+
+// TestSetBodySizeLimit exercises the request-body cap on the set endpoint:
+// an oversized body is rejected with 413, a small valid body still works.
+func TestSetBodySizeLimit(t *testing.T) {
+	cases := []struct {
+		name    string
+		body    string
+		want    int
+		wantKey string
+	}{
+		{
+			name: "small valid body accepted",
+			body: `{"feature":"BSH.Common.Setting.PowerState","value":"On"}`,
+			want: http.StatusAccepted,
+		},
+		{
+			name:    "oversized body rejected",
+			body:    `{"feature":"F","value":"` + strings.Repeat("x", maxSetBodyBytes+1024) + `"}`,
+			want:    http.StatusRequestEntityTooLarge,
+			wantKey: "payload_too_large",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ts, _ := newTestServer(t, stubDispatch{}, true)
+			resp, err := http.Post(ts.URL+"/api/devices/dw/set", "application/json", strings.NewReader(tc.body)) //nolint:noctx // test client
+			if err != nil {
+				t.Fatalf("POST: %v", err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+			var m map[string]any
+			_ = json.NewDecoder(resp.Body).Decode(&m)
+			if resp.StatusCode != tc.want {
+				t.Errorf("status = %d, want %d", resp.StatusCode, tc.want)
+			}
+			if tc.wantKey != "" && m["error"] != tc.wantKey {
+				t.Errorf("error key = %v, want %q", m["error"], tc.wantKey)
+			}
+		})
+	}
+}
+
+// TestShutdownPromptWithSSEClient verifies that cancelling the Run context
+// terminates the server promptly (well under the 5s Shutdown budget) even
+// while an SSE client holds an open stream: BaseContext must cancel the
+// request context so handleSSE returns.
+func TestShutdownPromptWithSSEClient(t *testing.T) {
+	store := state.New(nil)
+	logger := slog.New(slog.DiscardHandler)
+	srv := New(Config{}, store, stubDispatch{}, VersionInfo{}, nil, logger)
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- srv.serve(ctx, ln) }()
+
+	// Connect an SSE client and read the initial snapshot so the stream is
+	// definitely established before shutdown starts.
+	resp, err := http.Get("http://" + ln.Addr().String() + "/api/events") //nolint:noctx // test client
+	if err != nil {
+		t.Fatalf("SSE GET: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	buf := make([]byte, 256)
+	if _, err := resp.Body.Read(buf); err != nil {
+		t.Fatalf("SSE read: %v", err)
+	}
+
+	start := time.Now()
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Errorf("serve returned %v, want context.Canceled", err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("serve did not return within 3s of context cancel")
+	}
+	if elapsed := time.Since(start); elapsed >= 2*time.Second {
+		t.Errorf("shutdown took %v, want well under the 5s budget", elapsed)
+	}
+}
+
+// TestRunListenError checks that Run wraps and returns a listen failure.
+func TestRunListenError(t *testing.T) {
+	store := state.New(nil)
+	srv := New(Config{Bind: "127.0.0.1:-1"}, store, stubDispatch{}, VersionInfo{}, nil, slog.New(slog.DiscardHandler))
+	if err := srv.Run(context.Background()); err == nil {
+		t.Fatal("Run with invalid bind should return an error")
+	}
 }
 
 func TestBasicAuth(t *testing.T) {

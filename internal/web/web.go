@@ -12,8 +12,10 @@ import (
 	"crypto/subtle"
 	"embed"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -52,6 +54,11 @@ type Server struct {
 	mqttUp   func() bool
 
 	handler http.Handler
+	// shutdown is closed when serve starts its graceful shutdown; the SSE
+	// handler watches it so open streams end promptly without cutting the
+	// grace window short for regular in-flight requests. Nil (never fires)
+	// when the handler is used without serve, e.g. in httptest.
+	shutdown chan struct{}
 }
 
 // New builds the web server. mqttUp may be nil (then MQTT is reported up).
@@ -89,23 +96,46 @@ func (s *Server) buildHandler() http.Handler {
 
 // Run serves until the context is cancelled, then shuts down gracefully.
 func (s *Server) Run(ctx context.Context) error {
+	var lc net.ListenConfig
+	ln, err := lc.Listen(ctx, "tcp", s.cfg.Bind)
+	if err != nil {
+		return fmt.Errorf("web: listen on %s: %w", s.cfg.Bind, err)
+	}
+	return s.serve(ctx, ln)
+}
+
+// serve runs the HTTP server on ln until ctx is cancelled (split from Run
+// so tests can inject an ephemeral-port listener).
+func (s *Server) serve(ctx context.Context, ln net.Listener) error {
 	srv := &http.Server{
-		Addr:              s.cfg.Bind,
 		Handler:           s.handler,
 		ReadHeaderTimeout: 10 * time.Second,
+		// IdleTimeout reaps idle keep-alive connections. ReadTimeout and
+		// WriteTimeout deliberately stay zero: /api/events is a long-lived
+		// SSE response (docs/08-web-api.md) and an absolute read/write
+		// deadline would kill the stream mid-flight.
+		IdleTimeout: 120 * time.Second,
 	}
+	// Deliberately no BaseContext tied to ctx: in-flight regular requests
+	// (e.g. a set dispatch) get srv.Shutdown's full grace window; only the
+	// long-lived SSE streams are told to end early, via s.shutdown.
+	s.shutdown = make(chan struct{})
 	errCh := make(chan error, 1)
 	go func() {
-		s.logger.Info("web.listening", slog.String("bind", s.cfg.Bind))
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		s.logger.Info("web.listening", slog.String("bind", ln.Addr().String()))
+		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
 	}()
 	select {
 	case <-ctx.Done():
+		close(s.shutdown)
 		shutCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
-		_ = srv.Shutdown(shutCtx)
+		if err := srv.Shutdown(shutCtx); err != nil {
+			s.logger.Warn("web.shutdown", slog.String("err", err.Error()))
+			_ = srv.Close()
+		}
 		return ctx.Err()
 	case err := <-errCh:
 		return err

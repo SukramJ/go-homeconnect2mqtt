@@ -47,6 +47,17 @@ API) and the phased implementation plan is `docs/09-implementation-plan.md`.
   stops a worker. Per-device and per-entity isolation (see
   `docs/05-resilience.md`).
 
+## Release process
+
+A version bump touches **five** spots — keep them in sync in the same PR:
+
+1. `internal/version/version.go` (`Version = "x.y.z"`)
+2. `changelog.md` (project changelog, new dated section)
+3. `addon/CHANGELOG.md` (**Home Assistant add-on changelog — easy to forget,
+   never skip it**; mirror the project changelog entry)
+4. `addon/config.yaml` (`version:`)
+5. `addon/Dockerfile` (`ARG BUILD_VERSION=`)
+
 ## Common commands
 
 ```

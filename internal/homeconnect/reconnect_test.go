@@ -72,6 +72,36 @@ func readySleep(durs chan time.Duration) func(time.Duration) <-chan time.Time {
 	}
 }
 
+// Every failed connect attempt must release whatever it left behind: the
+// manager closes the Connectable before backing off, so no half-open
+// socket or receive loop leaks per retry.
+func TestFailedConnectClosesConn(t *testing.T) {
+	conn := &fakeConn{connectFn: func() error { return errors.New("offline") }}
+	durs := make(chan time.Duration, 16)
+	m := NewManager(conn, ReconnectConfig{
+		InitialBackoff: time.Second,
+		MaxBackoff:     4 * time.Second,
+		sleep:          readySleep(durs),
+	})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan struct{})
+	go func() { _ = m.Run(ctx); close(done) }()
+
+	for range 3 {
+		<-durs
+	}
+	cancel()
+	<-done
+
+	conn.mu.Lock()
+	connects, closes := conn.connects, conn.closes
+	conn.mu.Unlock()
+	if closes < connects {
+		t.Errorf("closes = %d, want >= connects (%d): failed attempts must be cleaned up", closes, connects)
+	}
+}
+
 func TestReconnectBackoffExponential(t *testing.T) {
 	durs := make(chan time.Duration, 100)
 	conn := &fakeConn{connectFn: func() error { return errors.New("offline") }}
