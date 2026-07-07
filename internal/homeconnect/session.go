@@ -21,7 +21,15 @@ type SessionConfig struct {
 	AppID            string
 	SendTimeout      time.Duration
 	HandshakeTimeout time.Duration
-	Logger           *slog.Logger
+	// Heartbeat is the interval of the active WebSocket ping probe
+	// (docs/01-protocol.md §1). Zero disables the probe; drops are then
+	// only detected when the blocking read fails.
+	Heartbeat time.Duration
+	Logger    *slog.Logger
+
+	// Injectable for deterministic tests; defaults to a real time.Ticker
+	// (mirrors ReconnectConfig's sleep injection).
+	heartbeatTick func(time.Duration) (<-chan time.Time, func())
 }
 
 // Session drives the message layer on top of a Socket: it performs the
@@ -40,12 +48,23 @@ type Session struct {
 	pendingMu sync.Mutex
 	pending   map[int]chan *Message
 
-	initCh  chan *Message
-	recvErr chan error
-	dropped chan struct{}
+	cur *connState // guarded by mu
 
 	notifyMu      sync.RWMutex
 	notifyHandler func(*Message)
+}
+
+// connState bundles the state scoped to one connection attempt. Each
+// Connect creates a fresh instance, so a stale receive loop can never
+// touch a newer connection's channels. dropped is closed by the receive
+// loop alone (its single owner); hbDone is nil unless a heartbeat probe
+// was started and is closed when that goroutine exits.
+type connState struct {
+	initCh  chan *Message
+	recvErr chan error
+	dropped chan struct{}
+	hbDone  chan struct{}
+	cancel  context.CancelFunc
 }
 
 // NewSession builds a session around socket.
@@ -61,6 +80,12 @@ func NewSession(socket Socket, cfg SessionConfig) *Session {
 	}
 	if cfg.AppName == "" {
 		cfg.AppName = "go-homeconnect2mqtt"
+	}
+	if cfg.heartbeatTick == nil {
+		cfg.heartbeatTick = func(d time.Duration) (<-chan time.Time, func()) {
+			t := time.NewTicker(d)
+			return t.C, t.Stop
+		}
 	}
 	return &Session{
 		socket:          socket,
@@ -89,18 +114,72 @@ func (s *Session) ServiceVersion(service string) (int, bool) {
 
 // Connect dials the socket, starts the receive loop and runs the full
 // handshake. It returns once the appliance is CONNECTED and post-init has
-// been attempted.
+// been attempted. A failed handshake tears the connection down again: no
+// goroutine or socket survives a failed attempt (docs/05-resilience.md).
 func (s *Session) Connect(ctx context.Context) error {
+	s.teardownCurrent()
 	if err := s.socket.Connect(ctx); err != nil {
 		return err
 	}
 	s.resetState()
-	go s.receiveLoop(ctx)
-	return s.handshake(ctx)
+	// The receive loop lives as long as the connection, not as long as the
+	// caller's (possibly deadline-bound) connect context; Close cancels it.
+	loopCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	cs := &connState{
+		initCh:  make(chan *Message, 1),
+		recvErr: make(chan error, 1),
+		dropped: make(chan struct{}),
+		cancel:  cancel,
+	}
+	s.mu.Lock()
+	s.cur = cs
+	s.mu.Unlock()
+	go s.receiveLoop(loopCtx, cs)
+	if err := s.handshake(ctx, cs); err != nil {
+		s.teardownCurrent()
+		return err
+	}
+	if s.cfg.Heartbeat > 0 {
+		hb := make(chan struct{})
+		s.mu.Lock()
+		cs.hbDone = hb
+		s.mu.Unlock()
+		go s.heartbeatLoop(loopCtx, cs, hb)
+	}
+	return nil
 }
 
-// Close tears down the socket.
-func (s *Session) Close() error { return s.socket.Close() }
+// Close cancels the receive loop and tears down the socket.
+func (s *Session) Close() error {
+	s.mu.Lock()
+	cs := s.cur
+	s.mu.Unlock()
+	if cs != nil {
+		cs.cancel()
+	}
+	return s.socket.Close()
+}
+
+// teardownCurrent stops the current connection attempt's goroutines (the
+// receive loop and, if started, the heartbeat probe) and closes the socket.
+// It joins both goroutines before returning, so a later redial can never
+// race a stale loop — in particular a stale heartbeat that decided to close
+// the shared socket must have done so before a successor connection exists.
+func (s *Session) teardownCurrent() {
+	s.mu.Lock()
+	prev := s.cur
+	s.cur = nil
+	s.mu.Unlock()
+	if prev == nil {
+		return
+	}
+	prev.cancel()
+	_ = s.socket.Close()
+	<-prev.dropped
+	if prev.hbDone != nil {
+		<-prev.hbDone
+	}
+}
 
 func (s *Session) resetState() {
 	s.mu.Lock()
@@ -116,12 +195,6 @@ func (s *Session) resetState() {
 	}
 	s.pending = map[int]chan *Message{}
 	s.pendingMu.Unlock()
-
-	s.initCh = make(chan *Message, 1)
-	s.recvErr = make(chan error, 1)
-	s.mu.Lock()
-	s.dropped = make(chan struct{})
-	s.mu.Unlock()
 }
 
 // Disconnected returns a channel closed when the current connection's
@@ -130,29 +203,21 @@ func (s *Session) resetState() {
 func (s *Session) Disconnected() <-chan struct{} {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.dropped
-}
-
-func (s *Session) signalDropped() {
-	s.mu.Lock()
-	ch := s.dropped
-	s.mu.Unlock()
-	select {
-	case <-ch:
-	default:
-		close(ch)
+	if s.cur == nil {
+		return nil
 	}
+	return s.cur.dropped
 }
 
 // receiveLoop reads frames and dispatches them until the socket errors or
-// the context is cancelled.
-func (s *Session) receiveLoop(ctx context.Context) {
-	defer s.signalDropped()
+// the context is cancelled. It is the sole closer of cs.dropped.
+func (s *Session) receiveLoop(ctx context.Context, cs *connState) {
+	defer close(cs.dropped)
 	for {
 		text, err := s.socket.Receive(ctx)
 		if err != nil {
 			select {
-			case s.recvErr <- err:
+			case cs.recvErr <- err:
 			default:
 			}
 			s.failPending(err)
@@ -163,11 +228,63 @@ func (s *Session) receiveLoop(ctx context.Context) {
 			s.logger.Warn("homeconnect.decode", slog.String("err", err.Error()))
 			continue
 		}
-		s.dispatch(msg)
+		s.safeDispatch(msg, cs)
 	}
 }
 
-func (s *Session) dispatch(msg *Message) {
+// safeDispatch isolates a panic in the notify/update path: the message data
+// is appliance-controlled, and one malformed frame must drop that frame,
+// not the daemon (docs/05-resilience.md, per-device isolation).
+func (s *Session) safeDispatch(msg *Message, cs *connState) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.logger.Error("homeconnect.dispatch_panic",
+				slog.String("resource", msg.Resource), slog.Any("panic", r))
+		}
+	}()
+	s.dispatch(msg, cs)
+}
+
+// heartbeatLoop actively probes the peer (docs/01-protocol.md §1). A failed
+// ping closes the socket, which drops the receive loop and lets the
+// reconnect manager react — a silently dead peer would otherwise keep
+// stale state online until TCP keepalive notices, minutes later. done is
+// closed on exit; teardownCurrent joins it so this goroutine's socket
+// close can never hit a successor connection.
+func (s *Session) heartbeatLoop(ctx context.Context, cs *connState, done chan<- struct{}) {
+	defer close(done)
+	tick, stop := s.cfg.heartbeatTick(s.cfg.Heartbeat)
+	defer stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-cs.dropped:
+			return
+		case <-tick:
+		}
+		pctx, cancel := context.WithTimeout(ctx, s.cfg.Heartbeat)
+		err := s.socket.Ping(pctx)
+		cancel()
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			select {
+			case <-cs.dropped:
+				// The connection is already down; the teardown owns the
+				// socket now.
+				return
+			default:
+			}
+			s.logger.Warn("homeconnect.heartbeat", slog.String("err", err.Error()))
+			_ = s.socket.Close()
+			return
+		}
+	}
+}
+
+func (s *Session) dispatch(msg *Message, cs *connState) {
 	if msg.Action == ActionResponse {
 		if ch := s.takePending(msg.MsgID); ch != nil {
 			ch <- msg
@@ -176,7 +293,7 @@ func (s *Session) dispatch(msg *Message) {
 	}
 	if msg.Resource == "/ei/initialValues" && msg.Action == ActionPost {
 		select {
-		case s.initCh <- msg:
+		case cs.initCh <- msg:
 		default:
 		}
 		return
@@ -210,12 +327,12 @@ func (s *Session) failPending(err error) {
 }
 
 // handshake runs the exact sequence from docs/01-protocol.md §6.
-func (s *Session) handshake(ctx context.Context) error {
+func (s *Session) handshake(ctx context.Context, cs *connState) error {
 	// 1. Await the device-initiated /ei/initialValues.
 	var initMsg *Message
 	select {
-	case initMsg = <-s.initCh:
-	case err := <-s.recvErr:
+	case initMsg = <-cs.initCh:
+	case err := <-cs.recvErr:
 		return fmt.Errorf("homeconnect: handshake await initialValues: %w", err)
 	case <-time.After(s.cfg.HandshakeTimeout):
 		return errors.New("homeconnect: handshake timeout awaiting initialValues")

@@ -47,6 +47,10 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-r.Context().Done():
 			return
+		case <-s.shutdown:
+			// Server shutdown: end the stream so the graceful-shutdown
+			// window is not spent waiting on open SSE connections.
+			return
 		case <-ticker.C:
 			_, _ = fmt.Fprint(w, ":\n\n") // heartbeat comment
 			flusher.Flush()

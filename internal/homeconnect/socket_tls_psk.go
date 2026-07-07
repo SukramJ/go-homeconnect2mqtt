@@ -140,13 +140,18 @@ func init() { tlsPSKConnect = openSSLPSKConnect }
 // All SSL_* calls plus draining the write-BIO and the matching raw write are
 // serialized by mu; the single blocking raw.Read happens outside mu.
 type sslConn struct {
-	raw    net.Conn
+	raw net.Conn
+	// inMu serializes feedIn's raw.Read + read-BIO append: the receive
+	// loop and a concurrent Ping/Write can both need inbound TLS bytes
+	// (SSL_ERROR_WANT_READ), and interleaved reads into the BIO would
+	// corrupt the record stream order.
+	inMu   sync.Mutex
 	mu     sync.Mutex
 	ctx    *C.SSL_CTX
 	ssl    *C.SSL
 	rbio   *C.BIO
 	wbio   *C.BIO
-	in     []byte // scratch for raw.Read
+	in     []byte // scratch for raw.Read, guarded by inMu
 	closed bool
 }
 
@@ -171,11 +176,18 @@ func (c *sslConn) flushOutLocked() error {
 }
 
 // feedIn reads one chunk from raw (no mu held) and pushes it into the
-// read-BIO under mu.
+// read-BIO under mu. inMu keeps read + BIO append atomic across the two
+// goroutines that may need inbound bytes concurrently.
 func (c *sslConn) feedIn() error {
+	c.inMu.Lock()
+	defer c.inMu.Unlock()
 	n, err := c.raw.Read(c.in)
 	if n > 0 {
 		c.mu.Lock()
+		if c.closed {
+			c.mu.Unlock()
+			return net.ErrClosed
+		}
 		C.hc_bio_write(c.rbio, unsafe.Pointer(&c.in[0]), C.int(n))
 		c.mu.Unlock()
 	}
@@ -186,10 +198,16 @@ func (c *sslConn) feedIn() error {
 }
 
 // pump runs op (an SSL_* call) to completion, shuttling TLS bytes between the
-// BIOs and raw until op makes progress or fails.
+// BIOs and raw until op makes progress or fails. A concurrent Close (the
+// standard way an in-flight blocking Read is unblocked) frees the SSL
+// objects under mu, so every iteration re-checks closed before touching them.
 func (c *sslConn) pump(op func() C.int) (C.int, error) {
 	for {
 		c.mu.Lock()
+		if c.closed {
+			c.mu.Unlock()
+			return 0, net.ErrClosed
+		}
 		ret := op()
 		var sslErrCode C.int
 		if ret <= 0 {
@@ -246,6 +264,11 @@ func (c *sslConn) Write(p []byte) (int, error) {
 }
 
 func (c *sslConn) Close() error {
+	// Close raw first, without waiting on mu: a pump may hold mu across a
+	// raw.Write blocked on a dead peer (no write deadline in steady state),
+	// and closing the TCP conn is what unblocks it. Waiting for mu here
+	// would wedge session teardown for the kernel retransmit timeout.
+	err := c.raw.Close()
 	c.mu.Lock()
 	if !c.closed {
 		c.closed = true
@@ -253,7 +276,7 @@ func (c *sslConn) Close() error {
 		c.ssl, c.ctx, c.rbio, c.wbio = nil, nil, nil, nil
 	}
 	c.mu.Unlock()
-	return c.raw.Close()
+	return err
 }
 
 func (c *sslConn) LocalAddr() net.Addr                { return c.raw.LocalAddr() }

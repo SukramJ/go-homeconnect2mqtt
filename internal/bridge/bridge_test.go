@@ -114,6 +114,29 @@ func buildTestBridge(t *testing.T) (*Bridge, *stubMQTT) {
 	return b, stub
 }
 
+// startPublisher runs the device's async publish drain for the test's
+// lifetime, mirroring what Bridge.Run wires up.
+func startPublisher(t *testing.T, b *Bridge, d *Device) {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { defer close(done); d.pub.run(ctx, b.publish) }()
+	t.Cleanup(func() { cancel(); <-done })
+}
+
+// waitFor polls the stub until topic carries want or the deadline hits.
+func waitFor(t *testing.T, stub *stubMQTT, topic, want string) {
+	t.Helper()
+	deadline := time.After(5 * time.Second)
+	for stub.get(topic) != want {
+		select {
+		case <-deadline:
+			t.Fatalf("topic %q = %q, want %q", topic, stub.get(topic), want)
+		case <-time.After(2 * time.Millisecond):
+		}
+	}
+}
+
 func TestFeaturePath(t *testing.T) {
 	if got := featurePath("BSH.Common.Status.OperationState", 0x1002); got != "BSH/Common/Status/OperationState" {
 		t.Errorf("featurePath = %q", got)
@@ -136,22 +159,19 @@ func TestDeviceTopics(t *testing.T) {
 func TestOnUpdatePublishesState(t *testing.T) {
 	b, stub := buildTestBridge(t)
 	dev := b.devices[0]
-	// Drive an enum value update; onUpdate must publish the resolved name.
+	startPublisher(t, b, dev)
+	// Drive an enum value update; the async publisher must publish the
+	// resolved name to the state topic.
 	dev.app.ApplyValues([]map[string]any{{"uid": 0x1002, "value": 3}})
-	topic := "homeconnect/dishwasher/BSH/Common/Status/OperationState/state"
-	if got := stub.get(topic); got != "Run" {
-		t.Errorf("state publish = %q, want Run", got)
-	}
+	waitFor(t, stub, "homeconnect/dishwasher/BSH/Common/Status/OperationState/state", "Run")
 }
 
 func TestOnUpdatePublishesBool(t *testing.T) {
 	b, stub := buildTestBridge(t)
 	dev := b.devices[0]
+	startPublisher(t, b, dev)
 	dev.app.ApplyValues([]map[string]any{{"uid": 0x1005, "value": true}})
-	topic := "homeconnect/dishwasher/BSH/Common/Setting/PowerState/state"
-	if got := stub.get(topic); got != "true" {
-		t.Errorf("bool publish = %q, want true", got)
-	}
+	waitFor(t, stub, "homeconnect/dishwasher/BSH/Common/Setting/PowerState/state", "true")
 }
 
 func TestOnStatePublishesAvailability(t *testing.T) {

@@ -73,7 +73,13 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	if cfg.Debug {
 		level = slog.LevelDebug
 	}
-	logger := slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: level}))
+	// RedactAttr enforces the redaction contract at the handler: attrs
+	// keyed like secrets (psk/iv/serialNumber/mac/shipSki/deviceID,
+	// docs/03-profile-format.md §6) are masked before they reach the log.
+	logger := slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: level, ReplaceAttr: profile.RedactAttr}))
+	// Route slog.Default() through the same guard: library fallbacks (e.g.
+	// a nil SessionConfig.Logger) must not bypass redaction.
+	slog.SetDefault(logger)
 	logger.Info("starting", slog.String("version", version.Version))
 
 	specs, err := loadDeviceSpecs(devicesPath, logger)

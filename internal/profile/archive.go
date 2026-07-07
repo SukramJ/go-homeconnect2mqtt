@@ -14,8 +14,34 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
+
+// Zip-bomb guards for profile archives. A real archive is tiny — per
+// appliance one JSON index plus two XML files, a few hundred KiB in total
+// (docs/03-profile-format.md §2) — so these caps are generous while keeping
+// a crafted archive from exhausting memory when inflated.
+const (
+	maxEntrySize   = 16 << 20 // 16 MiB inflated, per entry
+	maxArchiveSize = 64 << 20 // 64 MiB inflated, across all entries
+)
+
+// haIDPattern constrains a parsed haId to file-name-safe characters. The
+// haId is a plain alphanumeric device ID (docs/03-profile-format.md §3) and
+// doubles as an output file name (hc-util writes <haId>.json), so path
+// separators or dot-only names mark a crafted archive.
+var haIDPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+
+// ValidHaID reports whether s is a plausible, file-name-safe haId. It is
+// the single canonical validator: every consumer that turns an haId into a
+// file name must use it so the rules cannot drift apart.
+func ValidHaID(s string) bool {
+	if s == "." || s == ".." {
+		return false
+	}
+	return haIDPattern.MatchString(s)
+}
 
 // Categorized onboarding errors (docs/03-profile-format.md §7). They are
 // sentinels callers can match with errors.Is to drive the manual-IP
@@ -127,16 +153,41 @@ func ParseArchiveBytes(data []byte, logger *slog.Logger) ([]*DeviceProfile, erro
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrInvalidProfile, err)
 	}
+	// Zip-bomb guard, fast path: reject on the declared sizes before
+	// inflating anything. The read loop below re-checks the actual bytes
+	// because a crafted header can under-declare.
+	var declared uint64
+	for _, f := range zr.File {
+		if f.UncompressedSize64 > maxEntrySize {
+			return nil, fmt.Errorf("%w: entry %s declares %d inflated bytes (max %d)",
+				ErrInvalidProfile, f.Name, f.UncompressedSize64, int64(maxEntrySize))
+		}
+		declared += f.UncompressedSize64 // no overflow: each addend capped above
+	}
+	if declared > maxArchiveSize {
+		return nil, fmt.Errorf("%w: archive declares %d inflated bytes (max %d)",
+			ErrInvalidProfile, declared, int64(maxArchiveSize))
+	}
 	files := map[string][]byte{}
+	var total int64
 	for _, f := range zr.File {
 		rc, err := f.Open()
 		if err != nil {
 			return nil, fmt.Errorf("%w: open %s: %w", ErrInvalidProfile, f.Name, err)
 		}
-		b, err := io.ReadAll(rc)
+		b, err := io.ReadAll(io.LimitReader(rc, maxEntrySize+1))
 		_ = rc.Close()
 		if err != nil {
 			return nil, fmt.Errorf("%w: read %s: %w", ErrInvalidProfile, f.Name, err)
+		}
+		if len(b) > maxEntrySize {
+			return nil, fmt.Errorf("%w: entry %s inflates past %d bytes",
+				ErrInvalidProfile, f.Name, int64(maxEntrySize))
+		}
+		total += int64(len(b))
+		if total > maxArchiveSize {
+			return nil, fmt.Errorf("%w: archive inflates past %d bytes at entry %s",
+				ErrInvalidProfile, int64(maxArchiveSize), f.Name)
 		}
 		files[f.Name] = b
 	}
@@ -161,6 +212,15 @@ func parseFileSet(files map[string][]byte, logger *slog.Logger) ([]*DeviceProfil
 		if err := json.Unmarshal(files[name], &pj); err != nil {
 			return nil, fmt.Errorf("%w: %s: %w", ErrInvalidProfile, name, err)
 		}
+		// The haId is used verbatim as an output file name downstream, so a
+		// crafted value like "../../x" would escape the target directory.
+		// Lenient loading: skip this profile, keep the rest of the archive.
+		if !ValidHaID(pj.HaID) {
+			err := fmt.Errorf("%w: %s: haId is not file-name-safe", ErrInvalidProfile, name)
+			logger.Warn("profile.skip_profile",
+				slog.String("index", name), slog.String("haId", pj.HaID), slog.String("err", err.Error()))
+			continue
+		}
 		descXML, ok := lookupFile(files, pj.DeviceDescriptionFileName, name)
 		if !ok {
 			return nil, fmt.Errorf("%w: missing %s", ErrInvalidProfile, pj.DeviceDescriptionFileName)
@@ -184,6 +244,9 @@ func parseFileSet(files map[string][]byte, logger *slog.Logger) ([]*DeviceProfil
 			Model:          pj.Model,
 			Description:    desc,
 		})
+	}
+	if len(profiles) == 0 {
+		return nil, fmt.Errorf("%w: no valid profile in archive", ErrInvalidProfile)
 	}
 	return profiles, nil
 }
