@@ -56,6 +56,13 @@ fixed, each fix covered by tests.
   starts (regular in-flight requests keep the full grace window), and a
   shutdown error is logged + force-closed instead of discarded.
 
+### Changed
+- Adopt [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt)
+  v1.2.0 (up from v1.1.0): the client's own hardening release (28 verified
+  findings — serialized connect/disconnect, cross-epoch quota/packet-id
+  protection, typed ack waiters against forged acknowledgements, decoder
+  robustness). No exported signatures changed.
+
 ### Added
 - Active WebSocket heartbeat: the `HEARTBEAT` config option (default 20 s)
   is now actually wired — a failed ping drops the connection so a silently

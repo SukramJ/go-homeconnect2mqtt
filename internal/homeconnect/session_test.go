@@ -363,23 +363,37 @@ func TestReceiveLoopSurvivesConnectCtxCancel(t *testing.T) {
 	}
 }
 
+// heartbeatSession builds a connected session whose heartbeat fires only
+// when the test sends on the returned tick channel (fixed clock per the
+// project test conventions; the interval itself is inert).
+func heartbeatSession(t *testing.T, sock *scriptedSocket) (s *Session, ticks chan time.Time) {
+	t.Helper()
+	ticks = make(chan time.Time)
+	s = NewSession(sock, SessionConfig{
+		SendTimeout:      2 * time.Second,
+		HandshakeTimeout: 2 * time.Second,
+		Heartbeat:        time.Hour,
+		heartbeatTick: func(time.Duration) (<-chan time.Time, func()) {
+			return ticks, func() {}
+		},
+	})
+	if err := s.Connect(t.Context()); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	return s, ticks
+}
+
 // A failed heartbeat ping must drop the connection so the reconnect
 // manager reacts (docs/01-protocol.md §1).
 func TestHeartbeatDropsOnPingFailure(t *testing.T) {
 	services := []map[string]any{{"service": "ci", "version": 3}, {"service": "ro", "version": 1}}
 	onConnect, responder := applianceScript(3, services)
 	sock := newScriptedSocket(onConnect, responder)
-	s := NewSession(sock, SessionConfig{
-		SendTimeout:      2 * time.Second,
-		HandshakeTimeout: 2 * time.Second,
-		Heartbeat:        20 * time.Millisecond,
-	})
-	if err := s.Connect(t.Context()); err != nil {
-		t.Fatalf("Connect: %v", err)
-	}
-	defer func() { _ = s.Close() }()
-
 	sock.setPing(func(context.Context) error { return errors.New("peer dead") })
+	s, ticks := heartbeatSession(t, sock)
+
+	ticks <- time.Time{} // one heartbeat tick -> failing ping
 	select {
 	case <-s.Disconnected():
 	case <-time.After(2 * time.Second):
@@ -392,17 +406,21 @@ func TestHeartbeatKeepsHealthyConnection(t *testing.T) {
 	services := []map[string]any{{"service": "ci", "version": 3}, {"service": "ro", "version": 1}}
 	onConnect, responder := applianceScript(3, services)
 	sock := newScriptedSocket(onConnect, responder)
-	s := NewSession(sock, SessionConfig{
-		SendTimeout:      2 * time.Second,
-		HandshakeTimeout: 2 * time.Second,
-		Heartbeat:        10 * time.Millisecond,
+	pinged := make(chan struct{}, 8)
+	sock.setPing(func(context.Context) error {
+		pinged <- struct{}{}
+		return nil
 	})
-	if err := s.Connect(t.Context()); err != nil {
-		t.Fatalf("Connect: %v", err)
-	}
-	defer func() { _ = s.Close() }()
+	s, ticks := heartbeatSession(t, sock)
 
-	time.Sleep(100 * time.Millisecond) // several heartbeat ticks
+	for range 3 {
+		ticks <- time.Time{}
+		select {
+		case <-pinged:
+		case <-time.After(2 * time.Second):
+			t.Fatal("heartbeat tick did not trigger a ping")
+		}
+	}
 	select {
 	case <-s.Disconnected():
 		t.Fatal("healthy heartbeat dropped the connection")

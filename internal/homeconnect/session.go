@@ -26,6 +26,10 @@ type SessionConfig struct {
 	// only detected when the blocking read fails.
 	Heartbeat time.Duration
 	Logger    *slog.Logger
+
+	// Injectable for deterministic tests; defaults to a real time.Ticker
+	// (mirrors ReconnectConfig's sleep injection).
+	heartbeatTick func(time.Duration) (<-chan time.Time, func())
 }
 
 // Session drives the message layer on top of a Socket: it performs the
@@ -76,6 +80,12 @@ func NewSession(socket Socket, cfg SessionConfig) *Session {
 	}
 	if cfg.AppName == "" {
 		cfg.AppName = "go-homeconnect2mqtt"
+	}
+	if cfg.heartbeatTick == nil {
+		cfg.heartbeatTick = func(d time.Duration) (<-chan time.Time, func()) {
+			t := time.NewTicker(d)
+			return t.C, t.Stop
+		}
 	}
 	return &Session{
 		socket:          socket,
@@ -243,15 +253,15 @@ func (s *Session) safeDispatch(msg *Message, cs *connState) {
 // close can never hit a successor connection.
 func (s *Session) heartbeatLoop(ctx context.Context, cs *connState, done chan<- struct{}) {
 	defer close(done)
-	ticker := time.NewTicker(s.cfg.Heartbeat)
-	defer ticker.Stop()
+	tick, stop := s.cfg.heartbeatTick(s.cfg.Heartbeat)
+	defer stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-cs.dropped:
 			return
-		case <-ticker.C:
+		case <-tick:
 		}
 		pctx, cancel := context.WithTimeout(ctx, s.cfg.Heartbeat)
 		err := s.socket.Ping(pctx)
