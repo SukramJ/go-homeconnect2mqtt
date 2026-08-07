@@ -27,6 +27,32 @@ func TestProgNorm(t *testing.T) {
 	}
 }
 
+// TestProgramPayloadNone pins the idle case: an appliance reports its
+// active/selected program as a raw uid (0 when nothing runs), which is not one
+// of the select's program options — publishing it made HA log "Invalid option",
+// so an unresolved program publishes HA's "None" and clears the entity.
+func TestProgramPayloadNone(t *testing.T) {
+	dev, _ := connectedDevice(t, "Dishwasher")
+	active, ok := dev.app.EntityByName("BSH.Common.Root.ActiveProgram")
+	if !ok {
+		t.Fatal("ActiveProgram entity missing")
+	}
+	cases := []struct {
+		value any
+		want  string
+	}{
+		{0, payloadNone},      // idle
+		{0x9999, payloadNone}, // a uid the profile does not name
+		{0x1015, "Eco 50 °C"}, // the one known program, localized
+	}
+	for _, c := range cases {
+		dev.app.ApplyValues([]map[string]any{{"uid": active.UID(), "value": c.value}})
+		if got := payloadFor(active, "de"); got != c.want {
+			t.Errorf("payloadFor(program=%v) = %q, want %q", c.value, got, c.want)
+		}
+	}
+}
+
 // TestProgramLabelResolves pins the resolveProgramUID invariant: a localized
 // select label, de-localized and normalized, equals the normalized program leaf
 // — which is how a Home Assistant select option maps back to its program uid.

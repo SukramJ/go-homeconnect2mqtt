@@ -100,7 +100,6 @@ features:
   BSH.Common.Event.AlarmClockElapsed:
     name: Alarm clock elapsed
     name_de: Wecker abgelaufen
-    device_class: enum
     enabled_by_default: true
   BSH.Common.Event.AquaStopOccured:
     name: Aqua Stop Occured
@@ -141,12 +140,10 @@ features:
   BSH.Common.Event.ProgramAborted:
     name: Program aborted
     name_de: Programm abgebrochen
-    device_class: enum
     enabled_by_default: true
   BSH.Common.Event.ProgramFinished:
     name: Program finished
     name_de: Programm beendet
-    device_class: enum
     enabled_by_default: true
   BSH.Common.Event.SoftwareDownloadAvailable:
     name: Software Download Available
@@ -448,17 +445,14 @@ features:
   ConsumerProducts.CleaningRobot.Event.DockingStationNotFound:
     name: Docking station not found
     name_de: Ladestation nicht gefunden
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CleaningRobot.Event.EmptyDustBoxAndCleanFilter:
     name: Empty dust box and clean filter
     name_de: Staubbehälter leeren und Filter reinigen
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CleaningRobot.Event.RobotIsStuck:
     name: Robot is stuck
     name_de: Roboter steckt fest
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CleaningRobot.Option.CleaningMode:
     name: Cleaning mode
@@ -521,102 +515,82 @@ features:
   ConsumerProducts.CoffeeMaker.Event.BeanContainerEmpty:
     name: Bean container empty
     name_de: Bohnenbehälter leer
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.CalcNCleanIn10Cups:
     name: Calc'N'Clean in 10 cups
     name_de: Calc'N'Clean in 10 Tassen
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.CalcNCleanIn15Cups:
     name: Calc'N'Clean in 15 cups
     name_de: Calc'N'Clean in 15 Tassen
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.CalcNCleanIn20Cups:
     name: Calc'N'Clean in 20 cups
     name_de: Calc'N'Clean in 20 Tassen
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.CalcNCleanIn5Cups:
     name: Calc'N'Clean in 5 cups
     name_de: Calc'N'Clean in 5 Tassen
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DescalingIn10Cups:
     name: Descaling in 10 cups
     name_de: Entkalken in 10 Tassen
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DescalingIn15Cups:
     name: Descaling in 15 cups
     name_de: Entkalken in 15 Tassen
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DescalingIn20Cups:
     name: Descaling in 20 cups
     name_de: Entkalken in 20 Tassen
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DescalingIn5Cups:
     name: Descaling in 5 cups
     name_de: Entkalken in 5 Tassen
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceCalcNCleanBlockage:
     name: Device Calc'N'Clean blockage
     name_de: Calc'N'Clean-Blockierung
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceCalcNCleanOverdue:
     name: Device Calc'N'Clean overdue
     name_de: Calc'N'Clean überfällig
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceCleaningOverdue:
     name: Device cleaning overdue
     name_de: Reinigung überfällig
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceDescalingBlockage:
     name: Device descaling blockage
     name_de: Entkalkungsblockierung
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceDescalingOverdue:
     name: Device descaling overdue
     name_de: Entkalkung überfällig
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceShouldBeCalcNCleaned:
     name: Device should be Calc'N'Cleaned
     name_de: Calc'N'Clean erforderlich
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceShouldBeCleaned:
     name: Device should be cleaned
     name_de: Reinigung erforderlich
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DeviceShouldBeDescaled:
     name: Device should be descaled
     name_de: Entkalkung erforderlich
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.DripTrayFull:
     name: Drip tray full
     name_de: Tropfschale voll
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.KeepMilkTankCool:
     name: Keep milk tank cool
     name_de: Milchbehälter kühl halten
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Event.WaterTankEmpty:
     name: Water tank empty
     name_de: Wassertank leer
-    device_class: enum
     enabled_by_default: true
   ConsumerProducts.CoffeeMaker.Option.AromaSelect:
     name: Aroma Select
@@ -761,12 +735,10 @@ features:
   Cooking.Common.Event.Hood.GreaseFilterMaxSaturationNearlyReached:
     name: Grease filter max saturation nearly reached
     name_de: Fettfiltersättigung fast erreicht
-    device_class: enum
     enabled_by_default: true
   Cooking.Common.Event.Hood.GreaseFilterMaxSaturationReached:
     name: Grease filter max saturation reached
     name_de: Fettfiltersättigung erreicht
-    device_class: enum
     enabled_by_default: true
   Cooking.Common.Event.PreheatFinished:
     name: Preheat Finished
@@ -1830,12 +1802,10 @@ features:
   Cooking.Oven.Event.PreheatFinished:
     name: Pre-heat finished
     name_de: Vorheizen beendet
-    device_class: enum
     enabled_by_default: true
   Cooking.Oven.Event.RegularPreheatFinished:
     name: Regular pre-heat finished
     name_de: Reguläres Vorheizen beendet
-    device_class: enum
     enabled_by_default: true
   Cooking.Oven.Option.AirExchange:
     name: Air Exchange
@@ -1939,7 +1909,6 @@ features:
   Dishcare.Dishwasher.Event.RinseAidNearlyEmpty:
     name: Rinse aid nearly empty
     name_de: Klarspüler fast leer
-    device_class: enum
     enabled_by_default: true
   Dishcare.Dishwasher.Event.SaltLack:
     name: Salt Lack
@@ -1948,7 +1917,6 @@ features:
   Dishcare.Dishwasher.Event.SaltNearlyEmpty:
     name: Salt nearly empty
     name_de: Salz fast leer
-    device_class: enum
     enabled_by_default: true
   Dishcare.Dishwasher.Event.SmartFilterCleaningReminder:
     name: Smart Filter Cleaning Reminder
@@ -2334,7 +2302,6 @@ features:
   LaundryCare.Dryer.Event.DryingProcessFinished:
     name: Drying process finished
     name_de: Trocknen beendet
-    device_class: enum
     enabled_by_default: true
   LaundryCare.Dryer.Option.ConnectedDry.OriginalProgramTime:
     name: Original Program Time
@@ -2384,12 +2351,10 @@ features:
   LaundryCare.Washer.Event.IDos1FillLevelPoor:
     name: Poor i-Dos 1 fill level
     name_de: Niedriger Füllstand von i-Dos 1
-    device_class: enum
     enabled_by_default: true
   LaundryCare.Washer.Event.IDos2FillLevelPoor:
     name: Poor i-Dos 2 fill level
     name_de: Niedriger Füllstand von i-Dos 2
-    device_class: enum
     enabled_by_default: true
   LaundryCare.Washer.Event.PumpError:
     name: Pump Error
@@ -2795,17 +2760,14 @@ features:
   Refrigeration.FridgeFreezer.Event.DoorAlarmFreezer:
     name: Freezer door alarm
     name_de: Türalarm Gefrierschrank
-    device_class: enum
     enabled_by_default: true
   Refrigeration.FridgeFreezer.Event.DoorAlarmRefrigerator:
     name: Refrigerator door alarm
     name_de: Türalarm Kühlschrank
-    device_class: enum
     enabled_by_default: true
   Refrigeration.FridgeFreezer.Event.TemperatureAlarmFreezer:
     name: Freezer temperature alarm
     name_de: Temperaturalarm Gefrierschrank
-    device_class: enum
     enabled_by_default: true
   Refrigeration.FridgeFreezer.Setting.SetpointTemperatureFreezer:
     name: Freezer temperature

@@ -255,6 +255,111 @@ func TestBinarySensorPayload(t *testing.T) {
 	if p["payload_on"] != "Present" || p["payload_off"] != "Off" {
 		t.Errorf("event payload_on/off = %v/%v", p["payload_on"], p["payload_off"])
 	}
+	// An event is an enum feature, but `enum` is a sensor-only device class:
+	// carrying it would make HA reject the whole binary_sensor config.
+	if dc, ok := p["device_class"]; ok {
+		t.Errorf("binary_sensor device_class = %v, want none", dc)
+	}
+}
+
+// TestButtonPayload pins the two things HA requires of a command button: a
+// command_topic (it rejects the config without one) and a press payload the
+// bridge can write to the boolean command feature.
+func TestButtonPayload(t *testing.T) {
+	app, entities := buildEntities(t)
+	pub := newStubPub()
+	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
+	d.PublishDevice(context.Background(), "dw", app.Info(), entities)
+	raw := pub.pubs["homeassistant/button/dw/bsh_common_command_abortprogram/config"]
+	if raw == "" {
+		t.Fatalf("missing command button config; got topics %v", keys(pub.pubs))
+	}
+	var p map[string]any
+	_ = json.Unmarshal([]byte(raw), &p)
+	if p["command_topic"] != "homeconnect/dw/BSH/Common/Command/AbortProgram/set" {
+		t.Errorf("button command_topic = %v", p["command_topic"])
+	}
+	if p["payload_press"] != commandPressPayload {
+		t.Errorf("button payload_press = %v, want %q", p["payload_press"], commandPressPayload)
+	}
+	if st, ok := p["state_topic"]; ok {
+		t.Errorf("button state_topic = %v, want none (a button has no state)", st)
+	}
+}
+
+// enumEnricher mimics an operator catalogue that attaches device_class `enum`
+// to an event — the shipped mapping.yaml used to, and HA rejects it.
+type enumEnricher struct{ fakeEnricher }
+
+func (enumEnricher) DeviceClass(feature string) (string, bool) {
+	if feature == "BSH.Common.Event.Problem" {
+		return deviceClassEnum, true
+	}
+	return "", false
+}
+
+func TestEnrichmentDeviceClassFilteredPerPlatform(t *testing.T) {
+	app, entities := buildEntities(t)
+	pub := newStubPub()
+	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
+	d.SetEnricher(enumEnricher{})
+	d.PublishDevice(context.Background(), "dw", app.Info(), entities)
+	var p map[string]any
+	_ = json.Unmarshal([]byte(pub.pubs["homeassistant/binary_sensor/dw/bsh_common_event_problem/config"]), &p)
+	if dc, ok := p["device_class"]; ok {
+		t.Errorf("catalogue enum class survived onto a binary_sensor: %v", dc)
+	}
+}
+
+func TestDeviceClassAllowed(t *testing.T) {
+	cases := []struct {
+		platform, class string
+		want            bool
+	}{
+		{platformSensor, deviceClassEnum, true},
+		{platformSensor, "temperature", true},
+		{platformBinarySensor, deviceClassEnum, false},
+		{platformBinarySensor, "door", true},
+		{platformSwitch, "outlet", true},
+		{platformSwitch, "temperature", false},
+		{platformButton, "restart", true},
+		{platformNumber, "temperature", true},
+		{platformNumber, deviceClassEnum, false},
+		{platformSelect, deviceClassEnum, false},
+	}
+	for _, c := range cases {
+		if got := deviceClassAllowed(c.platform, c.class); got != c.want {
+			t.Errorf("deviceClassAllowed(%s, %s) = %v, want %v", c.platform, c.class, got, c.want)
+		}
+	}
+}
+
+// TestSanitizeSensorEnumPairing pins HA's mutual implication on a sensor:
+// device_class `enum` needs options, and options need `enum`.
+func TestSanitizeSensorEnumPairing(t *testing.T) {
+	p := map[string]any{"device_class": deviceClassEnum}
+	sanitizeForPlatform(p, platformSensor)
+	if _, ok := p["device_class"]; ok {
+		t.Error("enum without options should drop device_class")
+	}
+
+	p = map[string]any{"device_class": "temperature", "options": []string{"a"}, "unit_of_measurement": "°C"}
+	sanitizeForPlatform(p, platformSensor)
+	if _, ok := p["options"]; ok {
+		t.Error("options without the enum class should be dropped")
+	}
+	if p["unit_of_measurement"] != "°C" {
+		t.Errorf("unit dropped from a value sensor: %v", p)
+	}
+
+	p = map[string]any{"device_class": deviceClassEnum, "options": []string{"a"}, "state_class": "measurement", "unit_of_measurement": "°C"}
+	sanitizeForPlatform(p, platformSensor)
+	if _, ok := p["state_class"]; ok {
+		t.Error("an enum sensor must not carry a state_class")
+	}
+	if _, ok := p["unit_of_measurement"]; ok {
+		t.Error("an enum sensor must not carry a unit")
+	}
 }
 
 func keys(m map[string]string) []string {
