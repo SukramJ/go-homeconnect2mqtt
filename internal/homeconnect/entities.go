@@ -116,6 +116,14 @@ func (e *Entity) Value() any {
 	return e.valueRaw
 }
 
+// HasEnumName reports whether s is one of the entity's enum member names
+// (case-insensitively), i.e. whether a display value is a resolved member
+// rather than the raw-value fallback of [Entity.Value].
+func (e *Entity) HasEnumName(s string) bool {
+	_, ok := e.revEnum[strings.ToLower(s)]
+	return ok
+}
+
 // Bounds carries the numeric bounds of an entity, each with a presence flag.
 type Bounds struct {
 	Min     float64

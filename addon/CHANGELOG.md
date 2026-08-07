@@ -5,6 +5,29 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-08-07
+
+Discovery fixes: Home Assistant rejected three classes of config payload, so
+the affected entities never appeared.
+
+### Fixed
+- Event binary sensors no longer carry `device_class: enum`. `enum` is a
+  sensor-only class, and HA discards the whole entity when it sees it on a
+  binary sensor. Discovery now validates `device_class` against the platform
+  it publishes to (and drops `unit_of_measurement`/`state_class` where the
+  platform has none), so neither the heuristic nor an operator override can
+  produce a config HA refuses. `device_class: enum` is also removed from the
+  38 event features in the shipped `mapping.yaml`.
+- Command buttons publish the required `command_topic` (plus
+  `payload_press: "true"`, the value written to the boolean command feature)
+  and no longer a meaningless `state_topic` — previously HA logged
+  `required key not provided @ data['command_topic']` and skipped them, so
+  `PauseProgram`/`ResumeProgram` and friends were missing.
+- An active/selected program that does not resolve to a named program —
+  idle (raw uid `0`), or a uid the profile does not name — publishes `None`
+  instead of the raw uid, which HA logged as `Invalid option` while keeping
+  the stale value. `None` clears the select and sets the sensor unknown.
+
 ## [0.11.0] - 2026-07-07
 
 Hardening release: an adversarially verified audit across untrusted input,

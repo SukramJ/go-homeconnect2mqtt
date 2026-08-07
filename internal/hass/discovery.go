@@ -195,6 +195,7 @@ func (d *Discovery) PublishDevice(ctx context.Context, device string, info profi
 		payload := payloadFor(e, platform, device, d.topicsFor(device, e), dev)
 		d.applyEnrichment(e, payload)
 		d.localizeOptions(payload)
+		sanitizeForPlatform(payload, platform)
 		// Curated mode: only publish the enabled-by-default (primary) entities.
 		if d.curated && disabledByDefault(payload) {
 			continue

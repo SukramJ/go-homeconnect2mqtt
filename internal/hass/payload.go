@@ -42,6 +42,37 @@ const (
 	categoryConfig     = "config"
 )
 
+// deviceClassEnum is HA's enumeration class. It exists on `sensor` only and
+// requires an `options` list.
+const deviceClassEnum = "enum"
+
+// commandPressPayload is what a command button writes. A command feature is
+// executed by writing to it (POST /ro/values, per docs/01-protocol.md §7), so
+// the press payload must be the value to write — not HA's default "PRESS",
+// which the boolean cast would turn into `false`.
+const commandPressPayload = "true"
+
+// Device classes Home Assistant accepts per platform. HA validates a discovery
+// config strictly and discards the WHOLE entity when device_class is not one of
+// them, so a class derived from the content type (or set by the operator
+// catalogue) is filtered against the platform it lands on before publishing.
+var (
+	binarySensorClasses = classSet("battery", "battery_charging", "carbon_monoxide", "cold",
+		"connectivity", "door", "garage_door", "gas", "heat", "light", "lock", "moisture",
+		"motion", "moving", "occupancy", "opening", "plug", "power", "presence", "problem",
+		"running", "safety", "smoke", "sound", "tamper", "update", "vibration", "window")
+	switchClasses = classSet("outlet", "switch")
+	buttonClasses = classSet("identify", "restart", "update")
+)
+
+func classSet(vals ...string) map[string]bool {
+	m := make(map[string]bool, len(vals))
+	for _, v := range vals {
+		m[v] = true
+	}
+	return m
+}
+
 // classify maps an entity to a Home Assistant platform. ok is false when
 // the entity should not be exposed via discovery (e.g. a raw program node).
 func classify(e *homeconnect.Entity) (platform string, ok bool) {
@@ -167,7 +198,7 @@ func stateClassFor(e *homeconnect.Entity, platform string) string {
 // content type (docs/04 §2).
 func deviceClassAndUnit(e *homeconnect.Entity) (deviceClass, unit string) {
 	if e.Desc.IsEnum() {
-		return "enum", ""
+		return deviceClassEnum, ""
 	}
 	switch e.Desc.ContentType {
 	case "temperatureCelsius":
@@ -204,9 +235,15 @@ func payloadFor(e *homeconnect.Entity, platform, device string, t entityTopics, 
 		"name":               humanize(e),
 		"object_id":          slugify(device + "_" + featureKey(e)),
 		"default_entity_id":  platform + "." + slugify(device+"_"+featureKey(e)),
-		"state_topic":        t.state,
 		"availability_topic": t.availability,
 		"device":             dev.block,
+	}
+	if platform == platformButton {
+		// A button is write-only: HA requires command_topic and knows no state.
+		p["command_topic"] = t.command
+		p["payload_press"] = commandPressPayload
+	} else {
+		p["state_topic"] = t.state
 	}
 	if e.Desc.Writable() && (platform == platformSwitch || platform == platformSelect || platform == platformNumber) {
 		p["command_topic"] = t.command
@@ -258,6 +295,57 @@ func payloadFor(e *homeconnect.Entity, platform, device string, t entityTopics, 
 		p["enabled_by_default"] = false
 	}
 	return p
+}
+
+// deviceClassAllowed reports whether dc may be published on platform. sensor
+// and number carry HA's open-ended value classes (the operator catalogue is
+// trusted there); the boolean platforms take a small fixed set and select takes
+// none at all. `enum` is sensor-only — attaching it to the event binary_sensors
+// (both the enum heuristic and the catalogue used to) makes HA reject them.
+func deviceClassAllowed(platform, dc string) bool {
+	switch platform {
+	case platformSensor:
+		return true
+	case platformNumber:
+		return dc != deviceClassEnum
+	case platformBinarySensor:
+		return binarySensorClasses[dc]
+	case platformSwitch:
+		return switchClasses[dc]
+	case platformButton:
+		return buttonClasses[dc]
+	default: // select
+		return false
+	}
+}
+
+// sanitizeForPlatform strips attributes the target platform rejects. It runs
+// last, after enrichment, so neither the heuristic nor an operator override can
+// produce a config Home Assistant refuses to load.
+func sanitizeForPlatform(p map[string]any, platform string) {
+	if dc, ok := p["device_class"].(string); ok && !deviceClassAllowed(platform, dc) {
+		delete(p, "device_class")
+	}
+	// unit_of_measurement is sensor/number only, state_class sensor only.
+	if platform != platformSensor && platform != platformNumber {
+		delete(p, "unit_of_measurement")
+	}
+	if platform != platformSensor {
+		delete(p, "state_class")
+		return
+	}
+	// On a sensor, `options` and device_class `enum` imply each other, and an
+	// enum sensor carries neither a unit nor a state_class.
+	if p["device_class"] == deviceClassEnum {
+		if _, ok := p["options"]; !ok {
+			delete(p, "device_class")
+			return
+		}
+		delete(p, "unit_of_measurement")
+		delete(p, "state_class")
+		return
+	}
+	delete(p, "options")
 }
 
 // enumOptions returns the sorted enum value names for a select.

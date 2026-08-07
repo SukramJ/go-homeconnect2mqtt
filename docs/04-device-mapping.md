@@ -333,6 +333,24 @@ One discovery payload per entity under `<hass_base_topic>/<platform>/<unique_id>
 Platform choice follows the heuristic from §1. Birth/LWT handling
 (`<hass_base_topic>/status` → re-publish the discovery on "online").
 
+Home Assistant validates a discovery config strictly and discards the **whole**
+entity on a violation, so the payload is filtered against its platform before
+publishing:
+
+- `device_class` is platform-scoped: `enum` exists on `sensor` only (and needs
+  `options`, which in turn need `enum`); `binary_sensor`/`switch`/`button` take
+  their own fixed class lists; `select` takes none. A class that does not fit
+  the platform is dropped rather than published.
+- `unit_of_measurement` is `sensor`/`number` only, `state_class` is `sensor`
+  only, and an enum sensor carries neither.
+- A `button` requires `command_topic` and has no state: the command feature is
+  executed by writing to it, so `payload_press` is the value to write (`true`),
+  not HA's default `PRESS`.
+- An enum state that does not resolve to a member of `options` (e.g. an
+  active/selected program reported as a raw uid while idle) publishes `None` —
+  HA's "no value" payload, which clears a select and unknowns a sensor. An
+  empty payload would only be ignored, leaving the stale value in place.
+
 ### 6.4 Write Semantics (Command Topics)
 
 1. Receive value → normalize type/enum per `02-data-model.md` (float→int for #68,

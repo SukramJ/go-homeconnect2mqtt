@@ -23,6 +23,11 @@ const (
 	availOffline = "offline"
 )
 
+// payloadNone is Home Assistant's "no value" payload: an mqtt select clears its
+// selection and an enum sensor goes unknown. An empty payload would only be
+// ignored, leaving the last value in place.
+const payloadNone = "None"
+
 // deviceTopics holds the precomputed topic prefixes for a device.
 type deviceTopics struct {
 	base string
@@ -58,11 +63,15 @@ func payloadFor(e *homeconnect.Entity, lang string) string {
 	if v == nil {
 		return ""
 	}
-	// An active/selected program reported as a raw uid (idle, or an unknown
-	// program) publishes empty so a program select shows "no selection".
+	// An active/selected program reported as a raw uid — idle (uid 0) or a
+	// program the profile does not name — publishes "None" so the program
+	// select/sensor clears instead of rejecting a value that is not one of its
+	// options. The raw uid survives as a string when the element carries no
+	// type, so an unresolved enum member counts as raw here too.
 	if isProgramKind(e.Desc.Kind) {
-		if _, ok := v.(string); !ok {
-			return ""
+		s, ok := v.(string)
+		if !ok || (e.Desc.IsEnum() && !e.HasEnumName(s)) {
+			return payloadNone
 		}
 	}
 	switch t := v.(type) {
