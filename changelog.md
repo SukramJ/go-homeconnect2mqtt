@@ -5,6 +5,32 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-16
+
+### Changed
+- Bump [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt)
+  v1.2.0 -> v1.3.0, an audit release with 42 findings fixed. No source
+  changes were needed on our side — the new API surface
+  (`LifecycleConfig.FlapWindow`, `ConnectResult.ServerKeepAliveSet`) is
+  additive and this bridge doesn't touch either.
+- Behavior change: a connection that drops within 10s of connecting now
+  reconnects with exponential backoff instead of immediately (flap
+  damping, `LifecycleConfig.FlapWindow`, new default). Our `LifecycleConfig`
+  in `cmd/homeconnect2mqtt/main.go` sets `InitialBackoff`/`MaxBackoff`/
+  `Jitter`/`Logger` only, so it inherits the new default — a broker that
+  bounces the link repeatedly right after connect no longer produces a
+  tight reconnect loop.
+- The publish-path circuit breaker (`mqtt.NewBreaker`, wired in
+  `cmd/homeconnect2mqtt/main.go`) no longer opens on client-side
+  validation errors (e.g. `protocol.ErrProtocolViolation`); only genuine
+  broker-side/transport failures count toward its 5-failure threshold, so
+  `homeconnect2mqtt.mqtt_breaker_state` now reflects broker health more
+  accurately.
+- Also inherited without code changes: no spurious reconnect after an
+  intentional `Lifecycle.Stop` (our clean-shutdown path), and stricter
+  inbound wire validation (a malformed broker frame now tears the
+  connection down per MQTT §4.13 instead of being tolerated).
+
 ## [0.11.1] - 2026-08-07
 
 Discovery fixes: Home Assistant rejected three classes of config payload, so
