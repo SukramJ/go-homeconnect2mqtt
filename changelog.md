@@ -5,6 +5,20 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+### Removed
+- Stop publishing `object_id` in HA discovery payloads (entity configs in
+  `internal/hass/payload.go` and the program-control buttons in
+  `internal/hass/discovery.go`). Home Assistant's MQTT discovery schemas are
+  `extra=REMOVE_EXTRA`: a key no platform declares is dropped on arrival,
+  silently — no error on the wire, no log line. Measured against the schemas
+  of Home Assistant 2026.9, `object_id` is accepted by **0 of the 32 MQTT
+  platforms**, `default_entity_id` by 28. The key added in 0.10.1 has
+  therefore been doing nothing since HA removed it; it was only dead weight in
+  every retained config and misleading to anyone reading those payloads. No
+  user-visible effect: every payload already carried `default_entity_id` with
+  the identical English, language-independent seed, so entity ids are
+  unchanged.
+
 ## [0.12.0] - 2026-08-16
 
 ### Changed

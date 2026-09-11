@@ -178,14 +178,13 @@ func TestPublishDevice(t *testing.T) {
 		}
 	}
 
-	// Program controls (buttons) seed both object_id and default_entity_id with
-	// the same platform-less slug; object_id keeps current HA correct while
-	// default_entity_id is not yet reliably honoured (HA #157241).
+	// Program controls (buttons) seed the entity id via default_entity_id only;
+	// object_id is dropped by HA's discovery schemas and must not be published.
 	btnTopic := "homeassistant/button/dishwasher/start_program/config"
 	if raw, ok := pub.pubs[btnTopic]; ok {
 		_ = json.Unmarshal([]byte(raw), &p)
-		if p["object_id"] != "dishwasher_start_program" {
-			t.Errorf("button object_id = %v, want dishwasher_start_program", p["object_id"])
+		if _, has := p["object_id"]; has {
+			t.Errorf("button object_id must not be published, got %v", p["object_id"])
 		}
 		if p["default_entity_id"] != "button.dishwasher_start_program" {
 			t.Errorf("button default_entity_id = %v, want button.dishwasher_start_program", p["default_entity_id"])
