@@ -63,9 +63,26 @@ func (c *fakeConn) triggerDrop() {
 
 // readySleep returns a sleep func that records each requested duration and
 // completes immediately, so backoff timing is deterministic and fast.
+// readySleep records the requested backoff and returns a channel that is
+// already ready, so a test drives the reconnect loop at full speed.
+//
+// The record is a NON-BLOCKING send, and that is the whole point. Manager.wait
+// calls sleep(d) to obtain the channel it selects on, so the send happens
+// *before* the select can observe ctx.Done(). A blocking send therefore parks
+// the manager outside the select, where cancellation cannot reach it: once the
+// loop has outrun the reader by more than the buffer, the test's cancel() is
+// ignored and its <-done never returns.
+//
+// That is a deadlock waiting for a machine fast enough to let the producer get
+// ahead, which is what a loaded CI runner is. Dropping a duration nobody is
+// waiting for costs the tests nothing — each reads only the first few, and the
+// buffer is far larger than that.
 func readySleep(durs chan time.Duration) func(time.Duration) <-chan time.Time {
 	return func(d time.Duration) <-chan time.Time {
-		durs <- d
+		select {
+		case durs <- d:
+		default:
+		}
 		ch := make(chan time.Time, 1)
 		ch <- time.Time{}
 		return ch
