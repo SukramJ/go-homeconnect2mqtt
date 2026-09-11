@@ -59,6 +59,33 @@ func (g *gatedMQTT) callCount(topic string) int {
 	return g.calls[topic]
 }
 
+// waitForCount blocks until a topic has entered Publish want times.
+//
+// It is the counterpart to waitFor for a sequence that revisits a value:
+// waiting on the payload cannot distinguish "the run has finished" from
+// "the run happens to be passing through this value again".
+//
+// It counts entries, not completions — gatedMQTT raises the counter before
+// it publishes — so a caller that also cares about the delivered payload
+// needs waitFor after this, not instead of it.
+func waitForCount(t *testing.T, g *gatedMQTT, topic string, want int) {
+	t.Helper()
+	deadline := time.After(5 * time.Second)
+	for {
+		if n := g.callCount(topic); n >= want {
+			if n > want {
+				t.Fatalf("publish calls = %d, want %d", n, want)
+			}
+			return
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("publish calls = %d, want %d (every transition delivered)", g.callCount(topic), want)
+		case <-time.After(2 * time.Millisecond):
+		}
+	}
+}
+
 func buildGatedBridge(t *testing.T) (*Bridge, *gatedMQTT) {
 	t.Helper()
 	g := newGatedMQTT()
@@ -278,11 +305,22 @@ func TestPublisherPreservesEveryUpdate(t *testing.T) {
 	dev.app.ApplyValues([]map[string]any{{"uid": 0x1005, "value": true}})
 	dev.app.ApplyValues([]map[string]any{{"uid": 0x1005, "value": false}})
 	close(g.gate)
+
+	// Two waits, because the two assertions are about different moments and
+	// neither implies the other.
+	//
+	// The count first: no transition was lost. Waiting on the payload
+	// cannot carry that, because the pulse ends on the same value it passes
+	// through on the way — true, false, true, false — and waitFor polls the
+	// topic's *last* payload, so it is satisfied the moment the second
+	// publish lands. That is the failure CI saw on a loaded runner: three
+	// delivered, a fourth still in flight, and a report of a lost
+	// transition that never happened.
+	waitForCount(t, g, topic, 4)
+	// Then the payload: all four have also *completed*. callCount is raised
+	// on entry to Publish, so the count reaching four says the fourth was
+	// started, not that the broker has it.
 	waitFor(t, g.stubMQTT, topic, "false")
-	// The stalled publish plus all three queued transitions.
-	if n := g.callCount(topic); n != 4 {
-		t.Errorf("publish calls = %d, want 4 (every transition delivered)", n)
-	}
 }
 
 // TestPublisherDropsOldestWhenFull asserts the backlog cap drops the oldest
