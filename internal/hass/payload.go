@@ -6,13 +6,12 @@
 // heuristic (docs/04-device-mapping.md §1) and emits one config payload
 // per entity, plus birth/LWT re-publish handling.
 //
-// Entity ids are seeded English and language-independent via BOTH `object_id`
-// and `default_entity_id`, while the friendly `name` is localized. HA is
-// migrating from the (deprecated) `object_id` to `default_entity_id`, but
-// current releases do not yet honour `default_entity_id` reliably
-// (home-assistant/core#157241) — so we publish both: `object_id` keeps current
-// HA correct, `default_entity_id` keeps future HA correct. Both carry the same
-// English seed; only `name` is localized and `unique_id` stays independent.
+// Entity ids are seeded English and language-independent via
+// `default_entity_id`, while the friendly `name` is localized. The former
+// `object_id` key is no longer published: Home Assistant's MQTT discovery
+// schemas are extra=REMOVE_EXTRA and none of the 32 MQTT platforms declares
+// `object_id` any more (measured against HA 2026.9), so it was silently
+// dropped on arrival. Only `name` is localized; `unique_id` stays independent.
 // Most of the long tail of features is published disabled-by-default and
 // categorized as diagnostic/config so Home Assistant stays uncluttered without
 // dropping the "expose everything" promise.
@@ -233,7 +232,6 @@ func payloadFor(e *homeconnect.Entity, platform, device string, t entityTopics, 
 	p := map[string]any{
 		"unique_id":          dev.idPrefix + "_" + featureKey(e),
 		"name":               humanize(e),
-		"object_id":          slugify(device + "_" + featureKey(e)),
 		"default_entity_id":  platform + "." + slugify(device+"_"+featureKey(e)),
 		"availability_topic": t.availability,
 		"device":             dev.block,
