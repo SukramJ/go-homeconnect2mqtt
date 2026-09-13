@@ -188,6 +188,14 @@ func (s *subRecorder) Unsubscribe(context.Context, string) error { return nil }
 // recorded rather than sent.
 func pinBridge(t *testing.T) (*Bridge, *Device, *hass.Discovery, *subRecorder) {
 	t.Helper()
+	return pinBridgeQoS(t, int(pinQoS))
+}
+
+// pinBridgeQoS is pinBridge with MQTT_QOS chosen by the caller, so the
+// operator-facing promise of MQTT_QOS: 0 can be asserted off the recorded
+// transport calls rather than off the constant that produced them (F9).
+func pinBridgeQoS(t *testing.T, qos int) (*Bridge, *Device, *hass.Discovery, *subRecorder) {
+	t.Helper()
 	entries, err := pinEntries()
 	if err != nil {
 		t.Fatalf("pincatalog: %v", err)
@@ -199,6 +207,7 @@ func pinBridge(t *testing.T) (*Bridge, *Device, *hass.Discovery, *subRecorder) {
 	desc := &profile.Description{Info: pincatalog.Info, Entries: entries}
 
 	cfg := testCfg()
+	cfg.MQTTQoS = qos
 	cfg.MQTTTopic = pinRoot
 	cfg.Language = "de"
 	cfg.HASSEnable = true
@@ -208,7 +217,7 @@ func pinBridge(t *testing.T) (*Bridge, *Device, *hass.Discovery, *subRecorder) {
 	logger := slog.New(slog.DiscardHandler)
 	// HASS_DISCOVERY defaults to "curated"; the pin uses the full set so
 	// the topic tree is the widest one this daemon can produce.
-	disc := hass.New(rec, pinPrefix, pinRoot, mqtt.QoS(cfg.MQTTQoS), cfg.Language, false, logger) //nolint:gosec // fixed test value
+	disc := hass.New(rec, pinPrefix, pinRoot, mqtt.QoS(cfg.MQTTQoS), cfg.Language, false, logger) //nolint:gosec // test value from the caller
 	disc.SetEnricher(cat)
 
 	b, err := New(Deps{
@@ -650,4 +659,53 @@ func matchFilter(filter, topic string) bool {
 		}
 	}
 	return len(f) == len(tp)
+}
+
+// TestQoSZeroReachesTheTransportAsQoSZero is F9, pinned where it can be
+// seen to break.
+//
+// MQTT_QOS is validated to 0..1 and an operator who sets 0 is asking for
+// at-most-once. Today mqtt.QoS(0) means exactly that. In the go-hamqtt
+// publisher vocabulary this migration moves onto, QoS(0) means *unset* and
+// resolves to QoS 1, so the deliberate choice would be silently upgraded
+// the moment the plane moves — with nothing in the config, the log or the
+// payloads to show it.
+//
+// The assertion is deliberately made on the QoS the TRANSPORT was handed,
+// on every publish and every subscribe the daemon makes, not on the
+// constant that fed them. That is what lets the pin survive the whole
+// plane being replaced: a step that re-routes these calls through another
+// library still has to hand the transport a 0.
+func TestQoSZeroReachesTheTransportAsQoSZero(t *testing.T) {
+	b, dev, _, rec := pinBridgeQoS(t, 0)
+
+	if err := b.subscribeCommands(context.Background()); err != nil {
+		t.Fatalf("subscribeCommands: %v", err)
+	}
+	b.publishDiscovery(context.Background(), dev)
+	b.publish(dev.topics.Availability(), []byte("online"))
+
+	rec.mu.Lock()
+	filters := append([]filterQoS(nil), rec.filters...)
+	pubs := append([]pubCall(nil), rec.pubs...)
+	rec.mu.Unlock()
+
+	if len(pubs) == 0 || len(filters) == 0 {
+		t.Fatalf("nothing recorded: %d publishes, %d subscribes", len(pubs), len(filters))
+	}
+	for _, p := range pubs {
+		if p.qos != mqtt.QoS0 {
+			t.Errorf("publish %s: qos = %v, want QoS0 — MQTT_QOS: 0 was silently upgraded", p.topic, p.qos)
+		}
+	}
+	for _, f := range filters {
+		// The two transient reconcile filters are hard-wired to QoS 0 and
+		// are not recorded here; these are the command and birth ones,
+		// which follow MQTT_QOS.
+		if f.QoS != int(mqtt.QoS0) {
+			t.Errorf("subscribe %s: qos = %d, want 0", f.Filter, f.QoS)
+		}
+	}
+	t.Logf("F9: MQTT_QOS: 0 reached the transport as QoS 0 on %d publishes and %d subscribes",
+		len(pubs), len(filters))
 }
