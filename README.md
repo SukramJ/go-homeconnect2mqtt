@@ -110,17 +110,26 @@ mosquitto_pub -h <broker> -u <user> -P <password>   -t 'homeassistant/device/ges
 `-u`/`-P` are required on an authenticated broker, which is what the Home
 Assistant add-on always uses.
 
-**A document does not delete a component by leaving it out.** Narrowing what
-is published — excluding a feature in `mapping.yaml`, or switching
-`HASS_DISCOVERY` from `full` to `curated` (510 of 687 components per
-appliance) — removes nothing in Home Assistant: those entities keep their
-retained registry entry, keep *both* availability sources this daemon
-publishes, and keep receiving live state, because `HASS_DISCOVERY` is applied
-where discovery is rendered and never on the state topics. The daemon warns
-once per appliance on start (`hass.curated_components_omitted`, with the
-count). Removing them is manual: restart Home Assistant (or reload the MQTT
-integration) first — the delete option appears only once an entity is no
-longer offered — then delete them from the device page.
+**A component this daemon stops publishing is removed.** Narrowing what is
+published — excluding a feature in `mapping.yaml`, switching `HASS_DISCOVERY`
+from `full` to `curated` (510 of 687 components per appliance), or replacing
+an appliance's description file — deletes those entities from Home Assistant,
+together with their recorder history and anything that references them.
+
+A device document does not delete a component by leaving it out, so the
+document carries a *tombstone* for each one instead: an entry holding a
+platform and nothing else, which is Home Assistant's own form for a removal.
+To know what it published last time, the daemon reads its previous document
+back from the broker once per connection, immediately before the first
+publish of that connection. Every way that read can fail produces *fewer*
+removals and never different ones, and a document published by a second
+instance of this daemon is judged component by component against this
+instance's `MQTT_TOPIC` root, so a sibling's entities are never deleted.
+
+The daemon warns once per appliance on start when the curated filter drops
+anything (`hass.curated_components_omitted`, with the count). Setting
+`HASS_DISCOVERY` back to `full` re-creates the entities; it does not bring
+their history back.
 
 ## Building
 

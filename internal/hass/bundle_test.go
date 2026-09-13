@@ -366,7 +366,7 @@ func TestTheDocumentedDowngradeTopicMatchesTheCode(t *testing.T) {
 func TestAnEmptyDocumentIsWithheld(t *testing.T) {
 	rec := &bundleRecorder{}
 	d := New(rec, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
-	topic, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, pincatalog.Info, nil)
+	topic, _, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, pincatalog.Info, nil, nil)
 	if err == nil {
 		t.Fatal("an empty document was published")
 	}
@@ -437,8 +437,8 @@ func TestABlockingDocumentIsWithheld(t *testing.T) {
 	}
 }
 
-// TestOmittingAComponentDoesNotRemoveIt records the one capability this
-// step gives up, as a measurement rather than as a note.
+// TestOmittingAComponentDoesNotRemoveIt is the LIBRARY fact this daemon's
+// removals are built on, and it was written as the record of a deferral.
 //
 // Under the per-entity form an entity that leaves this daemon's emit set is
 // removed by the orphan sweep: its retained config is cleared and Home
@@ -453,16 +453,18 @@ func TestABlockingDocumentIsWithheld(t *testing.T) {
 // and the device availability topic, and this daemon goes on publishing
 // both.
 //
-// The triggers are operator-reachable on this bridge, which is why the
-// deferral is argued in the PR body rather than assumed harmless: a feature
-// excluded in mapping.yaml, HASS_DISCOVERY switched from `full` to
-// `curated` (510 of 687 components on the pin fixture), an appliance
-// replaced by one with a different feature list, and a firmware update that
-// changes that list.
+// The triggers are operator-reachable on this bridge: a feature excluded in
+// mapping.yaml, HASS_DISCOVERY switched from `full` to `curated` (510 of
+// 687 components on the pin fixture), an appliance replaced by one with a
+// different feature list, and a description file that changes.
 //
-// This test is the record, and it asserts BOTH halves — that omission is
-// inert and that the removal the library offers works — so the day
-// tombstones are implemented it is the test that already describes them.
+// The deferral is CLOSED — see tombstone.go and TestTheCuratedFlipRemovesWhatItStopsPublishing —
+// and this test is kept as what it always was: the assertion of both halves
+// of the library rule the daemon now depends on. Omission is inert, so a
+// removal has to be written; and Bundle.RemoveComponents writes exactly
+// `{"platform":"…"}`, carrying no unique_id, keeping the identity in
+// Tombstones, and does then render the legacy retraction. If the first half
+// ever stops holding, this daemon is writing 510 entries for nothing.
 func TestOmittingAComponentDoesNotRemoveIt(t *testing.T) {
 	d := New(nil, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
 	full, err := d.BundleFor(goldenDeviceEN, pincatalog.Info, pinEntities(t))

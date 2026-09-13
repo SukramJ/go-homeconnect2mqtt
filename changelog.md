@@ -47,31 +47,41 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
   rather than assembling it; that is the one spelling that cannot be wrong.
   Repeat it once per appliance. Home Assistant will then re-adopt the same
   entities from the per-entity configs, with their history.
-  **One capability is not yet carried over.** Under the per-entity form, a
-  feature that leaves this daemon's set — excluded in `mapping.yaml`, dropped
-  by switching `HASS_DISCOVERY` from `full` to `curated`, or missing after an
-  appliance is replaced or its firmware changes — had its config retracted
-  and its entity disappeared. A device document does not remove a component
-  by omitting it, so such an entity now stays in Home Assistant, reading
-  *available* and showing its last value, until it is deleted by hand. To
-  remove one: **restart Home Assistant (or reload the MQTT integration)
-  first** — the delete option only appears once the entity is no longer being
-  provided — then open the device page and delete the entity there.
+  **A component this daemon stops publishing is now removed, not stranded.**
+  Under the per-entity form, a feature that left this daemon's set — excluded
+  in `mapping.yaml`, dropped by switching `HASS_DISCOVERY` from `full` to
+  `curated`, or missing after an appliance is replaced or its description
+  file changes — had its retained config cleared and its entity disappeared.
+  A device document does not remove a component by omitting it, so for one
+  release such an entity stayed in Home Assistant, reading *available* and
+  showing its last value. It is now removed: the document carries a
+  *tombstone* for it — an entry holding a platform and nothing else, which is
+  how Home Assistant is told to delete a component — and the stale per-entity
+  config is retracted alongside it.
+  To know what the previous document declared, the daemon reads it back from
+  the broker once per connection, immediately before the first publish of
+  that connection (a short subscription to
+  `<discovery prefix>/device/+/config`). Every way that read can go wrong
+  produces *fewer* removals and never different ones: a window that sees
+  nothing, a document that does not parse, a component that names no topic of
+  this instance's, and a component this daemon still publishes are all simply
+  not removed, and the publish proceeds exactly as it would have without the
+  read. In particular a document written by a *second instance* of this
+  daemon — which addresses the same topic, because `MQTT_TOPIC` appears in
+  neither the discovery prefix nor the node id — is judged component by
+  component against this instance's own root, so a sibling's entities are
+  never deleted.
   **What that costs, measured:** the cheapest trigger is a single option, and
   it is not a rarity — switching `HASS_DISCOVERY` from `full` to `curated`
-  drops **510 of 687 components** per appliance. None of them disappears.
-  Each keeps its retained registry entry, keeps *both* availability sources
-  this daemon publishes (`<root>/status` and `<root>/<appliance>/connected`,
-  both `online`) and keeps receiving live state, because `HASS_DISCOVERY` is
-  applied only where discovery is rendered and never on the state plane — so
-  in Home Assistant they are indistinguishable from entities that are still
-  offered, and an operator who set `curated` to reduce clutter sees no change
-  whatsoever. The daemon now says so on start, once per appliance:
-  `WARN hass.curated_components_omitted device=… omitted=510 published=177`,
-  naming the manual removal above. Removing them automatically needs
-  tombstones (a component key carrying a platform and nothing else), which
-  changes the document's bytes and is therefore its own change, not a rider
-  on this one.
+  drops **510 of 687 components** per appliance, and all 510 are now
+  *deleted* from Home Assistant, together with their recorder history and
+  anything that references them. Setting the option back to `full` re-creates
+  the entities; it does not bring their history back. The daemon says so on
+  start, once per appliance:
+  `WARN hass.curated_components_omitted device=… omitted=510 published=177`.
+  The curated document grows from ~123 KB to ~158 KB on the one connection
+  that carries the removals and shrinks back on the next; the full document
+  is unchanged at ~473 KB, because a `full` render omits nothing.
 - The daemon now re-publishes discovery on every broker (re)connect, not only
   when an appliance reconnects or Home Assistant restarts. A broker that came
   back without its retained store previously left every entity missing until

@@ -414,24 +414,28 @@ func (d *Discovery) hamqttModel(device string, info profile.DeviceInfo, entities
 // warnCuratedOmissions says out loud what HASS_DISCOVERY: curated costs on
 // an installation that has already published the full set.
 //
-// A device document does not remove a component by leaving it out, so
-// flipping full -> curated does not shrink anything in Home Assistant: the
-// 510 components (of 687, measured on the pin catalogue) the curated filter
-// drops keep their retained per-entity registry entries, keep BOTH
-// availability sources — the bridge status topic and the device
-// availability topic, both of which this daemon goes on publishing — and
-// keep RECEIVING LIVE STATE, because `curated` is read only in this package
-// and the state plane never sees it. In Home Assistant they are
-// indistinguishable from real entities. The operator who set the option to
-// reduce clutter sees no change at all, which is the worst possible
-// outcome for an option: it appears to do nothing, so it gets set again.
+// The cost it names is no longer the one #48 measured, and the line had to
+// move with the behaviour rather than be left standing. Then: a device
+// document did not remove a component by leaving it out, so flipping
+// full -> curated shrank nothing in Home Assistant — the 510 components (of
+// 687, measured on the pin catalogue) the curated filter drops kept their
+// retained registry entries, kept BOTH availability sources publishing
+// `online` and kept receiving live state, because `curated` is read only in
+// this package and the state plane never sees it. The operator who set the
+// option to reduce clutter saw no change at all, and the warning pointed at
+// a manual removal.
 //
-// The tombstone path that would actually remove them is still deferred (see
-// TestOmittingAComponentDoesNotRemoveIt and the changelog), so this is the
-// honest interim: quantify it, name it per appliance, and point at the
-// documented manual remedy. Once per device per process — it is a statement
-// about a configuration, not about a publish, and every (re)connect
-// republishes.
+// Now the same 510 are TOMBSTONED into the document (see tombstone.go) and
+// Home Assistant deletes them. So the hazard is gone and the number is not:
+// flipping this option now deletes that many entities, along with their
+// history and anything in Home Assistant that references them, and it is
+// the reverse flip that cannot undo it — a re-created entity is a new one
+// only in the sense that its history stops at the deletion. That is worth
+// one line per appliance per process, at WARN, for the same reason the
+// deletion is worth performing.
+//
+// Once per device per process: it is a statement about a configuration, not
+// about a publish, and every (re)connect republishes.
 func (d *Discovery) warnCuratedOmissions(device string, omitted, kept int) {
 	if omitted == 0 {
 		return
@@ -451,11 +455,11 @@ func (d *Discovery) warnCuratedOmissions(device string, omitted, kept int) {
 		slog.Int("omitted", omitted),
 		slog.Int("published", kept),
 		slog.String("consequence",
-			"HASS_DISCOVERY: curated omits these components from the device document, and a "+
-				"document does not delete a component by omitting it: any entity Home Assistant "+
-				"already registered for them stays, stays available and keeps receiving state. "+
-				"Remove them by hand — restart Home Assistant (or reload the MQTT integration) "+
-				"first, then delete them on the device page (see addon/DOCS.md)"))
+			"HASS_DISCOVERY: curated omits these components from the device document, and the "+
+				"document now tombstones what it omits: Home Assistant DELETES any entity it had "+
+				"registered for them, together with their recorder history and any automation, "+
+				"script or dashboard card that names them. Setting HASS_DISCOVERY back to full "+
+				"re-creates the entities; it does not bring their history back"))
 }
 
 // hamqttBindings is payloadFor's topic decision expressed as bindings: a

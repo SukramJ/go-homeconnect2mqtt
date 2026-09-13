@@ -379,7 +379,46 @@ func (d *Discovery) publishProgramControls(ctx context.Context, device string, e
 // not the name — here "Geschirrspüler" is addressed as `geschirrspuler`,
 // which is neither the raw name nor merely its lower case.
 func (d *Discovery) BundleTopic(device string) string {
-	return publisher.BundleConfigTopic(d.baseTopic, sanitize(device))
+	return publisher.BundleConfigTopic(d.baseTopic, d.BundleNodeID(device))
+}
+
+// BundleNodeID is the device document's node id — the third topic segment,
+// and the key a parsed publisher.ConfigTopic reports for it.
+//
+// Exported so the tombstone read-back can look its own document up in what
+// the snapshot window delivered without composing the topic a second time.
+// It is slugify(<device name>), the same string
+// [Discovery.hamqttContext]'s NodeID renders, which is neither the raw
+// appliance name nor merely its lower case: "Geschirrspüler" is addressed
+// as "geschirrspuler". TestTheBundleNodeIDIsTheOneTheTopicCarries is what
+// keeps the two from drifting.
+func (d *Discovery) BundleNodeID(device string) string { return sanitize(device) }
+
+// BundleFilter is the MQTT filter that matches every device document under
+// this daemon's discovery prefix, and nothing else.
+//
+// It is deliberately narrower than the orphan sweep's `<prefix>/#`. The
+// tombstone read-back runs immediately before the one publish that cannot
+// be undone, so what it costs on the wire is what the migration costs: this
+// filter replays one retained message per appliance, where `<prefix>/#`
+// replays all 687 per-entity configs and the ~473 KB document as well. It
+// is also what keeps the read-back's window distinguishable from the
+// sweep's in a SUBSCRIBE list, which is where the sweep is pinned as having
+// not run.
+func (d *Discovery) BundleFilter() string { return d.baseTopic + "/device/+/config" }
+
+// BundleNodeIDOf reads the node id back out of a device document topic,
+// reporting false for anything that is not one under this prefix.
+//
+// It is publisher.ParseConfigTopic rather than a split on "/", because the
+// question "is this a device document" is the library's to answer and
+// getting it wrong here means reading a per-entity config as a document.
+func (d *Discovery) BundleNodeIDOf(topic string) (string, bool) {
+	t, ok := publisher.ParseConfigTopic(d.baseTopic, topic)
+	if !ok || !t.Bundle || t.NodeID == "" {
+		return "", false
+	}
+	return t.NodeID, true
 }
 
 // PublishDeviceBundle renders one appliance's device document and publishes
@@ -419,13 +458,49 @@ func (d *Discovery) BundleTopic(device string) string {
 //   - A packet the broker will not take. That refusal lives in
 //     haplane.Plane.PublishBundle, before the retraction, and is reported
 //     here as haplane.ErrDocumentTooLarge.
-func (d *Discovery) PublishDeviceBundle(ctx context.Context, device string, info profile.DeviceInfo, entities []*homeconnect.Entity) (string, error) {
+//
+// # prior, and what it adds
+//
+// prior is the component set the PREVIOUS document declared, read back from
+// the broker once per connection — see [Discovery.BundleComponents] and
+// internal/bridge's Bridge.priorComponentsFor. Every key it holds that this
+// render does not produce is written into the document as a TOMBSTONE:
+// `{"platform":"…"}`, the entry Home Assistant reads as a removal. A
+// component this daemon stops publishing is therefore removed rather than
+// stranded — which is what `HASS_DISCOVERY: curated` needed and did not
+// have.
+//
+// A nil prior is exactly the old behaviour, and every failure direction of
+// the read-back degrades to it. See the file comment in tombstone.go.
+//
+// The second return is the LIVE component set that was published: what the
+// caller remembers as the previous state of the document it just wrote. It
+// is nil on every refusal, because a document that was not written did not
+// become anybody's previous document.
+func (d *Discovery) PublishDeviceBundle(
+	ctx context.Context,
+	device string,
+	info profile.DeviceInfo,
+	entities []*homeconnect.Entity,
+	prior map[string]discovery.Component,
+) (topic string, live map[string]discovery.Component, err error) {
 	b, err := d.BundleFor(device, info, entities)
 	if err != nil {
 		d.logger.Error("hass.bundle_render", slog.String("device", device), slog.String("err", err.Error()))
-		return "", err
+		return "", nil, err
 	}
-	return d.publishBundle(ctx, device, b)
+	if gone := ApplyTombstones(b, prior); len(gone) > 0 {
+		d.logger.Info("hass.components_removed",
+			slog.String("device", device), slog.Int("removed", len(gone)),
+			slog.String("consequence",
+				"no longer published; the document carries a platform-only entry for each, "+
+					"which is how Home Assistant is told to delete the entity"))
+	}
+	topic, err = d.publishBundle(ctx, device, b)
+	if err != nil {
+		return topic, nil, err
+	}
+	return topic, LiveComponents(b), nil
 }
 
 // publishBundle is PublishDeviceBundle's gates and its write, separated
@@ -435,12 +510,22 @@ func (d *Discovery) PublishDeviceBundle(ctx context.Context, device string, info
 // a test: a document this daemon renders is never blocking (that is what
 // #43 fixed), so the only way to assert that a blocking one is withheld is
 // to hand one in.
+//
+// The empty-document gate counts LIVE components rather than entries, and
+// that distinction arrived with tombstones. A tombstone IS an entry, so an
+// appliance that classified to zero entities against a prior document of
+// 687 renders a document of 687 entries and none of them declares anything
+// — which walked straight past a `len(b.Components) == 0` test and
+// published a fleet-wide deletion as if it were a migration.
+// TestADocumentOfNothingButTombstonesIsWithheld is the pin.
 func (d *Discovery) publishBundle(ctx context.Context, device string, b *discovery.Bundle) (string, error) {
 	topic := publisher.BundleConfigTopic(d.baseTopic, b.NodeID)
-	if len(b.Components) == 0 {
+	live := len(LiveComponents(b))
+	if live == 0 {
 		err := fmt.Errorf("hass: device document for %q has no components", device)
 		d.logger.Error("hass.bundle_empty",
 			slog.String("device", device), slog.String("topic", topic),
+			slog.Int("entries", len(b.Components)),
 			slog.String("consequence", "withheld; the per-entity configs are left in place"))
 		return topic, err
 	}
@@ -451,13 +536,14 @@ func (d *Discovery) publishBundle(ctx context.Context, device string, b *discove
 	if err != nil {
 		d.logger.Error("hass.bundle_publish",
 			slog.String("device", device), slog.String("topic", topic),
-			slog.Int("components", len(b.Components)),
+			slog.Int("components", live), slog.Int("tombstones", len(b.Components)-live),
 			slog.String("err", err.Error()))
 		return topic, err
 	}
 	d.logger.Info("hass.bundle_published",
 		slog.String("device", device), slog.String("topic", topic),
-		slog.Int("components", len(b.Components)), slog.Bool("written", sent))
+		slog.Int("components", live), slog.Int("tombstones", len(b.Components)-live),
+		slog.Bool("written", sent))
 	return topic, nil
 }
 

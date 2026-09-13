@@ -232,7 +232,7 @@ func TestTheSweepNeverOffersTheDocumentItJustPublished(t *testing.T) {
 	// asynchronous, and two windows over one stub is a test racing itself
 	// rather than a property.
 	seedRetained(rec, map[string]string{doc: `{"device":{"identifiers":["homeconnect_geschirrspuler"]},"components":{}}`})
-	if _, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, dev.app.Info(), dev.app.Entities()); err != nil {
+	if _, _, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, dev.app.Info(), dev.app.Entities(), nil); err != nil {
 		t.Fatalf("PublishDeviceBundle: %v", err)
 	}
 
@@ -364,7 +364,7 @@ func TestBothSweepGuardsMustFailTogether(t *testing.T) {
 	doc := bundleTopicFor(b, dev.name)
 	rec.setFail(doc)
 
-	topic, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, d0(dev), dev.app.Entities())
+	topic, _, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, d0(dev), dev.app.Entities(), nil)
 	if err == nil {
 		t.Fatal("the stub accepted a document it was told to refuse")
 	}
@@ -661,6 +661,30 @@ func preGateWrites(rec *subRecorder, refreshOwns []string) []string {
 // note in TestTheBirthReplayCannotPublishIntoTheRefreshWindow.
 func birthRaceBridge(t *testing.T) (*Bridge, *Device, *subRecorder) {
 	t.Helper()
+	return smallBridge(t, nil)
+}
+
+// smallBridge is birthRaceBridge with the broker's advertised Maximum
+// Packet Size chosen by the caller, so the preflight can be driven against
+// the document that is actually published rather than against the one the
+// renderer produced before the removals were written into it.
+//
+// A nil hook is UNKNOWN, which publishes — see haplane.Config's
+// BrokerMaxPacketSize for why unknown may never be read as small.
+func smallBridge(t *testing.T, maxPacket func() (uint32, bool)) (*Bridge, *Device, *subRecorder) {
+	t.Helper()
+	b, rec := smallBridgeWith(t, maxPacket, pinDevice)
+	return b, b.devices[0], rec
+}
+
+// smallBridgeWith is smallBridge over several appliances, for the pins
+// whose property only exists with more than one — a fleet-wide snapshot
+// window that stops at the first document it sees is indistinguishable
+// from a correct one on a one-appliance fixture.
+func smallBridgeWith(
+	t *testing.T, maxPacket func() (uint32, bool), names ...string,
+) (*Bridge, *subRecorder) {
+	t.Helper()
 	cfg := testCfg()
 	cfg.MQTTTopic = pinRoot
 	cfg.HASSEnable = true
@@ -668,28 +692,33 @@ func birthRaceBridge(t *testing.T) (*Bridge, *Device, *subRecorder) {
 
 	rec := &subRecorder{}
 	logger := slog.New(slog.DiscardHandler)
-	plane := planeFor(t, rec, cfg.MQTTQoS, cfg.RetainEnabled())
-	b, err := New(Deps{
-		Config: cfg,
-		MQTT:   rec,
-		Plane:  plane,
-		Logger: logger,
-		HASS:   hass.New(plane, pinPrefix, pinRoot, cfg.Language, false, logger),
-		Devices: []DeviceSpec{{
+	plane := planeWithLimit(t, rec, cfg.MQTTQoS, cfg.RetainEnabled(), maxPacket)
+	desc := smallDescription(t)
+	specs := make([]DeviceSpec, 0, len(names))
+	for _, name := range names {
+		specs = append(specs, DeviceSpec{
 			Config: profile.DeviceConfig{
 				// 127.0.0.1:80 refuses fast, so Run's workers cycle
 				// through the offline path instead of hanging on a dial
 				// to an address nothing answers.
-				Name: pinDevice, Host: "127.0.0.1",
+				Name: name, Host: "127.0.0.1",
 				ConnectionType: profile.ConnectionAES, PSK64: b64(32), IV64: b64(16),
 			},
-			Description: smallDescription(t),
-		}},
+			Description: desc,
+		})
+	}
+	b, err := New(Deps{
+		Config:  cfg,
+		MQTT:    rec,
+		Plane:   plane,
+		Logger:  logger,
+		HASS:    hass.New(plane, pinPrefix, pinRoot, cfg.Language, false, logger),
+		Devices: specs,
 	})
 	if err != nil {
 		t.Fatalf("bridge.New: %v", err)
 	}
-	return b, b.devices[0], rec
+	return b, rec
 }
 
 // TestTheBirthReplayCannotPublishIntoTheRefreshWindow drives Run, in Run's
@@ -827,15 +856,7 @@ func TestTheBirthHandlerAndTheReconnectHookShareOnePass(t *testing.T) {
 		t.Errorf("%d of %d device-document publishes were inside the transport at once — "+
 			"the birth handler is not going through the one coalesced pass", deepest, arrivals)
 	}
-	// The sweep's own filter only: this test subscribes the birth topic
-	// itself, and that subscription lives under the discovery prefix too.
-	sweeps := 0
-	for _, f := range rec.discoveryWindows(pinPrefix) {
-		if f == pinPrefix+"/#" {
-			sweeps++
-		}
-	}
-	if sweeps > 2 {
+	if sweeps := len(rec.discoveryWindows(pinPrefix)); sweeps > 2 {
 		t.Errorf("three birth deliveries and a reconnect opened %d snapshot windows", sweeps)
 	}
 }
