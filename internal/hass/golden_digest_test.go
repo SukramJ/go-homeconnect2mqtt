@@ -4,6 +4,7 @@
 package hass
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
@@ -77,6 +78,17 @@ func fileDigest(t *testing.T, path string) string {
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}
-	sum := sha256.Sum256(b)
+	sum := sha256.Sum256(normalizeEOL(b))
 	return hex.EncodeToString(sum[:])
+}
+
+// normalizeEOL strips CR before LF so the digest is a property of the
+// fixture's content rather than of the checkout that produced it.
+//
+// .gitattributes pins these files to LF, which is the real fix; this is
+// the belt to its braces, for a clone made before that line existed with
+// core.autocrlf on. The goldens are machine-written JSON and contain no
+// meaningful lone CR.
+func normalizeEOL(b []byte) []byte {
+	return bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
 }

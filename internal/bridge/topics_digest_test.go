@@ -4,6 +4,7 @@
 package bridge
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
@@ -34,7 +35,11 @@ func TestTopicsGoldenMatchesItsPinnedDigest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read topics.json: %v", err)
 	}
-	sum := sha256.Sum256(b)
+	// Normalised for line endings: .gitattributes pins these fixtures to
+	// LF, and this keeps a clone made before that line existed (with
+	// core.autocrlf on, i.e. any Windows default) from failing on a
+	// checkout artefact rather than on a content change.
+	sum := sha256.Sum256(bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n")))
 	if got := hex.EncodeToString(sum[:]); got != topicsGoldenDigest {
 		t.Errorf("topics.json: digest %s, pinned %s\n"+
 			"The file was regenerated. Update topicsGoldenDigest in the same commit, "+

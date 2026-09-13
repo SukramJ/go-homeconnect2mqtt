@@ -1,0 +1,6 @@
+# The golden fixtures are pinned by SHA-256 (internal/hass/golden_digest_test.go,
+# internal/bridge/topics_digest_test.go), so their checked-out bytes must be the
+# same on every platform. Without this, Git's autocrlf rewrites them to CRLF on a
+# Windows checkout and every digest differs there. LF is also what the test
+# helper that regenerates them writes.
+*.json text eol=lf
