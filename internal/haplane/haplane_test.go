@@ -125,6 +125,22 @@ func TestQoSRefusesAValueNobodyChose(t *testing.T) {
 func TestEveryPublishCarriesTheStatedQoS(t *testing.T) {
 	t.Parallel()
 	for _, mqttQoS := range []int{0, 1} {
+		// retain=false too, because the non-retained state path is
+		// publisher.StatePublisher.Pulse, whose OWN default is QoS 0 — the
+		// one field in the package that does not default to 1. A plane
+		// that stated StateConfig.QoS and forgot PulseQoS would publish a
+		// whole non-retained fleet at a level nobody chose, and only at
+		// MQTT_QOS: 1 would it be visible.
+		for _, retain := range []bool{true, false} {
+			pulsePlane, pulseCap := newPlane(t, mqttQoS, retain)
+			if err := pulsePlane.PublishState(t.Context(), "homeconnect/dev/x/state", []byte("42")); err != nil {
+				t.Fatalf("state publish: %v", err)
+			}
+			recs := pulseCap.records()
+			if len(recs) != 1 || int(recs[0].qos) != mqttQoS {
+				t.Errorf("MQTT_QOS %d retain %v: state reached the transport as %+v", mqttQoS, retain, recs)
+			}
+		}
 		p, c := newPlane(t, mqttQoS, true)
 		ctx := t.Context()
 		if _, err := p.Publish(ctx, "homeassistant/sensor/dev/x/config", []byte(`{"a":1}`)); err != nil {

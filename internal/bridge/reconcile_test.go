@@ -344,9 +344,18 @@ func TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished(t *test
 	b, _, _, rec := pinBridge(t)
 	b.cfg.HASSDiscoveryRefresh = true
 
-	ours := "homeassistant/sensor/geschirrspuler/anything/config"
+	// Two appliances of ours, so the fleet scope is measurable: a refresh
+	// that only cleared the first device would pass a single-device
+	// fixture and leave half an installed base standing.
+	b.devices = append(b.devices, &Device{name: "Backofen", topics: newDeviceTopics(pinRoot, "Backofen")})
+
+	ours := []string{
+		"homeassistant/sensor/geschirrspuler/anything/config",
+		"homeassistant/sensor/backofen/anything/config",
+	}
 	seedRetained(rec, map[string]string{
-		ours: ourConfig("anything"),
+		ours[0]: ourConfig("anything"),
+		ours[1]: `{"unique_id":"homeconnect_backofen_anything","state_topic":"` + pinRoot + `/Backofen/X/state"}`,
 		"homeassistant/sensor/geschirrspuler/sibling/config": siblingConfig("sibling"),
 		"homeassistant/sensor/zigbee2mqtt_bridge/x/config":   `{"unique_id":"zigbee2mqtt_x"}`,
 	})
@@ -354,9 +363,10 @@ func TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished(t *test
 	b.refreshDiscoveryOnce(t.Context())
 
 	got := retractedTopics(rec)
-	if len(got) != 1 || got[0] != ours {
-		t.Errorf("refresh cleared %v, want [%s] — the sibling instance's and the foreign "+
-			"integration's configs must survive a fleet-wide clear too", got, ours)
+	sort.Strings(ours)
+	if len(got) != len(ours) || got[0] != ours[0] || got[1] != ours[1] {
+		t.Errorf("refresh cleared %v, want %v — every appliance of ours, and neither the "+
+			"sibling instance's nor the foreign integration's configs", got, ours)
 	}
 }
 
