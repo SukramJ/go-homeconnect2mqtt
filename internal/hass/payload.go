@@ -51,6 +51,14 @@ const deviceClassEnum = "enum"
 // which the boolean cast would turn into `false`.
 const commandPressPayload = "true"
 
+// controlPressPayload is what the two synthetic program buttons write. They
+// back no feature: internal/bridge's handleProgramControl recognises the
+// topic and ignores the payload entirely, so this is Home Assistant's own
+// default rather than a value to write. The difference from
+// commandPressPayload is deliberate and is the one difference between the
+// two button paths that survives their convergence (F6).
+const controlPressPayload = "PRESS"
+
 // Device classes Home Assistant accepts per platform. HA validates a discovery
 // config strictly and discards the WHOLE entity when device_class is not one of
 // them, so a class derived from the content type (or set by the operator
@@ -229,13 +237,7 @@ func deviceClassAndUnit(e *homeconnect.Entity) (deviceClass, unit string) {
 // overrides.
 func payloadFor(e *homeconnect.Entity, platform, device string, t entityTopics, dev deviceBlock) map[string]any {
 	deviceClass, unit := deviceClassAndUnit(e)
-	p := map[string]any{
-		"unique_id":          dev.idPrefix + "_" + featureKey(e),
-		"name":               humanize(e),
-		"default_entity_id":  platform + "." + slugify(device+"_"+featureKey(e)),
-		"availability_topic": t.availability,
-		"device":             dev.block,
-	}
+	p := basePayload(platform, device, featureKey(e), humanize(e), t, dev)
 	if platform == platformButton {
 		// A button is write-only: HA requires command_topic and knows no state.
 		p["command_topic"] = t.command
@@ -293,6 +295,30 @@ func payloadFor(e *homeconnect.Entity, platform, device string, t entityTopics, 
 		p["enabled_by_default"] = false
 	}
 	return p
+}
+
+// basePayload builds the five keys every entity this daemon publishes
+// carries, whatever built it: the two identity strings Home Assistant keys
+// its registries on, the entity-id seed, the availability declaration and
+// the device block.
+//
+// It exists because there are two payload builders — payloadFor for the
+// 685 feature-derived entities and publishProgramControls for the two
+// synthetic program buttons — and the second shared nothing with the first
+// (F6). A key added to one was simply absent from the other, and an
+// absent identity key is not a visible failure: Home Assistant registers
+// the entity anyway, under a different key, beside the one it replaced.
+//
+// key is the per-entity id: featureKey(e) for a feature, the control key
+// for a synthetic button.
+func basePayload(platform, device, key, name string, t entityTopics, dev deviceBlock) map[string]any {
+	return map[string]any{
+		"unique_id":          dev.idPrefix + "_" + key,
+		"name":               name,
+		"default_entity_id":  platform + "." + slugify(device+"_"+key),
+		"availability_topic": t.availability,
+		"device":             dev.block,
+	}
 }
 
 // deviceClassAllowed reports whether dc may be published on platform. sensor

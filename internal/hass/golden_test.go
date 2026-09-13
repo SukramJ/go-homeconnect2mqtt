@@ -548,6 +548,10 @@ func TestGoldenPinsTheEmptyOptionsSelect(t *testing.T) {
 // separate code path (publishProgramControls), carry neither — so they
 // are enabled and prominent, and they also carry a different
 // payload_press than every other button.
+//
+// After F6 the three differences named below are the ONLY ones, and each
+// is argued in publishProgramControls' doc comment. The common shape is
+// asserted separately by TestBothButtonPathsShareTheCommonPayloadShape.
 func TestGoldenPinsTheProgramButtonInconsistency(t *testing.T) {
 	var synthetic, derived int
 	for _, r := range publishPin(t, "en", goldenDeviceEN, false, true) {
@@ -580,6 +584,61 @@ func TestGoldenPinsTheProgramButtonInconsistency(t *testing.T) {
 	}
 	t.Logf("F6: %d synthetic buttons (enabled, uncategorised, payload_press=PRESS) vs %d derived ones "+
 		"(disabled, config, payload_press=true)", synthetic, derived)
+}
+
+// TestBothButtonPathsShareTheCommonPayloadShape is F6's structural half.
+//
+// The 18 command-derived buttons and the 2 synthetic program buttons are
+// built by two different functions. They now share basePayload, and this
+// asserts the consequence: every button, whichever path built it, carries
+// the same five common keys, built by the same rules, with the identity
+// strings agreeing with the topic that carries them.
+//
+// Asserting the keys rather than the values is the point. A missing
+// identity key is not a visible failure — Home Assistant registers the
+// entity anyway, under a different key, beside the one it replaced — so
+// nothing downstream would ever report it.
+func TestBothButtonPathsShareTheCommonPayloadShape(t *testing.T) {
+	common := []string{"unique_id", "name", "default_entity_id", "availability_topic", "device"}
+
+	var synthetic, derived int
+	for _, r := range publishPin(t, "de", goldenDeviceDE, false, true) {
+		if !strings.HasPrefix(r.Topic, goldenPrefix+"/button/") {
+			continue
+		}
+		for _, k := range common {
+			if _, has := r.Payload[k]; !has {
+				t.Errorf("%s is missing the common key %q — the two button "+
+					"builders have diverged again (F6)", r.Topic, k)
+			}
+		}
+		// segments: homeassistant/button/<node>/<key>/config
+		seg := strings.Split(r.Topic, "/")
+		if len(seg) != 5 {
+			t.Fatalf("%s: %d segments, want 5", r.Topic, len(seg))
+		}
+		node, key := seg[2], seg[3]
+		if want := "homeconnect_" + node + "_" + key; r.Payload["unique_id"] != want {
+			t.Errorf("%s: unique_id = %v, want %q", r.Topic, r.Payload["unique_id"], want)
+		}
+		if want := "button." + slugify(goldenDeviceDE+"_"+key); r.Payload["default_entity_id"] != want {
+			t.Errorf("%s: default_entity_id = %v, want %q", r.Topic, r.Payload["default_entity_id"], want)
+		}
+		if want := goldenRoot + "/" + goldenDeviceDE + "/availability"; r.Payload["availability_topic"] != want {
+			t.Errorf("%s: availability_topic = %v, want %q", r.Topic, r.Payload["availability_topic"], want)
+		}
+		if _, has := r.Payload["command_topic"]; !has {
+			t.Errorf("%s: a button with no command_topic is rejected by Home Assistant", r.Topic)
+		}
+		if strings.HasSuffix(key, "_program") {
+			synthetic++
+		} else {
+			derived++
+		}
+	}
+	if synthetic != 2 || derived != 18 {
+		t.Errorf("buttons = %d synthetic + %d derived, want 2 + 18", synthetic, derived)
+	}
 }
 
 // TestGoldenPlatformCensus pins the per-platform entity counts for each
