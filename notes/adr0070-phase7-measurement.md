@@ -1,6 +1,7 @@
 # ADR 0070 phase 7 — measurement for go-homeconnect2mqtt
 
-- Status: measurement, not a decision
+- Status: measurement (steps 0), plus the step 1+2 outcome and the F1/F10
+  decisions — see [Step 2 outcome](#step-2-outcome--what-was-fixed-what-was-decided-what-stays)
 - Date: 2026-09-13
 - Subject: [ADR 0070](https://github.com/SukramJ/openccu-loom/blob/main/docs/adr/0070-shared-ha-discovery-model-module.md)
   and its rollout table, row *"7 | `go-homeconnect2mqtt` (716) | Proves the
@@ -636,7 +637,9 @@ builder-against-builder test, not by the file.
 
 ## Findings
 
-Ranked by severity. None was fixed in this PR.
+Ranked by severity. None was fixed in the measurement PR (#40). Their
+status after steps 1+2 is in
+[Step 2 outcome](#step-2-outcome--what-was-fixed-what-was-decided-what-stays).
 
 <a name="f1"></a>
 ### F1 — the Last Will is attached to a topic no entity reads · **high**
@@ -838,6 +841,197 @@ The published state payload for an enum is localised
 retained *state* in the old language until the feature next changes, so
 the entity briefly holds a value that is not one of its own options.
 `HASS_DISCOVERY_REFRESH` does not help — it clears configs, not state.
+
+---
+
+## Step 2 outcome — what was fixed, what was decided, what stays
+
+This section was written by phase 7 steps 1+2 (the PR that fixes the
+defects). The measurement above is unchanged except where it was measured
+wrong; those corrections are marked.
+
+### Decisions taken in writing
+
+The sequencing table below puts F10 and F1 at step 3, "decided, not
+discovered". Both are decided here, one step early, because step 2 had to
+touch the code they govern and a fix that contradicts a later decision is
+worse than an early decision.
+
+**F10 — the slug: keep this bridge's `slugify`.** Decided. The migration
+will supply its own `discovery.Context` (and its own `topic.Layout`)
+calling this bridge's `slugify`, exactly as phases 5 and 6 did; it will
+not adopt `topic.Slug`.
+
+The reasoning, once, so step 4 does not reopen it:
+
+- The question is not which slug is correct. `topic.Slug` **is** the more
+  correct one — it expands `ä ö ü` to `ae oe ue` the way Home Assistant's
+  own `slugify` does, and this bridge folds them to `a o u`. The question
+  is whether the installed base's registry keys can be reproduced, and
+  for any German device name they cannot (§3.2: 5 of 7 device-name probes
+  diverge, and `LANGUAGE` defaults to `de`).
+- The device slug is embedded in the node id, in `device.identifiers[0]`,
+  and in the device half of both `unique_id` and `default_entity_id`.
+  Home Assistant keys the entity registry on `(domain, platform,
+  unique_id)` and the device registry on `identifiers`, and **neither has
+  a migration path**. A divergence re-keys the device and all 687 of its
+  entities at once — every automation, dashboard card, history series and
+  area assignment that names them breaks, silently, with the old entities
+  left behind as unavailable orphans.
+- The win from adopting `topic.Slug` is zero on the feature half: 0 of
+  686 feature seeds diverge, because Home Connect feature names are pure
+  ASCII. So the entire cost buys nothing but consistency with a sibling
+  module's transliteration.
+- **Do not "fix" the transliteration either.** `Geschirrspüler` →
+  `geschirrspuler` is wrong and stays. An umlaut in a device name is not
+  a reason to break someone's entity and device registry.
+- The `""` → `""` row of §3.2 is unreachable in production: `LoadDevices`
+  rejects an empty device name, and since F2 it also rejects a name with
+  no ASCII letter or digit, which is the only other way to reach an empty
+  slug.
+
+**F1 — availability: take both levels.** Decided and implemented in this
+step, deliberately not deferred to the migration. The measurement's own
+advice was "do not fix F1 in the same step as the migration"; step 2 is
+that separate step.
+
+- Every payload declares `{bridge, device}` with `availability_mode: all`
+  — which is `go-hamqtt`'s `model.Availability{}.Resolved()` default, so
+  the migration reproduces this shape rather than changing it.
+- Mode `all` is safe here **because both sources are genuinely
+  published** — the bridge topic by the will, the birth and the shutdown
+  path, the device topic by the device worker. That is the trap
+  go-mtec2mqtt had to avoid in the opposite direction: a declared source
+  nobody publishes is not neutral under `all`, it is a permanently
+  unavailable entity.
+- **The topic does not move.** `<MQTT_TOPIC>/status` is already in the
+  daemon's own publish root. `topic.Default.Bridge()` would render
+  `<root>/bridge/status`, but a custom `Layout` is required regardless
+  (§4: `Availability(slot)` must yield `<root>/<raw device name>/availability`,
+  which no default renders), so matching the library default buys one
+  line and costs an operator-visible topic move plus a retraction.
+- Consequently there is **no retained copy to retract** and no operator
+  step. An automation watching `<MQTT_TOPIC>/status` keeps working.
+
+### Fixed in step 2
+
+| Finding | Fix | Bytes moved |
+| --- | --- | --- |
+| **F1** | both availability levels, mode `all`, attached in the one funnel both payload builders pass through; will QoS matched to the birth publish | all 1 728 payload rows: `availability_topic` → `availability` + `availability_mode`. Identity untouched |
+| **F3** | new `internal/layout` package; every topic composed once | none |
+| **F4** | `mqtt.WithNoLocal()` + a `Relative()` check before dispatch | `topics.json`: one filter gains `options` |
+| **F6** | both button builders share `basePayload` and `sanitizeForPlatform` | none |
+| **F2** (the defect half) | `validateDeviceName` rejects `+`, `#`, control characters, invalid UTF-8 and a name that slugifies to empty | none |
+| **F5** | a writable selected-program with no programs is a sensor, not an empty select | 1 row per file, `select/` → `sensor/` |
+| **F9** | pinned at both translation points, off the transport call | none |
+| **F11** | localised options sorted in the display language | `options` on 91 + 19 German rows |
+
+### Deliberately not fixed
+
+**F7 — 19 unread state topics, and `connection_state`.** Left as
+published. Removing topics an installed base may already consume is a
+decision about the operator contract, not a defect fix, and it does not
+belong inside a migration programme — the same call go-mtec2mqtt made
+twice for its equivalent (its F10, five unread topics, left at step 1 and
+again at step 2). The 19 are not noise either: the command features, the
+raw program node and the protection port are all observable state that a
+user's own automation may read even though no entity does, and
+`connection_state` is the only MQTT-visible signal distinguishing "the
+appliance is unreachable" from "the daemon is down". Since F1 the
+availability half of the finding is smaller:
+`availability_topics_no_entity_reads` is now `connection_state` alone.
+Still pinned in `topics.json` as `state_topics_without_entity`.
+
+**F12 — changing `LANGUAGE` strands retained enum state.** Left. The fix
+is not cheap: the daemon keeps no state across restarts, so it cannot
+know the language changed; making it know means persisting the last
+language somewhere, and republishing every entity's state on a mismatch —
+new persistent state and a new startup side effect, to correct a value
+that self-corrects the next time the feature changes. `LANGUAGE` is
+changed approximately once per installation. Not worth new machinery
+inside a migration programme.
+
+**F8 — two instances collide on identity.** Not fixed, by the same
+reasoning go-mtec2mqtt applied to its duplicate `unique_id`: the stakes
+change at step 6, and the decision belongs to the step that publishes
+bundles. See the next section.
+
+**F2's asymmetry itself.** The raw/slugified split stays, pinned by
+`TestGoldenPinsTheSanitizedNodeIDAsymmetry`. Both forms are
+load-bearing — the slug is half of every `unique_id` and of
+`device.identifiers`, the raw name is in every topic an installed base
+subscribes to — so neither can move without re-keying a registry or
+orphaning retained state.
+
+**F6's un-excludable synthetic buttons.** The two program buttons remain
+outside the operator catalogue's reach. Enrichment and exclusion are
+keyed on a feature name and these back no feature; there is nothing to
+match. That is a gap in the catalogue's vocabulary, not a divergence
+between two builders.
+
+### F8 — what step 6 needs to know
+
+Measured precisely, so the bundle step does not have to re-derive it.
+
+**What collides.** `unique_id`, `device.identifiers[0]`, the discovery
+config topic's node id and `default_entity_id` are all functions of
+`HASS_BASE_TOPIC` and the **device name** only. `MQTT_TOPIC` appears in
+none of them (`discovery.go` `deviceBlockFor`/`configTopic`,
+`payload.go` `basePayload`).
+
+**Under which configuration.** Two daemon instances on one broker, with
+**different `MQTT_TOPIC` roots** (so their state trees do not collide and
+neither notices the other), the **same `HASS_BASE_TOPIC`** (the default,
+`homeassistant`), and **any device name in common** — including two
+physically different appliances an operator happened to call
+`Geschirrspüler`. Same `MQTT_TOPIC` is not required and does not make it
+worse. A single instance cannot collide with itself: `LoadDevices`
+rejects a duplicate device name.
+
+**What happens today.** Both instances publish the same 687 retained
+config topics with the same 687 `unique_id`s. Last writer wins per topic.
+Home Assistant sees one set of entities whose `state_topic` flips between
+the two roots, so the entity shows whichever instance published its
+config most recently and goes stale when that instance's appliance does.
+`IsOwnConfig` checks the state-topic prefix, so the orphan sweep does
+**not** retract the other instance's configs — the two do not fight, they
+overwrite.
+
+**Why the stakes change at step 6.** Today the damage is spread over 687
+independent retained topics, each individually last-writer-wins. A device
+bundle is **one** retained topic per device carrying all 687 components.
+Two instances then alternate publishing a single document, and each
+publish replaces the other's entire entity set rather than one entity of
+it — and `SupersededTopics` retraction runs against a per-entity form
+both instances also own. The failure goes from "some entities point at
+the wrong root" to "the whole device flips".
+
+**What step 6 must decide.** Whether the identity namespace gains a
+discriminator, and if so which. The candidates, with their costs:
+
+- `MQTT_TOPIC` in `unique_id` and `identifiers` — correct, and it
+  re-keys every entity in every existing installation (the default root
+  is `homeconnect`, so it is not even a no-op for defaults unless the
+  discriminator is omitted when the root is the default, which is a rule
+  nobody will remember).
+- An `INSTANCE_ID` config key, empty by default — additive, no default
+  installation changes, and it only helps operators who know to set it.
+- Leave it. Two instances with a shared device name on one broker is
+  plausible but not common, and the collision is at least deterministic.
+
+Nothing here is decided. It is measured so the step that publishes
+bundles can decide it in one sitting.
+
+### Corrections to the measurement above
+
+- §2.2's census is one off in the curated row: the builder publishes
+  **177** entities in `HASS_DISCOVERY: curated`, not 176. The
+  `TestGoldenPlatformCensus` doc comment claimed to pin the per-platform
+  counts as literals; its body only logged them. It does now, which is
+  how the discrepancy surfaced. (The full-set 499/36 sensor/select split
+  the document reports is right again after F5, coincidentally: it was
+  498/37 before.)
+- §2.5's "Advertised command topics | 86" is 85 after F5.
 
 ---
 

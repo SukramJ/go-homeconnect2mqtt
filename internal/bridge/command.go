@@ -15,6 +15,7 @@ import (
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
 
@@ -24,13 +25,20 @@ import (
 func (b *Bridge) subscribeCommands(ctx context.Context) error {
 	for _, d := range b.devices {
 		dev := d
-		filter := dev.topics.base + "/#"
+		filter := dev.topics.CommandFilter()
+		// The feature path is variable-depth, so no fixed-arity filter
+		// covers the command tree: the subscription is the whole device
+		// sub-tree and therefore also matches all 689 of this daemon's own
+		// state, availability and connection-state publishes (F4).
+		//
+		// Two guards, because neither alone is enough. MQTT 5.0 No Local
+		// tells the broker not to forward a message back to the connection
+		// that published it, which removes the echo at the source — but it
+		// does not cover the retained replay the broker delivers on
+		// (re)subscribe, which is not a forward, and it is a no-op on a
+		// 3.1.1 link. The retained check below covers that half.
 		if _, err := b.mqtt.Subscribe(ctx, filter, b.qos, func(msg *mqtt.Message) {
-			if msg.Retain {
-				// Drop the broker's replay of the last retained command on
-				// (re)subscribe: without this, a stale command topic (or our
-				// own retained state loopback) re-fires the write on every
-				// reconnect. See [mqtt.MessageHandler] for the retained bit.
+			if !shouldDispatch(dev, msg) {
 				return
 			}
 			// handleSet makes blocking Home Connect cloud HTTP calls with
@@ -39,11 +47,42 @@ func (b *Bridge) subscribeCommands(ctx context.Context) error {
 			// would stall PUBACK/PINGRESP processing and could trip a
 			// spurious ping_timeout. See [mqtt.MessageHandler].
 			go b.handleSet(ctx, dev, msg.Topic, msg.Payload)
-		}); err != nil {
+		}, mqtt.WithNoLocal()); err != nil {
 			return err
 		}
 	}
 	return b.subscribeBirth(ctx)
+}
+
+// shouldDispatch decides, without side effects, whether an inbound message
+// on the device sub-tree is a command this daemon should act on.
+//
+// It is a function rather than an inline pair of early returns because the
+// alternative is untestable: the handler's only effect is to start a
+// goroutine, and a goroutine that returns immediately leaves no trace, so
+// deleting either check below is invisible to every test that can be
+// written against the handler itself.
+//
+// Both checks earn their place:
+//
+//   - Retained. The broker replays the last retained message on every
+//     (re)subscribe, so without this a stale command topic — or this
+//     daemon's own retained state loopback — re-fires the write on every
+//     reconnect. MQTT 5.0 No Local does not cover this: a retained
+//     delivery at subscribe time is not a forward. See [mqtt.MessageHandler]
+//     for the retained bit.
+//   - A command topic at all. The subscription is the whole device
+//     sub-tree (the feature path is variable-depth, so no fixed-arity
+//     filter fits), which matches every state, availability and
+//     connection-state topic this daemon publishes for the device. With
+//     MQTT_RETAIN: false the retained check never fires, and each of those
+//     used to spawn a goroutine whose only job was to return (F4).
+func shouldDispatch(d *Device, msg *mqtt.Message) bool {
+	if msg.Retain {
+		return false
+	}
+	_, ok := d.topics.Relative(msg.Topic)
+	return ok
 }
 
 // subscribeBirth watches the Home Assistant status topic and re-publishes
@@ -74,12 +113,11 @@ func (b *Bridge) subscribeBirth(ctx context.Context) error {
 // handleSet resolves an incoming "/set" command to a feature and applies
 // it, choosing the device-specific program-start path where applicable
 // (FK-4) and gating writes on the dynamic access window (FK-5).
-func (b *Bridge) handleSet(parent context.Context, d *Device, topic string, payload []byte) {
-	if !strings.HasSuffix(topic, "/set") {
+func (b *Bridge) handleSet(parent context.Context, d *Device, msgTopic string, payload []byte) {
+	rel, ok := d.topics.Relative(msgTopic)
+	if !ok {
 		return // a state/availability publish echoed back, ignore
 	}
-	rel := strings.TrimPrefix(topic, d.topics.base+"/")
-	rel = strings.TrimSuffix(rel, "/set")
 	value := strings.TrimSpace(string(payload))
 
 	if b.handleProgramControl(parent, d, rel) {
@@ -88,7 +126,7 @@ func (b *Bridge) handleSet(parent context.Context, d *Device, topic string, payl
 
 	entity, ok := b.resolveEntity(d, rel)
 	if !ok {
-		b.logger.Warn("bridge.command_unknown_feature", slog.String("device", d.name), slog.String("topic", topic))
+		b.logger.Warn("bridge.command_unknown_feature", slog.String("device", d.name), slog.String("topic", msgTopic))
 		return
 	}
 
@@ -114,13 +152,14 @@ func (b *Bridge) handleSet(parent context.Context, d *Device, topic string, payl
 // resolveEntity maps a relative topic path back to an entity, handling both
 // the dotted feature name and the _uid/<n> fallback path.
 func (b *Bridge) resolveEntity(d *Device, rel string) (*homeconnect.Entity, bool) {
-	if uidStr, ok := strings.CutPrefix(rel, "_uid/"); ok {
-		if uid, err := strconv.Atoi(uidStr); err == nil {
-			return d.app.Entity(uid)
-		}
+	name, uid, byUID := layout.FeatureName(rel)
+	if byUID {
+		return d.app.Entity(uid)
+	}
+	if name == "" {
 		return nil, false
 	}
-	return d.app.EntityByName(strings.ReplaceAll(rel, "/", "."))
+	return d.app.EntityByName(name)
 }
 
 // writeWithWindow writes a scalar value, retrying within the dynamic access
@@ -154,25 +193,22 @@ func (b *Bridge) writeWithWindow(ctx context.Context, d *Device, e *homeconnect.
 	}
 }
 
-// Synthetic program-control topics (published by the discovery layer; they back
-// no device feature). Start posts the selected program to /ro/activeProgram.
-const (
-	controlStartProgram = "_control/start_program"
-	controlStopProgram  = "_control/stop_program"
-)
-
 // handleProgramControl runs a synthetic start/stop control, reporting whether
 // rel was one (so the caller skips the feature-write path).
 func (b *Bridge) handleProgramControl(parent context.Context, d *Device, rel string) bool {
-	if rel != controlStartProgram && rel != controlStopProgram {
+	// The relative paths the discovery layer advertises as the two
+	// synthetic buttons' command_topic. Both sides read layout.ControlPath,
+	// so a press can never land on a path nothing handles (F3).
+	start, stop := layout.ControlPath(layout.ControlStartProgram), layout.ControlPath(layout.ControlStopProgram)
+	if rel != start && rel != stop {
 		return false
 	}
 	ctx, cancel := context.WithTimeout(parent, b.cfg.SendTimeoutDuration()+b.cmdRetryDelay*time.Duration(b.cmdRetries+1))
 	defer cancel()
 	switch rel {
-	case controlStartProgram:
+	case start:
 		b.startSelectedProgram(ctx, d)
-	case controlStopProgram:
+	case stop:
 		b.runProgramCall(ctx, d, "stop", func() error { _, err := d.app.StopActiveProgram(ctx); return err })
 	}
 	return true

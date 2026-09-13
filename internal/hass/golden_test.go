@@ -19,6 +19,7 @@ import (
 	"github.com/SukramJ/go-mqtt"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mapping"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/pincatalog"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
@@ -56,17 +57,24 @@ import (
 // fixes them produces a diff a reviewer can see. Do not "fix" the golden
 // file instead of the code. See the measurement document for F1-F12:
 //
-//   - F1 — no entity declares the bridge-level availability topic that the
-//     daemon's LWT actually writes, so a killed daemon leaves every entity
-//     showing its last value forever. Pinned by
-//     TestGoldenPinsTheBridgeAvailabilityGap.
+//   - F1 — FIXED. Every payload now declares both availability levels
+//     (bridge then device) under mode "all", and the bridge entry is the
+//     topic the Last Will writes. Asserted by
+//     TestEveryPayloadDeclaresBothAvailabilityLevels and
+//     TestBridgeAvailabilityTopicIsTheOneTheWillWrites.
 //   - F2 — the config topic's node id is sanitize(device) while every
 //     state and command topic uses the RAW device name. Pinned by
 //     TestGoldenPinsTheSanitizedNodeIDAsymmetry.
-//   - F5 — a writable selected-program element whose appliance exposes no
-//     programs produces a select with an EMPTY options list: a dropdown
-//     with nothing in it, which can never be set. Pinned by
-//     TestGoldenPinsTheEmptyOptionsSelect.
+//   - F5 — FIXED. A writable selected-program element whose appliance
+//     exposes no programs used to produce a select with an EMPTY options
+//     list — a visible, writable dropdown that can never be set. It is now
+//     a read-only sensor, as the non-writable branch has always been.
+//     Asserted by TestNoSelectIsPublishedWithoutOptions and
+//     TestSelectedProgramWithNoProgramsFallsBackToASensor.
+//   - F11 — FIXED. Localised options are sorted in the display language,
+//     not in the English their raw enumeration names happen to be in.
+//     Asserted by TestOptionsAreSortedInTheDisplayLanguage and
+//     TestGermanOptionsAreNotInEnglishOrder.
 //   - F6 — the two synthetic program buttons carry neither
 //     entity_category nor enabled_by_default, so they are enabled and
 //     prominent while every other command button is disabled+config.
@@ -449,32 +457,86 @@ func TestGoldenPinsTheTopicForm(t *testing.T) {
 // nobody subscribed an entity to.
 //
 // This asserts the CURRENT, defective shape. The fix step flips it.
-func TestGoldenPinsTheBridgeAvailabilityGap(t *testing.T) {
-	const deviceAvail = goldenRoot + "/" + goldenDeviceEN + "/availability"
-	const bridgeAvail = goldenRoot + "/status"
-	n := 0
-	for _, r := range publishPin(t, "en", goldenDeviceEN, false, true) {
-		n++
-		if got := r.Payload["availability_topic"]; got != deviceAvail {
-			t.Errorf("%s: availability_topic = %v, want %q", r.Topic, got, deviceAvail)
-		}
-		if _, has := r.Payload["availability"]; has {
-			t.Errorf("%s carries both the flat and the list availability form", r.Topic)
-		}
-		if _, has := r.Payload["availability_mode"]; has {
-			t.Errorf("%s declares availability_mode with a single source", r.Topic)
-		}
-		for _, k := range []string{"payload_available", "payload_not_available"} {
-			if _, has := r.Payload[k]; has {
-				t.Errorf("%s declares %q; today it relies on Home Assistant's online/offline defaults", r.Topic, k)
+func TestEveryPayloadDeclaresBothAvailabilityLevels(t *testing.T) {
+	for _, tc := range goldenCases {
+		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
+			deviceAvail := goldenRoot + "/" + tc.device + "/availability"
+			want := canonicalString(t, []map[string]any{
+				{"topic": goldenRoot + "/status", "payload_available": "online", "payload_not_available": "offline"},
+				{"topic": deviceAvail, "payload_available": "online", "payload_not_available": "offline"},
+			})
+			n := 0
+			for _, r := range publishPin(t, tc.lang, tc.device, tc.curated, tc.enriched) {
+				n++
+				if got := canonicalString(t, r.Payload["availability"]); got != want {
+					t.Errorf("%s: availability = %s, want %s", r.Topic, got, want)
+				}
+				if got := r.Payload["availability_mode"]; got != "all" {
+					t.Errorf("%s: availability_mode = %v, want \"all\"", r.Topic, got)
+				}
+				// The flat pre-2024 form must be gone, not sitting beside
+				// the list: a payload carrying both is a contradiction
+				// Home Assistant resolves silently.
+				for _, k := range []string{"availability_topic", "payload_available", "payload_not_available"} {
+					if _, has := r.Payload[k]; has {
+						t.Errorf("%s carries the flat key %q alongside the availability list", r.Topic, k)
+					}
+				}
 			}
+			if n == 0 {
+				t.Fatal("no entities published")
+			}
+			t.Logf("F1: %d entities, every one declaring both levels under mode all", n)
+		})
+	}
+}
+
+// TestBridgeAvailabilityTopicIsTheOneTheWillWrites is F1's other half:
+// the topic every payload declares is the one the daemon's own Last Will,
+// birth and shutdown publishes write. Both sides read layout.Bridge, so
+// they cannot drift; this asserts the string that reaches the payload.
+//
+// It also asserts the topic is in the daemon's own publish root and not in
+// Home Assistant's discovery tree, which is why F1 needed no topic move
+// and no retraction of a retained copy at an old location.
+func TestBridgeAvailabilityTopicIsTheOneTheWillWrites(t *testing.T) {
+	want := layout.Bridge(goldenRoot)
+	if want != goldenRoot+"/status" {
+		t.Fatalf("layout.Bridge(%q) = %q, want %q", goldenRoot, want, goldenRoot+"/status")
+	}
+	if strings.HasPrefix(want, goldenPrefix+"/") {
+		t.Errorf("%q is inside Home Assistant's discovery tree", want)
+	}
+	for _, r := range publishPin(t, "en", goldenDeviceEN, false, true) {
+		list, ok := r.Payload["availability"].([]any)
+		if !ok || len(list) != 2 {
+			t.Fatalf("%s: availability is not a two-entry list: %v", r.Topic, r.Payload["availability"])
 		}
-		if strings.Contains(canonicalString(t, r.Payload), bridgeAvail+`"`) {
-			t.Errorf("%s references the bridge status topic — F1 is fixed; "+
-				"update this test and the goldens together", r.Topic)
+		first, ok := list[0].(map[string]any)
+		if !ok {
+			t.Fatalf("%s: availability[0] is not an object: %v", r.Topic, list[0])
+		}
+		if first["topic"] != want {
+			t.Errorf("%s: first availability source = %v, want %q (bridge before device)", r.Topic, first["topic"], want)
 		}
 	}
-	t.Logf("F1: %d entities, none of which references %q (the topic the Last Will writes)", n, bridgeAvail)
+}
+
+// availabilitySource reads the i-th availability topic out of a decoded
+// payload. The list came back through encoding/json, so its entries are
+// []any of map[string]any rather than the types the builder wrote.
+func availabilitySource(t *testing.T, payload map[string]any, i int) string {
+	t.Helper()
+	list, ok := payload["availability"].([]any)
+	if !ok || i >= len(list) {
+		t.Fatalf("availability is not a list with index %d: %v", i, payload["availability"])
+	}
+	m, ok := list[i].(map[string]any)
+	if !ok {
+		t.Fatalf("availability[%d] is not an object: %v", i, list[i])
+	}
+	s, _ := m["topic"].(string)
+	return s
 }
 
 func canonicalString(t *testing.T, v any) string {
@@ -495,8 +557,8 @@ func TestGoldenPinsTheSanitizedNodeIDAsymmetry(t *testing.T) {
 		if parts[2] != "geschirrspuler" {
 			t.Fatalf("%s: node id = %q, want %q", r.Topic, parts[2], "geschirrspuler")
 		}
-		if got := r.Payload["availability_topic"]; got != goldenRoot+"/"+goldenDeviceDE+"/availability" {
-			t.Errorf("%s: availability_topic = %v, want the RAW device name", r.Topic, got)
+		if got := availabilitySource(t, r.Payload, 1); got != goldenRoot+"/"+goldenDeviceDE+"/availability" {
+			t.Errorf("%s: device availability topic = %v, want the RAW device name", r.Topic, got)
 		}
 		if st, ok := r.Payload["state_topic"].(string); ok {
 			sawState = true
@@ -519,26 +581,46 @@ func TestGoldenPinsTheSanitizedNodeIDAsymmetry(t *testing.T) {
 //
 // Pinned as current behaviour. Every select must carry an options key —
 // that part is asserted, not logged — and the empty one is named.
-func TestGoldenPinsTheEmptyOptionsSelect(t *testing.T) {
-	empty := 0
+func TestNoSelectIsPublishedWithoutOptions(t *testing.T) {
+	for _, tc := range goldenCases {
+		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
+			selects := 0
+			for _, r := range publishPin(t, tc.lang, tc.device, tc.curated, tc.enriched) {
+				if !strings.HasPrefix(r.Topic, goldenPrefix+"/select/") {
+					continue
+				}
+				selects++
+				opts, ok := r.Payload["options"].([]any)
+				if !ok {
+					t.Errorf("%s is a select with no options key at all — Home Assistant rejects it", r.Topic)
+					continue
+				}
+				if len(opts) == 0 {
+					t.Errorf("%s is a select with an empty options list: a visible, "+
+						"writable dropdown with nothing in it, which can never be set (F5)", r.Topic)
+				}
+			}
+			if selects == 0 {
+				t.Fatal("no selects in the pin")
+			}
+		})
+	}
+}
+
+// TestSelectedProgramWithNoProgramsFallsBackToASensor is F5's other side:
+// the entity does not disappear, it changes platform. A read-only sensor
+// still shows the current selection, which is what the read-only
+// selected-program branch has always produced.
+func TestSelectedProgramWithNoProgramsFallsBackToASensor(t *testing.T) {
+	const key = "bsh_common_root_selectedprogramnoprograms"
+	var found string
 	for _, r := range publishPin(t, "en", goldenDeviceEN, false, true) {
-		if !strings.HasPrefix(r.Topic, goldenPrefix+"/select/") {
-			continue
-		}
-		opts, ok := r.Payload["options"].([]any)
-		if !ok {
-			t.Errorf("%s is a select with no options key at all — Home Assistant rejects it", r.Topic)
-			continue
-		}
-		if len(opts) == 0 {
-			empty++
-			t.Logf("F5: %s is a select with an empty options list", r.Topic)
+		if strings.Contains(r.Topic, "/"+key+"/") {
+			found = r.Topic
 		}
 	}
-	if empty != 1 {
-		t.Errorf("selects with empty options = %d, want 1 (the pin catalogue's "+
-			"BSH.Common.Root.SelectedProgramNoPrograms) — F5 may be fixed; "+
-			"update this test and the goldens together", empty)
+	if want := goldenPrefix + "/sensor/" + slugify(goldenDeviceEN) + "/" + key + "/config"; found != want {
+		t.Errorf("the programless selected-program entity is published at %q, want %q", found, want)
 	}
 }
 
@@ -548,6 +630,10 @@ func TestGoldenPinsTheEmptyOptionsSelect(t *testing.T) {
 // separate code path (publishProgramControls), carry neither — so they
 // are enabled and prominent, and they also carry a different
 // payload_press than every other button.
+//
+// After F6 the three differences named below are the ONLY ones, and each
+// is argued in publishProgramControls' doc comment. The common shape is
+// asserted separately by TestBothButtonPathsShareTheCommonPayloadShape.
 func TestGoldenPinsTheProgramButtonInconsistency(t *testing.T) {
 	var synthetic, derived int
 	for _, r := range publishPin(t, "en", goldenDeviceEN, false, true) {
@@ -582,10 +668,134 @@ func TestGoldenPinsTheProgramButtonInconsistency(t *testing.T) {
 		"(disabled, config, payload_press=true)", synthetic, derived)
 }
 
+// TestBothButtonPathsShareTheCommonPayloadShape is F6's structural half.
+//
+// The 18 command-derived buttons and the 2 synthetic program buttons are
+// built by two different functions. They now share basePayload, and this
+// asserts the consequence: every button, whichever path built it, carries
+// the same five common keys, built by the same rules, with the identity
+// strings agreeing with the topic that carries them.
+//
+// Asserting the keys rather than the values is the point. A missing
+// identity key is not a visible failure — Home Assistant registers the
+// entity anyway, under a different key, beside the one it replaced — so
+// nothing downstream would ever report it.
+func TestBothButtonPathsShareTheCommonPayloadShape(t *testing.T) {
+	common := []string{"unique_id", "name", "default_entity_id", "availability", "availability_mode", "device"}
+
+	var synthetic, derived int
+	for _, r := range publishPin(t, "de", goldenDeviceDE, false, true) {
+		if !strings.HasPrefix(r.Topic, goldenPrefix+"/button/") {
+			continue
+		}
+		for _, k := range common {
+			if _, has := r.Payload[k]; !has {
+				t.Errorf("%s is missing the common key %q — the two button "+
+					"builders have diverged again (F6)", r.Topic, k)
+			}
+		}
+		// segments: homeassistant/button/<node>/<key>/config
+		seg := strings.Split(r.Topic, "/")
+		if len(seg) != 5 {
+			t.Fatalf("%s: %d segments, want 5", r.Topic, len(seg))
+		}
+		node, key := seg[2], seg[3]
+		if want := "homeconnect_" + node + "_" + key; r.Payload["unique_id"] != want {
+			t.Errorf("%s: unique_id = %v, want %q", r.Topic, r.Payload["unique_id"], want)
+		}
+		if want := "button." + slugify(goldenDeviceDE+"_"+key); r.Payload["default_entity_id"] != want {
+			t.Errorf("%s: default_entity_id = %v, want %q", r.Topic, r.Payload["default_entity_id"], want)
+		}
+		if want := goldenRoot + "/" + goldenDeviceDE + "/availability"; availabilitySource(t, r.Payload, 1) != want {
+			t.Errorf("%s: device availability topic = %v, want %q", r.Topic, availabilitySource(t, r.Payload, 1), want)
+		}
+		if _, has := r.Payload["command_topic"]; !has {
+			t.Errorf("%s: a button with no command_topic is rejected by Home Assistant", r.Topic)
+		}
+		if strings.HasSuffix(key, "_program") {
+			synthetic++
+		} else {
+			derived++
+		}
+	}
+	if synthetic != 2 || derived != 18 {
+		t.Errorf("buttons = %d synthetic + %d derived, want 2 + 18", synthetic, derived)
+	}
+}
+
+// TestOptionsAreSortedInTheDisplayLanguage is F11. enumOptions sorts the
+// raw enumeration member names, which are English; localizeOptions then
+// translated them. So a German dropdown came out ordered by its English
+// originals — OperationState read ["Auto", "Aus", "Ein"], i.e.
+// Auto/Off/On — and the user sees only the left column.
+//
+// The German sort key folds umlauts the way DIN 5007-1 collates them. A
+// plain byte sort would file every umlaut after "z".
+func TestOptionsAreSortedInTheDisplayLanguage(t *testing.T) {
+	for _, tc := range goldenCases {
+		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
+			checked := 0
+			for _, r := range publishPin(t, tc.lang, tc.device, tc.curated, tc.enriched) {
+				opts, ok := r.Payload["options"].([]any)
+				if !ok || len(opts) < 2 {
+					continue
+				}
+				checked++
+				for i := 1; i < len(opts); i++ {
+					prev, _ := opts[i-1].(string)
+					cur, _ := opts[i].(string)
+					if collateKey(prev) > collateKey(cur) {
+						t.Errorf("%s: options %v are not in %s order (%q before %q)",
+							r.Topic, opts, tc.lang, prev, cur)
+						break
+					}
+				}
+			}
+			if checked == 0 {
+				t.Fatal("no multi-option entities in the pin")
+			}
+			t.Logf("F11: %d option lists, all ordered in %s", checked, tc.lang)
+		})
+	}
+}
+
+// TestGermanOptionsAreNotInEnglishOrder is the specific row the finding
+// named, held as a literal so the ordering cannot silently revert.
+func TestGermanOptionsAreNotInEnglishOrder(t *testing.T) {
+	const want = `["Aus","Auto","Ein"]` // NOT ["Auto","Aus","Ein"], which is Auto/Off/On
+	for _, r := range publishPin(t, "de", goldenDeviceDE, false, true) {
+		if !strings.HasSuffix(r.Topic, "/bsh_common_status_operationstate/config") {
+			continue
+		}
+		if got := canonicalString(t, r.Payload["options"]); got != want {
+			t.Errorf("OperationState options = %s, want %s", got, want)
+		}
+		return
+	}
+	t.Fatal("bsh_common_status_operationstate not in the pin")
+}
+
 // TestGoldenPlatformCensus pins the per-platform entity counts for each
 // shipped configuration, as literals, so a re-platformed entity is caught
 // even if its payload happens to round-trip.
+//
+// The literals below were added after the fact: the doc comment claimed
+// them from the start, but the body only logged the census and asserted
+// that it was non-empty. The measurement document's own census table
+// (notes/adr0070-phase7-measurement.md §2.2) is one off in two rows
+// because of it — 499 sensors / 36 selects and a 176-entity curated set,
+// against the 498 / 37 / 177 the builder actually produces. A census that
+// is only logged is not a pin.
 func TestGoldenPlatformCensus(t *testing.T) {
+	// Held as literals, in Go, so a re-platformed entity is caught even
+	// when its payload happens to round-trip and even immediately after a
+	// golden regeneration.
+	want := map[string]map[string]int{
+		"discovery_full_en.json":    {"sensor": 499, "binary_sensor": 103, "select": 36, "button": 20, "switch": 15, "number": 14},
+		"discovery_full_de.json":    {"sensor": 499, "binary_sensor": 103, "select": 36, "button": 20, "switch": 15, "number": 14},
+		"discovery_curated_de.json": {"sensor": 94, "binary_sensor": 43, "select": 17, "number": 11, "button": 6, "switch": 6},
+		"discovery_plain_en.json":   {"sensor": 499, "binary_sensor": 103, "select": 36, "button": 20, "switch": 15, "number": 14},
+	}
 	for _, tc := range goldenCases {
 		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
 			got := map[string]int{}
@@ -597,8 +807,8 @@ func TestGoldenPlatformCensus(t *testing.T) {
 				total += n
 			}
 			t.Logf("%s: %d entities %v", tc.file, total, got)
-			if total == 0 {
-				t.Fatal("nothing published")
+			if diff := canonicalString(t, got); diff != canonicalString(t, want[tc.file]) {
+				t.Errorf("%s census = %s, want %s", tc.file, diff, canonicalString(t, want[tc.file]))
 			}
 		})
 	}

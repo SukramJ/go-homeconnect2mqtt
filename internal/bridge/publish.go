@@ -10,17 +10,20 @@ package bridge
 import (
 	"encoding/json"
 	"strconv"
-	"strings"
 
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
 
-// availability payload values.
+// availability payload values. Spelled once in internal/hass, because the
+// entity that reads this topic is told there which two words to expect
+// (F1); a third spelling here could drift from it silently.
 const (
-	availOnline  = "online"
-	availOffline = "offline"
+	availOnline  = hass.PayloadAvailable
+	availOffline = hass.PayloadNotAvailable
 )
 
 // payloadNone is Home Assistant's "no value" payload: an mqtt select clears its
@@ -28,28 +31,20 @@ const (
 // ignored, leaving the last value in place.
 const payloadNone = "None"
 
-// deviceTopics holds the precomputed topic prefixes for a device.
+// deviceTopics is this package's view of the shared topic layout in
+// internal/layout. It adds only the entity-typed convenience the workers
+// use; the strings themselves are composed in exactly one place, which is
+// the point of the layout package (F3).
 type deviceTopics struct {
-	base string
+	layout.Device
 }
 
 func newDeviceTopics(rootTopic, device string) deviceTopics {
-	return deviceTopics{base: strings.TrimRight(rootTopic, "/") + "/" + device}
+	return deviceTopics{Device: layout.NewDevice(rootTopic, device)}
 }
 
-func (t deviceTopics) availability() string    { return t.base + "/availability" }
-func (t deviceTopics) connectionState() string { return t.base + "/connection_state" }
 func (t deviceTopics) state(e *homeconnect.Entity) string {
-	return t.base + "/" + featurePath(e.Name(), e.UID()) + "/state"
-}
-
-// featurePath maps a dotted feature name to a slash-separated MQTT path.
-// Unnamed features fall back to a uid-based path so nothing is lost (FK-8).
-func featurePath(name string, uid int) string {
-	if name == "" {
-		return "_uid/" + strconv.Itoa(uid)
-	}
-	return strings.ReplaceAll(name, ".", "/")
+	return t.State(e.Name(), e.UID())
 }
 
 // isProgramKind reports whether the entry is the active/selected program.

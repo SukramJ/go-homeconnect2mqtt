@@ -5,6 +5,54 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+### Fixed
+- **Entities now go unavailable when the daemon dies.** The Last Will wrote
+  `<MQTT_TOPIC>/status` and no discovery payload referenced it, so on a
+  crash, SIGKILL or an unclean broker loss every entity stayed *available*,
+  showing its last retained value indefinitely. Every payload now declares
+  both availability levels — the bridge status topic and the device
+  availability topic — with `availability_mode: all`. The topic itself did
+  not move (it was already in the daemon's own publish root, not in Home
+  Assistant's discovery tree), so there is no retained copy to clear and an
+  automation watching it keeps working. The Last Will also goes out at
+  `MQTT_QOS` now instead of QoS 0, matching the birth publish.
+- A writable *selected program* element on an appliance that exposes no
+  programs was published as a `select` with an empty `options` list — a
+  visible, writable dropdown that could never be set. It is now a read-only
+  sensor, as the non-writable case has always been. The superseded `select`
+  config is retracted by the daemon itself on the next discovery run; no
+  operator step. That one entity re-registers under the `sensor` domain.
+- German dropdown options were sorted by their English originals: the
+  operating state read `Auto, Aus, Ein` (Auto/Off/On). Localised options are
+  now sorted in the display language, with umlauts collated as DIN 5007-1
+  does. The option *set* is unchanged, so retained state stays valid.
+- The device's command subscription (`<root>/<device>/#`) matched all 689 of
+  this daemon's own publishes for that device and the broker echoed every one
+  of them back. It now subscribes with MQTT 5.0 No Local, and checks that an
+  arriving topic is a command topic before dispatching anything — the latter
+  matters because No Local does not cover the retained replay a broker sends
+  on subscribe, and because with `MQTT_RETAIN: false` every state publish used
+  to spawn a goroutine whose only job was to return.
+- A device name in `devices.yaml` is validated. `+` and `#` are rejected
+  because the subscription filter does not escape them (a device named `#`
+  subscribed the daemon to every topic on the broker); so are control
+  characters, invalid UTF-8, and a name with no ASCII letter or digit, which
+  produced an empty Home Assistant node id. Non-ASCII names such as
+  `Geschirrspüler` remain fully supported, and so does a name containing `/`.
+
+### Changed
+- Every MQTT topic this daemon builds is now composed in one place
+  (`internal/layout`) instead of six across three packages. The state topic
+  was built twice and the two synthetic program buttons' command topic was
+  spelled twice — once by the discovery layer that advertises it, once by the
+  handler that acts on it, with nothing comparing them. Nothing on the wire
+  changes.
+- Both discovery payload builders (the feature-derived entities and the two
+  synthetic program buttons) now share one function for the keys every entity
+  carries, so a key added to one cannot be missing from the other. Nothing on
+  the wire changes.
+- `mqttSession` is replaced by `mqtt.SplitClient` from go-mqtt v1.4.0.
+
 ### Changed
 - Bump [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt)
   v1.3.0 -> v1.5.1. Two minors, both relevant. v1.4.0 adds

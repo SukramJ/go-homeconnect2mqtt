@@ -5,8 +5,7 @@
     "homeconnect/Geschirrspüler/connection_state"
   ],
   "availability_topics_no_entity_reads": [
-    "homeconnect/Geschirrspüler/connection_state",
-    "homeconnect/status"
+    "homeconnect/Geschirrspüler/connection_state"
   ],
   "state_topics": [
     "homeconnect/Geschirrspüler/BSH/Common/Appliance/Connected/state",
@@ -1389,7 +1388,6 @@
     "homeconnect/Geschirrspüler/BSH/Common/Option/RemainingProgramTimeEstimationState/set",
     "homeconnect/Geschirrspüler/BSH/Common/Option/SmartEnergyService/SmartStartEnabled/set",
     "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgram/set",
-    "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgramNoPrograms/set",
     "homeconnect/Geschirrspüler/BSH/Common/Setting/AlarmClock/set",
     "homeconnect/Geschirrspüler/BSH/Common/Setting/AmbientLightEnabled/set",
     "homeconnect/Geschirrspüler/BSH/Common/Setting/ChildLock/set",
@@ -1490,7 +1488,10 @@
     },
     {
       "filter": "homeconnect/Geschirrspüler/#",
-      "qos": 1
+      "qos": 1,
+      "options": [
+        "WithNoLocal"
+      ]
     }
   ],
   "publish_qos_retain": {

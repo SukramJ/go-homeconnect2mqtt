@@ -4,7 +4,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_appliance_connected",
       "device": {
         "identifiers": [
@@ -28,7 +40,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_event_alarmclockelapsed",
       "device": {
         "identifiers": [
@@ -51,7 +75,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_event_programaborted",
       "device": {
         "identifiers": [
@@ -73,7 +109,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_event_programfinished",
       "device": {
         "identifiers": [
@@ -95,7 +143,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_status_interiorilluminationactive",
       "device": {
         "identifiers": [
@@ -119,7 +179,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_status_localcontrolactive",
       "device": {
         "identifiers": [
@@ -142,7 +214,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_status_remotecontrolactive",
       "device": {
         "identifiers": [
@@ -164,7 +248,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_status_remotecontrolstartallowed",
       "device": {
         "identifiers": [
@@ -186,7 +282,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_cleaningrobot_event_dockingstationnotfound",
       "device": {
         "identifiers": [
@@ -209,7 +317,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_cleaningrobot_event_emptydustboxandcleanfilter",
       "device": {
         "identifiers": [
@@ -232,7 +352,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_cleaningrobot_event_robotisstuck",
       "device": {
         "identifiers": [
@@ -255,7 +387,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_beancontainerempty",
       "device": {
         "identifiers": [
@@ -278,7 +422,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_calcncleanin10cups",
       "device": {
         "identifiers": [
@@ -301,7 +457,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_calcncleanin15cups",
       "device": {
         "identifiers": [
@@ -324,7 +492,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_calcncleanin20cups",
       "device": {
         "identifiers": [
@@ -347,7 +527,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_calcncleanin5cups",
       "device": {
         "identifiers": [
@@ -370,7 +562,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_descalingin10cups",
       "device": {
         "identifiers": [
@@ -393,7 +597,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_descalingin15cups",
       "device": {
         "identifiers": [
@@ -416,7 +632,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_descalingin20cups",
       "device": {
         "identifiers": [
@@ -439,7 +667,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_descalingin5cups",
       "device": {
         "identifiers": [
@@ -462,7 +702,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_devicecalcncleanblockage",
       "device": {
         "identifiers": [
@@ -485,7 +737,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_devicecalcncleanoverdue",
       "device": {
         "identifiers": [
@@ -508,7 +772,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_devicecleaningoverdue",
       "device": {
         "identifiers": [
@@ -531,7 +807,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_devicedescalingblockage",
       "device": {
         "identifiers": [
@@ -554,7 +842,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_devicedescalingoverdue",
       "device": {
         "identifiers": [
@@ -577,7 +877,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_deviceshouldbecalcncleaned",
       "device": {
         "identifiers": [
@@ -600,7 +912,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_deviceshouldbecleaned",
       "device": {
         "identifiers": [
@@ -623,7 +947,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_deviceshouldbedescaled",
       "device": {
         "identifiers": [
@@ -646,7 +982,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_driptrayfull",
       "device": {
         "identifiers": [
@@ -669,7 +1017,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_keepmilktankcool",
       "device": {
         "identifiers": [
@@ -692,7 +1052,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_watertankempty",
       "device": {
         "identifiers": [
@@ -715,7 +1087,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_cooking_common_event_hood_greasefiltermaxsaturationnearlyreached",
       "device": {
         "identifiers": [
@@ -738,7 +1122,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_cooking_common_event_hood_greasefiltermaxsaturationreached",
       "device": {
         "identifiers": [
@@ -761,7 +1157,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_cooking_oven_event_preheatfinished",
       "device": {
         "identifiers": [
@@ -784,7 +1192,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_cooking_oven_event_regularpreheatfinished",
       "device": {
         "identifiers": [
@@ -807,7 +1227,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_dishcare_dishwasher_event_rinseaidnearlyempty",
       "device": {
         "identifiers": [
@@ -830,7 +1262,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_dishcare_dishwasher_event_saltnearlyempty",
       "device": {
         "identifiers": [
@@ -853,7 +1297,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_laundrycare_dryer_event_dryingprocessfinished",
       "device": {
         "identifiers": [
@@ -876,7 +1332,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_laundrycare_washer_event_idos1filllevelpoor",
       "device": {
         "identifiers": [
@@ -899,7 +1367,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_laundrycare_washer_event_idos2filllevelpoor",
       "device": {
         "identifiers": [
@@ -922,7 +1402,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_refrigeration_fridgefreezer_event_dooralarmfreezer",
       "device": {
         "identifiers": [
@@ -945,7 +1437,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_refrigeration_fridgefreezer_event_dooralarmrefrigerator",
       "device": {
         "identifiers": [
@@ -968,7 +1472,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "binary_sensor.geschirrspuler_refrigeration_fridgefreezer_event_temperaturealarmfreezer",
       "device": {
         "identifiers": [
@@ -991,7 +1507,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Command/OpenDoor/set",
       "default_entity_id": "button.geschirrspuler_bsh_common_command_opendoor",
       "device": {
@@ -1013,7 +1541,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Command/PartlyOpenDoor/set",
       "default_entity_id": "button.geschirrspuler_bsh_common_command_partlyopendoor",
       "device": {
@@ -1035,7 +1575,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Command/PauseProgram/set",
       "default_entity_id": "button.geschirrspuler_bsh_common_command_pauseprogram",
       "device": {
@@ -1057,7 +1609,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Command/ResumeProgram/set",
       "default_entity_id": "button.geschirrspuler_bsh_common_command_resumeprogram",
       "device": {
@@ -1079,7 +1643,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/_control/start_program/set",
       "default_entity_id": "button.geschirrspuler_start_program",
       "device": {
@@ -1100,7 +1676,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/_control/stop_program/set",
       "default_entity_id": "button.geschirrspuler_stop_program",
       "device": {
@@ -1121,7 +1709,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/AlarmClock/set",
       "default_entity_id": "number.geschirrspuler_bsh_common_setting_alarmclock",
       "device": {
@@ -1148,7 +1748,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/SetpointTemperature/set",
       "default_entity_id": "number.geschirrspuler_cooking_oven_option_setpointtemperature",
       "device": {
@@ -1175,7 +1787,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/BottleCooler/SetpointTemperature/set",
       "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_bottlecooler_setpointtemperature",
       "device": {
@@ -1202,7 +1826,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/ChillerCommon/SetpointTemperature/set",
       "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_chillercommon_setpointtemperature",
       "device": {
@@ -1229,7 +1865,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/ChillerLeft/SetpointTemperature/set",
       "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_chillerleft_setpointtemperature",
       "device": {
@@ -1256,7 +1904,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/ChillerRight/SetpointTemperature/set",
       "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_chillerright_setpointtemperature",
       "device": {
@@ -1283,7 +1943,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/WineCompartment2/SetpointTemperature/set",
       "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_winecompartment2_setpointtemperature",
       "device": {
@@ -1310,7 +1982,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/WineCompartment3/SetpointTemperature/set",
       "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_winecompartment3_setpointtemperature",
       "device": {
@@ -1337,7 +2021,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/WineCompartment/SetpointTemperature/set",
       "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_winecompartment_setpointtemperature",
       "device": {
@@ -1364,7 +2060,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Setting/SetpointTemperatureFreezer/set",
       "default_entity_id": "number.geschirrspuler_refrigeration_fridgefreezer_setting_setpointtemperaturefreezer",
       "device": {
@@ -1391,7 +2099,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Setting/SetpointTemperatureRefrigerator/set",
       "default_entity_id": "number.geschirrspuler_refrigeration_fridgefreezer_setting_setpointtemperaturerefrigerator",
       "device": {
@@ -1418,7 +2138,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgram/set",
       "default_entity_id": "select.geschirrspuler_bsh_common_root_selectedprogram",
       "device": {
@@ -1440,33 +2172,23 @@
     }
   },
   {
-    "topic": "homeassistant/select/geschirrspuler/bsh_common_root_selectedprogramnoprograms/config",
-    "qos": 1,
-    "retain": true,
-    "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
-      "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgramNoPrograms/set",
-      "default_entity_id": "select.geschirrspuler_bsh_common_root_selectedprogramnoprograms",
-      "device": {
-        "identifiers": [
-          "homeconnect_geschirrspuler"
-        ],
-        "manufacturer": "BOSCH",
-        "model": "SMV6ZCX49E",
-        "name": "Geschirrspüler"
-      },
-      "name": "Selected Program No Programs",
-      "options": [],
-      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgramNoPrograms/state",
-      "unique_id": "homeconnect_geschirrspuler_bsh_common_root_selectedprogramnoprograms"
-    }
-  },
-  {
     "topic": "homeassistant/select/geschirrspuler/bsh_common_setting_powerstate/config",
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/PowerState/set",
       "default_entity_id": "select.geschirrspuler_bsh_common_setting_powerstate",
       "device": {
@@ -1479,8 +2201,8 @@
       },
       "name": "Einschalter",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/PowerState/state",
@@ -1492,7 +2214,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Option/CleaningMode/set",
       "default_entity_id": "select.geschirrspuler_consumerproducts_cleaningrobot_option_cleaningmode",
       "device": {
@@ -1506,8 +2240,8 @@
       "entity_category": "config",
       "name": "Reinigungsmodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Option/CleaningMode/state",
@@ -1519,7 +2253,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/IntensiveLevel/set",
       "default_entity_id": "select.geschirrspuler_cooking_common_option_hood_intensivelevel",
       "device": {
@@ -1533,8 +2279,8 @@
       "entity_category": "config",
       "name": "Intensivstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/IntensiveLevel/state",
@@ -1546,7 +2292,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/VentingLevel/set",
       "default_entity_id": "select.geschirrspuler_cooking_common_option_hood_ventinglevel",
       "device": {
@@ -1560,8 +2318,8 @@
       "entity_category": "config",
       "name": "Lüfterstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/VentingLevel/state",
@@ -1573,7 +2331,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/FryingSensorLevel/set",
       "default_entity_id": "select.geschirrspuler_cooking_hob_option_fryingsensorlevel",
       "device": {
@@ -1587,8 +2357,8 @@
       "entity_category": "config",
       "name": "Bratsensor-Stufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/FryingSensorLevel/state",
@@ -1600,7 +2370,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/PowerLevel/set",
       "default_entity_id": "select.geschirrspuler_cooking_hob_option_powerlevel",
       "device": {
@@ -1614,8 +2396,8 @@
       "entity_category": "config",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/PowerLevel/state",
@@ -1627,7 +2409,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/BuzzerBeepLevel/set",
       "default_entity_id": "select.geschirrspuler_cooking_hob_setting_buzzerbeeplevel",
       "device": {
@@ -1641,8 +2435,8 @@
       "entity_category": "config",
       "name": "Signaltonlautstärke",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/BuzzerBeepLevel/state",
@@ -1654,7 +2448,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/WarmingLevel/set",
       "default_entity_id": "select.geschirrspuler_cooking_oven_option_warminglevel",
       "device": {
@@ -1668,8 +2474,8 @@
       "entity_category": "config",
       "name": "Wärmestufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/WarmingLevel/state",
@@ -1681,7 +2487,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Setting/SabbathMode/set",
       "default_entity_id": "select.geschirrspuler_cooking_oven_setting_sabbathmode",
       "device": {
@@ -1695,8 +2513,8 @@
       "entity_category": "config",
       "name": "Sabbatmodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Setting/SabbathMode/state",
@@ -1708,7 +2526,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/SilentMode/set",
       "default_entity_id": "select.geschirrspuler_laundrycare_common_option_silentmode",
       "device": {
@@ -1722,8 +2552,8 @@
       "entity_category": "config",
       "name": "Leise-Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/SilentMode/state",
@@ -1735,7 +2565,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/IDos1BaseLevel/set",
       "default_entity_id": "select.geschirrspuler_laundrycare_washer_setting_idos1baselevel",
       "device": {
@@ -1749,8 +2591,8 @@
       "entity_category": "config",
       "name": "i-Dos 1 Grunddosierung",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/IDos1BaseLevel/state",
@@ -1762,7 +2604,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/IDos2BaseLevel/set",
       "default_entity_id": "select.geschirrspuler_laundrycare_washer_setting_idos2baselevel",
       "device": {
@@ -1776,8 +2630,8 @@
       "entity_category": "config",
       "name": "i-Dos 2 Grunddosierung",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/IDos2BaseLevel/state",
@@ -1789,7 +2643,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/EcoMode/set",
       "default_entity_id": "select.geschirrspuler_refrigeration_common_setting_ecomode",
       "device": {
@@ -1803,8 +2669,8 @@
       "entity_category": "config",
       "name": "Eco-Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/EcoMode/state",
@@ -1816,7 +2682,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/FreshMode/set",
       "default_entity_id": "select.geschirrspuler_refrigeration_common_setting_freshmode",
       "device": {
@@ -1830,8 +2708,8 @@
       "entity_category": "config",
       "name": "Frische-Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/FreshMode/state",
@@ -1843,7 +2721,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/SabbathMode/set",
       "default_entity_id": "select.geschirrspuler_refrigeration_common_setting_sabbathmode",
       "device": {
@@ -1857,8 +2747,8 @@
       "entity_category": "config",
       "name": "Sabbat-Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/SabbathMode/state",
@@ -1870,7 +2760,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/VacationMode/set",
       "default_entity_id": "select.geschirrspuler_refrigeration_common_setting_vacationmode",
       "device": {
@@ -1884,8 +2786,8 @@
       "entity_category": "config",
       "name": "Urlaubsmodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/VacationMode/state",
@@ -1897,7 +2799,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_option_duration",
       "device": {
         "identifiers": [
@@ -1918,7 +2832,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_option_finishinrelative",
       "device": {
         "identifiers": [
@@ -1939,7 +2865,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_option_programprogress",
       "device": {
         "identifiers": [
@@ -1959,7 +2897,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_option_remainingprogramtime",
       "device": {
         "identifiers": [
@@ -1980,7 +2930,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_option_startinrelative",
       "device": {
         "identifiers": [
@@ -2000,7 +2962,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_root_activeprogram",
       "device": {
         "identifiers": [
@@ -2022,11 +2996,55 @@
     }
   },
   {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_root_selectedprogramnoprograms/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_root_selectedprogramnoprograms",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Selected Program No Programs",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgramNoPrograms/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_root_selectedprogramnoprograms"
+    }
+  },
+  {
     "topic": "homeassistant/sensor/geschirrspuler/bsh_common_root_selectedprogramreadonly/config",
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_root_selectedprogramreadonly",
       "device": {
         "identifiers": [
@@ -2052,7 +3070,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_setting_ambientlightcolor",
       "device": {
         "identifiers": [
@@ -2073,7 +3103,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_status_batterychargingstate",
       "device": {
         "identifiers": [
@@ -2095,7 +3137,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_status_batterylevel",
       "device": {
         "identifiers": [
@@ -2116,7 +3170,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_status_chargingconnection",
       "device": {
         "identifiers": [
@@ -2138,7 +3204,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_status_doorstate",
       "device": {
         "identifiers": [
@@ -2151,8 +3229,8 @@
       "device_class": "enum",
       "name": "Tür",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/DoorState/state",
@@ -2164,7 +3242,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_status_operationstate",
       "device": {
         "identifiers": [
@@ -2177,8 +3267,8 @@
       "device_class": "enum",
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/OperationState/state",
@@ -2190,7 +3280,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_bsh_common_status_video_camerastate",
       "device": {
         "identifiers": [
@@ -2204,8 +3306,8 @@
       "entity_category": "diagnostic",
       "name": "Kamerastatus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/Video/CameraState/state",
@@ -2217,7 +3319,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_option_referencemapid",
       "device": {
         "identifiers": [
@@ -2238,7 +3352,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_option_suctionpower",
       "device": {
         "identifiers": [
@@ -2259,7 +3385,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_setting_currentmap",
       "device": {
         "identifiers": [
@@ -2280,7 +3418,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_status_dustboxinserted",
       "device": {
         "identifiers": [
@@ -2301,7 +3451,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_status_lastselectedmap",
       "device": {
         "identifiers": [
@@ -2322,7 +3484,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_status_lifted",
       "device": {
         "identifiers": [
@@ -2343,7 +3517,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_status_lost",
       "device": {
         "identifiers": [
@@ -2364,7 +3550,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_beanamount",
       "device": {
         "identifiers": [
@@ -2385,7 +3583,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_beancontainerselection",
       "device": {
         "identifiers": [
@@ -2406,7 +3616,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_coffeemilkratio",
       "device": {
         "identifiers": [
@@ -2427,7 +3649,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_coffeetemperature",
       "device": {
         "identifiers": [
@@ -2448,7 +3682,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_fillquantity",
       "device": {
         "identifiers": [
@@ -2470,7 +3716,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_flowrate",
       "device": {
         "identifiers": [
@@ -2491,7 +3749,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_hotwatertemperature",
       "device": {
         "identifiers": [
@@ -2512,7 +3782,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_multiplebeverages",
       "device": {
         "identifiers": [
@@ -2533,7 +3815,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_setting_cupwarmer",
       "device": {
         "identifiers": [
@@ -2554,7 +3848,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecountercoffee",
       "device": {
         "identifiers": [
@@ -2576,7 +3882,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecountercoffeeandmilk",
       "device": {
         "identifiers": [
@@ -2598,7 +3916,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterfrothymilk",
       "device": {
         "identifiers": [
@@ -2620,7 +3950,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterhotmilk",
       "device": {
         "identifiers": [
@@ -2642,7 +3984,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterhotwater",
       "device": {
         "identifiers": [
@@ -2665,7 +4019,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterhotwatercups",
       "device": {
         "identifiers": [
@@ -2687,7 +4053,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecountermilk",
       "device": {
         "identifiers": [
@@ -2709,7 +4087,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterpowdercoffee",
       "device": {
         "identifiers": [
@@ -2731,7 +4121,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterristrettoespresso",
       "device": {
         "identifiers": [
@@ -2753,7 +4155,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_common_setting_lighting",
       "device": {
         "identifiers": [
@@ -2774,7 +4188,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_common_setting_signalvolume",
       "device": {
         "identifiers": [
@@ -2795,7 +4221,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hob_option_joinzone",
       "device": {
         "identifiers": [
@@ -2816,7 +4254,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hob_option_zoneselector",
       "device": {
         "identifiers": [
@@ -2837,7 +4287,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_automatictimer",
       "device": {
         "identifiers": [
@@ -2858,7 +4320,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_automaticzoneselection",
       "device": {
         "identifiers": [
@@ -2879,7 +4353,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_energyconsumptionindication",
       "device": {
         "identifiers": [
@@ -2900,7 +4386,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_hoodafterrun",
       "device": {
         "identifiers": [
@@ -2921,7 +4419,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_hoodautomaticlightoff",
       "device": {
         "identifiers": [
@@ -2942,7 +4452,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_hoodautomaticlighton",
       "device": {
         "identifiers": [
@@ -2963,7 +4485,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_hoodautomaticstart",
       "device": {
         "identifiers": [
@@ -2984,7 +4518,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_powermanagement",
       "device": {
         "identifiers": [
@@ -3005,7 +4551,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_timerselection",
       "device": {
         "identifiers": [
@@ -3026,7 +4584,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hood_setting_colortemperature",
       "device": {
         "identifiers": [
@@ -3047,7 +4617,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_hood_setting_colortemperaturepercent",
       "device": {
         "identifiers": [
@@ -3068,7 +4650,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_oven_option_fastpreheat",
       "device": {
         "identifiers": [
@@ -3089,7 +4683,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_cooking_oven_status_currentcavitytemperature",
       "device": {
         "identifiers": [
@@ -3113,7 +4719,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_brilliancedry",
       "device": {
         "identifiers": [
@@ -3134,7 +4752,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_ecodry",
       "device": {
         "identifiers": [
@@ -3155,7 +4785,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_extradry",
       "device": {
         "identifiers": [
@@ -3176,7 +4818,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_halfload",
       "device": {
         "identifiers": [
@@ -3197,7 +4851,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_hygieneplus",
       "device": {
         "identifiers": [
@@ -3218,7 +4884,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_intensivzone",
       "device": {
         "identifiers": [
@@ -3239,7 +4917,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_silenceondemand",
       "device": {
         "identifiers": [
@@ -3260,7 +4950,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_variospeedplus",
       "device": {
         "identifiers": [
@@ -3281,7 +4983,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_zeolitedry",
       "device": {
         "identifiers": [
@@ -3302,7 +5016,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_common_option_varioperfect",
       "device": {
         "identifiers": [
@@ -3323,7 +5049,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_dryer_option_dryingtarget",
       "device": {
         "identifiers": [
@@ -3344,7 +5082,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_intensiveplus",
       "device": {
         "identifiers": [
@@ -3365,7 +5115,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_lessironing",
       "device": {
         "identifiers": [
@@ -3386,7 +5148,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_miniload",
       "device": {
         "identifiers": [
@@ -3407,7 +5181,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_prewash",
       "device": {
         "identifiers": [
@@ -3428,7 +5214,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_rinsehold",
       "device": {
         "identifiers": [
@@ -3449,7 +5247,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_rinseplus",
       "device": {
         "identifiers": [
@@ -3470,7 +5280,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_soak",
       "device": {
         "identifiers": [
@@ -3491,7 +5313,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_spinspeed",
       "device": {
         "identifiers": [
@@ -3512,7 +5346,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_stains",
       "device": {
         "identifiers": [
@@ -3533,7 +5379,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_temperature",
       "device": {
         "identifiers": [
@@ -3554,7 +5412,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_waterplus",
       "device": {
         "identifiers": [
@@ -3575,7 +5445,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_setting_door_assistantfreezer",
       "device": {
         "identifiers": [
@@ -3596,7 +5478,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_setting_door_assistantfridge",
       "device": {
         "identifiers": [
@@ -3617,7 +5511,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_setting_light_external_power",
       "device": {
         "identifiers": [
@@ -3638,7 +5544,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_setting_light_internal_power",
       "device": {
         "identifiers": [
@@ -3659,7 +5577,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_bottlecooler",
       "device": {
         "identifiers": [
@@ -3681,7 +5611,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_chiller",
       "device": {
         "identifiers": [
@@ -3703,7 +5645,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_chillercommon",
       "device": {
         "identifiers": [
@@ -3725,7 +5679,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_chillerleft",
       "device": {
         "identifiers": [
@@ -3747,7 +5713,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_chillerright",
       "device": {
         "identifiers": [
@@ -3769,7 +5747,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_flexcompartment",
       "device": {
         "identifiers": [
@@ -3791,7 +5781,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_freezer",
       "device": {
         "identifiers": [
@@ -3813,7 +5815,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_refrigerator",
       "device": {
         "identifiers": [
@@ -3835,7 +5849,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_winecompartment",
       "device": {
         "identifiers": [
@@ -3857,7 +5883,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_fridgefreezer_setting_supermodefreezer",
       "device": {
         "identifiers": [
@@ -3878,7 +5916,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "default_entity_id": "sensor.geschirrspuler_refrigeration_fridgefreezer_setting_supermoderefrigerator",
       "device": {
         "identifiers": [
@@ -3899,7 +5949,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/AmbientLightEnabled/set",
       "default_entity_id": "switch.geschirrspuler_bsh_common_setting_ambientlightenabled",
       "device": {
@@ -3923,7 +5985,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/ChildLock/set",
       "default_entity_id": "switch.geschirrspuler_bsh_common_setting_childlock",
       "device": {
@@ -3947,7 +6021,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/AutomaticKeyLock/set",
       "default_entity_id": "switch.geschirrspuler_cooking_hob_setting_automatickeylock",
       "device": {
@@ -3971,7 +6057,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/IDos1Active/set",
       "default_entity_id": "switch.geschirrspuler_laundrycare_washer_option_idos1active",
       "device": {
@@ -3995,7 +6093,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/IDos2Active/set",
       "default_entity_id": "switch.geschirrspuler_laundrycare_washer_option_idos2active",
       "device": {
@@ -4019,7 +6129,19 @@
     "qos": 1,
     "retain": true,
     "payload": {
-      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
       "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Dispenser/Enabled/set",
       "default_entity_id": "switch.geschirrspuler_refrigeration_common_setting_dispenser_enabled",
       "device": {

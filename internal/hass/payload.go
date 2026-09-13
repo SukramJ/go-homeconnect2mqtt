@@ -18,6 +18,7 @@
 package hass
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -35,6 +36,24 @@ const (
 	platformButton       = "button"
 )
 
+// Availability payloads. These are the two words the daemon writes to the
+// bridge status topic and to every device availability topic, and the two
+// every entity is told to read there. Home Assistant's own defaults happen
+// to be the same pair, but an entity that reads a topic must not depend on
+// a default agreeing with a publisher in another package: they are spelled
+// once, here, and read by internal/bridge and cmd/homeconnect2mqtt.
+const (
+	PayloadAvailable    = "online"
+	PayloadNotAvailable = "offline"
+)
+
+// availabilityModeAll requires EVERY declared source to say online. It is
+// written out rather than left to Home Assistant, whose default is
+// `latest` — which with two sources means whichever message arrived last
+// wins, so a live daemon reporting an unreachable appliance would read as
+// available.
+const availabilityModeAll = "all"
+
 // Entity categories (Home Assistant).
 const (
 	categoryDiagnostic = "diagnostic"
@@ -50,6 +69,14 @@ const deviceClassEnum = "enum"
 // the press payload must be the value to write — not HA's default "PRESS",
 // which the boolean cast would turn into `false`.
 const commandPressPayload = "true"
+
+// controlPressPayload is what the two synthetic program buttons write. They
+// back no feature: internal/bridge's handleProgramControl recognises the
+// topic and ignores the payload entirely, so this is Home Assistant's own
+// default rather than a value to write. The difference from
+// commandPressPayload is deliberate and is the one difference between the
+// two button paths that survives their convergence (F6).
+const controlPressPayload = "PRESS"
 
 // Device classes Home Assistant accepts per platform. HA validates a discovery
 // config strictly and discards the WHOLE entity when device_class is not one of
@@ -85,9 +112,20 @@ func classify(e *homeconnect.Entity) (platform string, ok bool) {
 		// synthetic "start program" control, not by writing this.
 		return platformSensor, true
 	case profile.KindSelectedProgram:
-		// Choosable when writable -> a select listing the programs to stage;
-		// otherwise a read-only sensor showing the current selection.
-		if e.Desc.Writable() {
+		// Choosable when writable AND there is something to choose from ->
+		// a select listing the programs to stage; otherwise a read-only
+		// sensor showing the current selection.
+		//
+		// The programs are normally folded into the enumeration by the
+		// parser, but an appliance that exposes none leaves it empty, and
+		// this used to route on the kind alone: the result was a select
+		// with "options": [], a visible, writable dropdown with nothing in
+		// it that can never be set (F5). Falling back to the sensor is
+		// what the read-only branch below already does, and it still shows
+		// the current selection. The superseded select config retracts
+		// itself — reconcileOrphans clears the retained config topics this
+		// daemon owns and no longer publishes, on the next discovery run.
+		if e.Desc.Writable() && e.Desc.IsEnum() {
 			return platformSelect, true
 		}
 		return platformSensor, true
@@ -229,13 +267,7 @@ func deviceClassAndUnit(e *homeconnect.Entity) (deviceClass, unit string) {
 // overrides.
 func payloadFor(e *homeconnect.Entity, platform, device string, t entityTopics, dev deviceBlock) map[string]any {
 	deviceClass, unit := deviceClassAndUnit(e)
-	p := map[string]any{
-		"unique_id":          dev.idPrefix + "_" + featureKey(e),
-		"name":               humanize(e),
-		"default_entity_id":  platform + "." + slugify(device+"_"+featureKey(e)),
-		"availability_topic": t.availability,
-		"device":             dev.block,
-	}
+	p := basePayload(platform, device, featureKey(e), humanize(e), t, dev)
 	if platform == platformButton {
 		// A button is write-only: HA requires command_topic and knows no state.
 		p["command_topic"] = t.command
@@ -292,6 +324,66 @@ func payloadFor(e *homeconnect.Entity, platform, device string, t entityTopics, 
 	if !enabledByDefault(e) {
 		p["enabled_by_default"] = false
 	}
+	return p
+}
+
+// applyAvailability attaches the entity's availability declaration: both
+// levels, and the mode that requires both.
+//
+// Until F1 was fixed every payload declared exactly one flat
+// `availability_topic`, the DEVICE topic — and the daemon's own Last Will
+// wrote the BRIDGE topic, which no payload referenced. The device
+// availability topic is only ever written by the daemon itself, so when
+// the daemon was killed, crashed or lost the broker without a clean
+// shutdown, nothing ever wrote `offline` anywhere an entity was reading:
+// all 687 entities stayed available, showing their last retained value
+// indefinitely. The will fired into a topic bound to nothing.
+//
+// Both sources are genuinely published, which is what makes mode `all`
+// safe here: the bridge topic by the will, the OnConnect birth and the
+// shutdown path in cmd/homeconnect2mqtt; the device topic by the device
+// worker on every connection-state change. A declared source that is
+// never published is not neutral under `all` — it is a permanently
+// unavailable entity with nothing in the log to say why.
+//
+// The flat `availability_topic` is REMOVED rather than left alongside the
+// list. Home Assistant accepts only one of the two forms; a payload
+// carrying both is a contradiction it resolves silently.
+func applyAvailability(p map[string]any, t entityTopics) {
+	delete(p, "availability_topic")
+	p["availability"] = []map[string]any{
+		{"topic": t.bridge, "payload_available": PayloadAvailable, "payload_not_available": PayloadNotAvailable},
+		{"topic": t.availability, "payload_available": PayloadAvailable, "payload_not_available": PayloadNotAvailable},
+	}
+	p["availability_mode"] = availabilityModeAll
+}
+
+// basePayload builds the keys every entity this daemon publishes
+// carries, whatever built it: the two identity strings Home Assistant keys
+// its registries on, the entity-id seed, the availability declaration and
+// the device block.
+//
+// It exists because there are two payload builders — payloadFor for the
+// 685 feature-derived entities and publishProgramControls for the two
+// synthetic program buttons — and the second shared nothing with the first
+// (F6). A key added to one was simply absent from the other, and an
+// absent identity key is not a visible failure: Home Assistant registers
+// the entity anyway, under a different key, beside the one it replaced.
+//
+// key is the per-entity id: featureKey(e) for a feature, the control key
+// for a synthetic button.
+func basePayload(platform, device, key, name string, t entityTopics, dev deviceBlock) map[string]any {
+	p := map[string]any{
+		"unique_id":         dev.idPrefix + "_" + key,
+		"name":              name,
+		"default_entity_id": platform + "." + slugify(device+"_"+key),
+		"device":            dev.block,
+	}
+	// Attached here, in the one place both payload builders funnel
+	// through, rather than in each of them: an entity whose availability
+	// was forgotten is indistinguishable from a healthy one until the
+	// daemon dies, which is the failure mode this key exists to close.
+	applyAvailability(p, t)
 	return p
 }
 
@@ -411,6 +503,28 @@ func slugify(s string) string {
 
 // sanitize is slugify kept under its historical name for the device id prefix.
 func sanitize(s string) string { return slugify(s) }
+
+// sortLocalized orders display labels the way a reader of the target
+// language expects. The key lowercases and folds the German umlauts the
+// way DIN 5007-1 collates them (ä/ö/ü under a/o/u, ß under ss) — a plain
+// byte sort would file every umlaut after "z", because their UTF-8
+// encodings sit above ASCII. Equal keys fall back to the raw string so
+// the order stays deterministic.
+//
+// This is a display ordering, not a collation library: the project has no
+// third-party dependencies and both shipped languages are covered by the
+// same fold that slugify already applies.
+func sortLocalized(s []string) {
+	sort.SliceStable(s, func(i, j int) bool {
+		a, b := collateKey(s[i]), collateKey(s[j])
+		if a != b {
+			return a < b
+		}
+		return s[i] < s[j]
+	})
+}
+
+func collateKey(s string) string { return umlautReplacer.Replace(strings.ToLower(s)) }
 
 func sortStrings(s []string) {
 	for i := 1; i < len(s); i++ {

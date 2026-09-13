@@ -14,6 +14,7 @@ import (
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
 
@@ -138,21 +139,21 @@ func waitFor(t *testing.T, stub *stubMQTT, topic, want string) {
 }
 
 func TestFeaturePath(t *testing.T) {
-	if got := featurePath("BSH.Common.Status.OperationState", 0x1002); got != "BSH/Common/Status/OperationState" {
+	if got := layout.FeaturePath("BSH.Common.Status.OperationState", 0x1002); got != "BSH/Common/Status/OperationState" {
 		t.Errorf("featurePath = %q", got)
 	}
-	if got := featurePath("", 0x1234); got != "_uid/4660" {
+	if got := layout.FeaturePath("", 0x1234); got != "_uid/4660" {
 		t.Errorf("unnamed featurePath = %q", got)
 	}
 }
 
 func TestDeviceTopics(t *testing.T) {
 	tp := newDeviceTopics("homeconnect", "dishwasher")
-	if tp.availability() != "homeconnect/dishwasher/availability" {
-		t.Errorf("availability = %q", tp.availability())
+	if tp.Availability() != "homeconnect/dishwasher/availability" {
+		t.Errorf("availability = %q", tp.Availability())
 	}
-	if tp.connectionState() != "homeconnect/dishwasher/connection_state" {
-		t.Errorf("connection_state = %q", tp.connectionState())
+	if tp.ConnectionState() != "homeconnect/dishwasher/connection_state" {
+		t.Errorf("connection_state = %q", tp.ConnectionState())
 	}
 }
 

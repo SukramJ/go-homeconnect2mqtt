@@ -7,13 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"strconv"
 	"strings"
 
 	"github.com/SukramJ/go-mqtt"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
 
@@ -75,6 +75,10 @@ type entityTopics struct {
 	state        string
 	command      string
 	availability string
+	// bridge is the daemon's own status topic — the one the Last Will
+	// writes, and the one every payload declares alongside the device
+	// topic (F1).
+	bridge string
 }
 
 type deviceBlock struct {
@@ -82,22 +86,13 @@ type deviceBlock struct {
 	block    map[string]any
 }
 
-// featurePath mirrors the bridge topic layout: dotted name -> slash path,
-// unnamed -> _uid/<n>. This is the MQTT topic path, NOT the slugified id.
-func featurePath(e *homeconnect.Entity) string {
-	if e.Name() == "" {
-		return "_uid/" + strconv.Itoa(e.UID())
-	}
-	return strings.ReplaceAll(e.Name(), ".", "/")
-}
-
 func (d *Discovery) topicsFor(device string, e *homeconnect.Entity) entityTopics {
-	base := d.rootTopic + "/" + device
-	fp := featurePath(e)
+	dt := layout.NewDevice(d.rootTopic, device)
 	return entityTopics{
-		state:        base + "/" + fp + "/state",
-		command:      base + "/" + fp + "/set",
-		availability: base + "/availability",
+		state:        dt.State(e.Name(), e.UID()),
+		command:      dt.Command(e.Name(), e.UID()),
+		availability: dt.Availability(),
+		bridge:       layout.Bridge(d.rootTopic),
 	}
 }
 
@@ -150,8 +145,9 @@ func (d *Discovery) applyEnrichment(e *homeconnect.Entity, payload map[string]an
 }
 
 // localizeOptions translates a select's enum options to the configured display
-// language so HA dropdown labels match the (also localized) published state.
-// Uncatalogued values pass through unchanged, keeping options and state aligned.
+// language so HA dropdown labels match the (also localized) published state,
+// and orders them in that language. Uncatalogued values pass through
+// unchanged, keeping options and state aligned.
 func (d *Discovery) localizeOptions(payload map[string]any) {
 	opts, ok := payload["options"].([]string)
 	if !ok {
@@ -161,6 +157,12 @@ func (d *Discovery) localizeOptions(payload map[string]any) {
 	for i, o := range opts {
 		loc[i] = i18n.EnumLabel(o, d.lang)
 	}
+	// Sort AFTER translating, not before. enumOptions sorts the raw
+	// enumeration member names, which are English, so a German dropdown
+	// used to come out ordered by its English originals: OperationState
+	// read ["Auto", "Aus", "Ein"], i.e. Auto/Off/On (F11). The user sees
+	// only the left column.
+	sortLocalized(loc)
 	payload["options"] = loc
 }
 
@@ -219,6 +221,25 @@ func (d *Discovery) PublishDevice(ctx context.Context, device string, info profi
 // run programs. The appliances expose no start command of their own, so the user
 // stages a program with the selected-program select and then presses Start
 // (which posts the selected program to /ro/activeProgram); Stop aborts it.
+//
+// The payload shares basePayload and sanitizeForPlatform with the
+// feature-derived entities (F6). Three things stay deliberately different,
+// and none of them is drift:
+//
+//   - payload_press is Home Assistant's own "PRESS", not the "true" a
+//     command feature writes: handleProgramControl recognises the topic
+//     and never writes a value.
+//   - No entity_category and no enabled_by_default, i.e. enabled and
+//     prominent. These two ARE the primary program controls — the same
+//     status isPrimary already gives the active/selected-program entities
+//     they operate — so the curated set keeps them, as it must: a curated
+//     install that could stage a program but not start it is not a
+//     smaller feature set, it is a broken one.
+//   - No enrichment and no exclusion. Both are keyed on a feature name and
+//     these back no feature, so there is nothing for the operator
+//     catalogue to match. Excluding them is not currently expressible;
+//     that is a gap in the catalogue's vocabulary, not a divergence
+//     between the two builders, and it is left as it is.
 func (d *Discovery) publishProgramControls(ctx context.Context, device string, entities []*homeconnect.Entity, dev deviceBlock, published map[string]bool) {
 	hasProgram := false
 	for _, e := range entities {
@@ -230,25 +251,31 @@ func (d *Discovery) publishProgramControls(ctx context.Context, device string, e
 	if !hasProgram {
 		return
 	}
-	base := d.rootTopic + "/" + device
+	dt := layout.NewDevice(d.rootTopic, device)
 	controls := []struct{ key, nameEN, nameDE string }{
-		{"start_program", "Start program", "Programm starten"},
-		{"stop_program", "Stop program", "Programm stoppen"},
+		{layout.ControlStartProgram, "Start program", "Programm starten"},
+		{layout.ControlStopProgram, "Stop program", "Programm stoppen"},
+	}
+	t := entityTopics{
+		command:      "", // no feature behind it; the control topic is its own
+		availability: dt.Availability(),
+		bridge:       layout.Bridge(d.rootTopic),
 	}
 	for _, c := range controls {
 		name := c.nameEN
 		if d.lang == "de" {
 			name = c.nameDE
 		}
-		payload := map[string]any{
-			"unique_id":          dev.idPrefix + "_" + c.key,
-			"name":               name,
-			"default_entity_id":  "button." + slugify(device+"_"+c.key),
-			"command_topic":      base + "/_control/" + c.key + "/set",
-			"payload_press":      "PRESS",
-			"availability_topic": base + "/availability",
-			"device":             dev.block,
-		}
+		// The same five common keys as every feature-derived entity, from
+		// the same function, so a key added to one path cannot be silently
+		// missing from the other (F6).
+		payload := basePayload(platformButton, device, c.key, name, t, dev)
+		payload["command_topic"] = dt.ControlCommand(c.key)
+		payload["payload_press"] = controlPressPayload
+		// Run the same last-pass platform filter the derived entities get.
+		// It is a no-op on these two today; that is the point — it stays a
+		// no-op by construction rather than by nobody having added a key.
+		sanitizeForPlatform(payload, platformButton)
 		b, err := json.Marshal(payload)
 		if err != nil {
 			d.logger.Warn("hass.marshal", slog.String("feature", c.key), slog.String("err", err.Error()))
