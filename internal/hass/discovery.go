@@ -545,18 +545,101 @@ func (d *Discovery) ConfigTopicFor(t publisher.ConfigTopic) string {
 	return publisher.EntityConfigTopic(d.baseTopic, t.Platform, t.NodeID, t.ObjectID)
 }
 
-// IsOwnConfig reports whether a retained HA discovery config payload was
-// published by this daemon (its unique_id is in our `homeconnect_` namespace
-// and its state topic is under our root), so orphan cleanup never touches
-// configs owned by another integration or bridge instance.
+// IsOwnConfig reports whether a retained Home Assistant discovery config
+// payload was published by THIS instance of this daemon.
+//
+// It is the second half of the ownership rule, and on the hard case it is
+// the only half. Two instances with different MQTT_TOPIC roots, the same
+// HASS_BASE_TOPIC and an appliance name in common publish byte-identical
+// config topics, node ids, platforms and `unique_id`s — MQTT_TOPIC appears
+// in none of the four identity strings (F8) — so nothing in the TOPIC can
+// tell them apart and nothing in the identity plane can either. The only
+// place the two differ is the set of MQTT topics the payload points at,
+// every one of which sits under the publishing instance's own root.
+//
+// # Why the namespace prefix is not enough, and why a missing state topic
+// used to make it the whole rule
+//
+// This read `unique_id` has our prefix AND (`state_topic` is empty OR it is
+// under our root). The empty branch was there for a reason — a write-only
+// platform has no state topic — but it collapsed the rule to the bare
+// `homeconnect_` prefix for exactly those payloads, and a sibling instance
+// shares that prefix. Measured against the pins: 20 of 687 configs per
+// appliance are buttons, 6 of 177 in the curated set, and a sweep with an
+// empty claim set cleared three of a sibling's buttons outright. The
+// reachable triggers needed no device document at all — one instance in
+// `curated` and one in `full`, or a HASS_DISCOVERY_REFRESH, which runs
+// fleet-wide with nothing claimed — and with the migration to a device
+// document it becomes ALL of a sibling's buttons unconditionally, because
+// an upgraded instance publishes no per-entity configs, so every one of the
+// sibling's is unclaimed at once.
+//
+// # The rule
+//
+// A button carries no `state_topic` and never did, but it has always
+// carried a `command_topic`, and since F1 every config of every platform
+// carries both availability sources. Pre-F1 payloads carry the flat
+// `availability_topic` instead. So: gather every MQTT topic the payload
+// names, require at least one, and require all of them to be under this
+// instance's root.
+//
+// Both directions of that are deliberate:
+//
+//   - At least one. A payload that names no topic at all cannot be proven
+//     ours, and ownership that cannot be proven is not claimed. No config
+//     this daemon has ever published is in that position.
+//   - All of them. Every topic this daemon renders is under MQTT_TOPIC, so
+//     a payload mixing roots is not ours whatever else it says. Being
+//     strict here leaves a stale entity behind at worst; being loose
+//     deletes a live instance's fleet.
 func (d *Discovery) IsOwnConfig(payload []byte) bool {
-	var cfg struct {
-		UniqueID   string `json:"unique_id"`
-		StateTopic string `json:"state_topic"`
-	}
+	var cfg retainedConfig
 	if json.Unmarshal(payload, &cfg) != nil {
 		return false
 	}
-	return strings.HasPrefix(cfg.UniqueID, "homeconnect_") &&
-		(cfg.StateTopic == "" || strings.HasPrefix(cfg.StateTopic, d.rootTopic+"/"))
+	if !strings.HasPrefix(cfg.UniqueID, "homeconnect_") {
+		return false
+	}
+	root := d.rootTopic + "/"
+	seen := false
+	for _, topic := range cfg.topics() {
+		if topic == "" {
+			continue
+		}
+		if !strings.HasPrefix(topic, root) {
+			return false
+		}
+		seen = true
+	}
+	return seen
+}
+
+// retainedConfig is the part of a retained per-entity discovery config
+// [Discovery.IsOwnConfig] reads: the identity string, and every MQTT topic
+// the payload points at.
+//
+// The four topic-bearing keys are not interchangeable and none is
+// redundant. `state_topic` covers 667 of this appliance's 687 configs;
+// `command_topic` is what a BUTTON has instead, and buttons are the 20 that
+// used to fall through to the bare namespace prefix; `availability` is the
+// two-source list every config has carried since F1; `availability_topic`
+// is the flat key those payloads had before it, which is exactly the shape
+// of the stale configs a sweep exists to clear.
+type retainedConfig struct {
+	UniqueID          string `json:"unique_id"`
+	StateTopic        string `json:"state_topic"`
+	CommandTopic      string `json:"command_topic"`
+	AvailabilityTopic string `json:"availability_topic"`
+	Availability      []struct {
+		Topic string `json:"topic"`
+	} `json:"availability"`
+}
+
+func (c retainedConfig) topics() []string {
+	out := make([]string, 0, 3+len(c.Availability))
+	out = append(out, c.StateTopic, c.CommandTopic, c.AvailabilityTopic)
+	for _, a := range c.Availability {
+		out = append(out, a.Topic)
+	}
+	return out
 }

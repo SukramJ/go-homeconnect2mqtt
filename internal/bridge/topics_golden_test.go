@@ -183,6 +183,18 @@ func (s *subRecorder) setFail(topic string) {
 	s.fail = topic
 }
 
+// lastPayload is the most recent payload written to topic.
+func (s *subRecorder) lastPayload(topic string) ([]byte, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := len(s.pubs) - 1; i >= 0; i-- {
+		if s.pubs[i].topic == topic {
+			return s.pubs[i].payload, true
+		}
+	}
+	return nil, false
+}
+
 // publishedTopics is every non-retraction publish the stub accepted.
 func (s *subRecorder) publishedTopics() []string {
 	s.mu.Lock()
@@ -213,9 +225,10 @@ func (s *subRecorder) discoveryWindows(prefix string) []string {
 }
 
 type pubCall struct {
-	topic  string
-	qos    mqtt.QoS
-	retain bool
+	topic   string
+	payload []byte
+	qos     mqtt.QoS
+	retain  bool
 	// retraction records an empty retained payload, which is MQTT's
 	// deletion of a retained message. It is a separate field rather than
 	// len(payload)==0 at the read site because the sweep pins care about
@@ -230,7 +243,7 @@ func (s *subRecorder) Publish(_ context.Context, topic string, payload []byte, q
 	if s.fail != "" && topic == s.fail {
 		return errors.New("subRecorder: refused " + topic)
 	}
-	s.pubs = append(s.pubs, pubCall{topic, qos, retain, len(payload) == 0 && retain})
+	s.pubs = append(s.pubs, pubCall{topic, append([]byte(nil), payload...), qos, retain, len(payload) == 0 && retain})
 	return nil
 }
 

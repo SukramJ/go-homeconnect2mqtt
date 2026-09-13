@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/SukramJ/go-hamqtt/publisher"
+
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 )
 
 // The device-document migration's pins at the bridge level.
@@ -335,3 +337,105 @@ func TestTheReconnectRepublishDoesNotOverlapItself(t *testing.T) {
 // depending on an arithmetic they do not assert. The arithmetic itself is
 // pinned where it is used, in internal/haplane.
 func haplanePacketSize(topic string, payloadLen int) int { return payloadLen + len(topic) + 64 }
+
+// TestTheDeviceAvailabilityPayloadsAreTheOnesEveryConfigDeclares closes a
+// loop that nothing was closing.
+//
+// availOnline and availOffline are defined from internal/hass's constants,
+// so they cannot drift from them by a typo — but they can be SWAPPED, and
+// swapping them passed the whole suite: the three tests that touched them
+// compared the published byte against the same two constants they were
+// testing, and the goldens pin `payload_available` inside the discovery
+// payload with nothing comparing that to the word the device worker
+// actually writes.
+//
+// Inverted, every appliance reads `offline` while it is connected. Under
+// `availability_mode: all` that is the whole fleet greyed out whenever the
+// appliance is up, and nothing on the wire or in a log names the cause.
+//
+// So the assertion crosses the two planes: the payload the worker publishes
+// on the device availability topic, against the payload the rendered
+// discovery config tells Home Assistant to expect there.
+func TestTheDeviceAvailabilityPayloadsAreTheOnesEveryConfigDeclares(t *testing.T) {
+	shortWindow(t)
+	b, dev, _, rec := pinBridge(t)
+	defer drainReconciles(t, b)
+
+	bundle, err := b.hass.BundleFor(dev.name, dev.app.Info(), dev.app.Entities())
+	if err != nil {
+		t.Fatalf("BundleFor: %v", err)
+	}
+	raw, err := json.Marshal(bundle.Components[bundle.Keys()[0]])
+	if err != nil {
+		t.Fatalf("marshal component: %v", err)
+	}
+	var comp struct {
+		Availability []struct {
+			Topic        string `json:"topic"`
+			Available    string `json:"payload_available"`
+			NotAvailable string `json:"payload_not_available"`
+		} `json:"availability"`
+	}
+	if err := json.Unmarshal(raw, &comp); err != nil {
+		t.Fatalf("component: %v", err)
+	}
+	avail := dev.topics.Availability()
+	declared := -1
+	for i, a := range comp.Availability {
+		if a.Topic == avail {
+			declared = i
+		}
+	}
+	if declared < 0 {
+		t.Fatalf("no component declares %s as an availability source: %+v", avail, comp.Availability)
+	}
+
+	for _, tc := range []struct {
+		state homeconnect.ConnectionState
+		want  string
+	}{
+		{homeconnect.StateConnected, comp.Availability[declared].Available},
+		{homeconnect.StateOffline, comp.Availability[declared].NotAvailable},
+	} {
+		b.onState(dev, tc.state)
+		got, ok := rec.lastPayload(avail)
+		if !ok {
+			t.Fatalf("%s: nothing was published on %s", tc.state, avail)
+		}
+		if string(got) != tc.want {
+			t.Errorf("%s: the worker wrote %q on %s, every config declares %q there",
+				tc.state, got, avail, tc.want)
+		}
+	}
+}
+
+// TestStopDiscoveryClosesTheShutdownWindow.
+//
+// The daemon's last act is a retained "offline" on its own status topic,
+// and it is the only one that goes out at all on a graceful stop — a clean
+// DISCONNECT suppresses the Last Will. Two things in this daemon publish
+// discovery asynchronously and outlive the call that started them: the Home
+// Assistant birth handler, and the (re)connect republish this step added.
+// Either landing after the offline marker writes "online"-era configs to a
+// broker this daemon has already told Home Assistant it left.
+//
+// publisher.Runtime.Close does not cover it and never did: it drains the
+// birth-replay worker, which exists only after Runtime.WatchBirth, and this
+// daemon watches the birth topic itself. So the gate is this daemon's own.
+func TestStopDiscoveryClosesTheShutdownWindow(t *testing.T) {
+	shortWindow(t)
+	b, dev, _, rec := pinBridge(t)
+	defer drainReconciles(t, b)
+	b.startOne.Do(func() { close(b.started) })
+
+	b.StopDiscovery()
+	b.republishDiscovery(t.Context())
+	b.publishDiscovery(t.Context(), dev)
+
+	if got := rec.publishedTopics(); slices.Contains(got, bundleTopicFor(b, dev.name)) {
+		t.Errorf("a discovery publish reached the broker after StopDiscovery: %v", got)
+	}
+	if windows := rec.discoveryWindows(pinPrefix); len(windows) != 0 {
+		t.Errorf("a sweep opened %v after StopDiscovery", windows)
+	}
+}

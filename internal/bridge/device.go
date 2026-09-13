@@ -339,7 +339,10 @@ func (b *Bridge) onState(d *Device, s homeconnect.ConnectionState) {
 // declared topics, the document is not on the broker as far as anything
 // else in this daemon is concerned either.
 func (b *Bridge) publishDiscovery(parent context.Context, d *Device) {
-	if b.hass == nil {
+	// discoveryStopped is checked here rather than only at the two call
+	// sites because both of them are asynchronous and neither can be
+	// stopped from outside: see [Bridge.StopDiscovery].
+	if b.hass == nil || b.discoveryStopped.Load() {
 		return
 	}
 	ctx, cancel := context.WithTimeout(parent, bundlePublishTimeout)

@@ -335,7 +335,14 @@ func (p *Plane) PublishState(ctx context.Context, topic string, payload []byte) 
 	return err
 }
 
-// Close drains the discovery runtime's birth-replay worker. Call it
-// before the final offline marker, so a replay cannot write an
-// "online"-era config after it.
+// Close finishes with the current discovery runtime.
+//
+// What it actually does is drain publisher.Runtime's birth-replay worker,
+// and that worker exists only once publisher.Runtime.WatchBirth has been
+// called. This daemon watches Home Assistant's birth topic itself, so the
+// call is inert here — it is made because the runtime is the library's to
+// finish with and the day this daemon adopts WatchBirth it must already be
+// wired, not because it closes the shutdown window. The window is closed by
+// the consumer, before the final offline marker: see
+// internal/bridge's Bridge.StopDiscovery.
 func (p *Plane) Close() { p.Runtime().Close() }

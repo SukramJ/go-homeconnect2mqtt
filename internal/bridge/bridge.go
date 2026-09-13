@@ -76,6 +76,9 @@ type Bridge struct {
 	started  chan struct{}
 	startOne sync.Once
 
+	// discoveryStopped closes the shutdown window. See [Bridge.StopDiscovery].
+	discoveryStopped atomic.Bool
+
 	// republishMu serialises the (re)connect republish passes and
 	// republishPending coalesces them. A flapping link fires OnConnect
 	// repeatedly, and two CONCURRENT passes over the same fleet buy
@@ -225,7 +228,7 @@ func (b *Bridge) PublishOnline(ctx context.Context) {
 // step whose completeness on THIS connection is the entire point of
 // rebuilding the runtime. Re-running the publish re-runs both.
 func (b *Bridge) republishDiscovery(ctx context.Context) {
-	if b.hass == nil {
+	if b.hass == nil || b.discoveryStopped.Load() {
 		return
 	}
 	select {
@@ -246,6 +249,26 @@ func (b *Bridge) republishDiscovery(ctx context.Context) {
 		b.publishDiscovery(ctx, d)
 	}
 }
+
+// StopDiscovery stops this daemon writing discovery, permanently.
+//
+// Call it before the final retained "offline" marker. That marker is the
+// only availability signal a graceful shutdown produces at all — a clean
+// DISCONNECT suppresses the Last Will — and two things here publish
+// discovery asynchronously and outlive the call that started them: the Home
+// Assistant birth handler, which reacts to a message that can arrive at any
+// moment, and the (re)connect republish. Either landing after the offline
+// marker writes "online"-era configs to a broker this daemon has already
+// told Home Assistant it left, and a retained config is not a transient
+// mistake.
+//
+// publisher.Runtime.Close does NOT cover this, and the comment that said it
+// did was describing a drain this daemon does not have: the runtime's
+// birth-replay worker exists only once publisher.Runtime.WatchBirth has been
+// called, and this daemon watches Home Assistant's birth topic itself (see
+// subscribeBirth). Close is kept because the runtime is the library's to
+// finish with, not because it closes this window.
+func (b *Bridge) StopDiscovery() { b.discoveryStopped.Store(true) }
 
 // stopCommands drains the command router.
 //

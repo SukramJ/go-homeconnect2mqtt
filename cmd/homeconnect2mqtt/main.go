@@ -158,7 +158,16 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 				slog.String("to", to.String()))
 		},
 	})
-	haLink.Wire(haTransport(layout.Bridge(cfg.MQTTTopic), breaker, client))
+	// The bypass topic is the plane's OWN answer, not a second rendering of
+	// it. publisher.New has already reconciled haplane.Config.StatusTopic
+	// against the layout and refused them if they disagreed, so this is the
+	// one string that cannot drift from the one the Last Will writes and
+	// every discovery payload names. Spelling layout.Bridge(cfg.MQTTTopic)
+	// here a second time is how the two come apart — and when they do, the
+	// availability markers silently rejoin the circuit breaker, a drop
+	// opens it, the reconnect's first act is refused with ErrCircuitOpen,
+	// and every entity sits unavailable under `availability_mode: all`.
+	haLink.Wire(haTransport(plane.StatusTopic(), breaker, client))
 
 	// The MQTT surface handed to the bridge, same split.
 	session := mqtt.SplitClient(breaker, client)
@@ -201,10 +210,24 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	defer func() {
 		stopCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
-		// Drain the discovery runtime's birth-replay worker BEFORE the
-		// offline marker: a replay that landed after it would write
-		// "online"-era configs to a broker this daemon has already told
-		// Home Assistant it left.
+		// Stop discovery BEFORE the offline marker. That marker is the
+		// only availability signal a graceful shutdown produces at all —
+		// a clean DISCONNECT suppresses the Last Will — and a discovery
+		// publish landing after it writes "online"-era retained configs
+		// to a broker this daemon has already told Home Assistant it
+		// left. Two things here publish asynchronously and outlive the
+		// call that started them: the Home Assistant birth handler and
+		// the (re)connect republish.
+		//
+		// publisher.Runtime.Close is NOT what closes that window, and the
+		// comment that used to stand here said it was. Close drains the
+		// runtime's birth-replay worker, which exists only once
+		// publisher.Runtime.WatchBirth has been called — and this daemon
+		// watches the birth topic itself (internal/bridge's
+		// subscribeBirth), so the worker is never created and the call is
+		// inert. It is kept because the runtime is the library's to
+		// finish with.
+		br.StopDiscovery()
 		plane.Close()
 		if err := plane.AnnounceOffline(stopCtx); err != nil {
 			logger.Warn("homeconnect2mqtt.offline_failed", slog.String("err", err.Error()))
