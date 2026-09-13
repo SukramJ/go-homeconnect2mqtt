@@ -5,7 +5,83 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+### Changed
+- **Home Assistant discovery is now one retained *device document* per
+  appliance instead of one retained config per entity.** Where this daemon
+  published 687 topics under
+  `homeassistant/<platform>/<appliance>/<feature>/config`, it now publishes a
+  single `homeassistant/device/<appliance>/config` (~460 KB) that carries
+  every component. Home Assistant reads both forms; a document is what it
+  asks new integrations to publish, and it is one message per appliance
+  instead of several hundred on every reconnect.
+  **What you will see:** nothing, if it goes well. No entity id, unique id,
+  device identifier or history changes — Home Assistant keys the registry on
+  `unique_id`, which does not move — so entity names you renamed, areas you
+  assigned, dashboard cards and automations all survive. The old per-entity
+  configs are retracted first, in the same step, because Home Assistant
+  refuses a document while a per-entity config for the same `unique_id` is
+  still retained (and refuses the reverse just as firmly), reporting only
+  `WARNING [mqtt.entity] Received a conflicting MQTT discovery message`.
+  **If the daemon is killed part-way through the migration** — after the
+  retractions, before the document — the appliance's entities are *gone*, not
+  unavailable, until the daemon is started again. The next start redoes both
+  halves: nothing is remembered across a restart, by design.
+  **If your broker limits the packet size** below the size of the document,
+  the migration is refused *before* anything is retracted, your existing
+  entities are left exactly as they are, and the daemon logs
+  `hass.bundle_publish` naming the size and the broker's limit. Raise the
+  broker's `max_packet_size` (Mosquitto's default is unlimited; EMQX's is
+  1 MB) and restart. A broker that advertises no limit, and an MQTT 3.1.1
+  broker, are treated as "no limit", never as a small one.
+  **If you roll back to an earlier release**, the retained device document is
+  still on the broker and the old release's per-entity configs will be
+  refused the same way, leaving you with no entities. Clear the document
+  once, by hand, before or after starting the old version:
+  ```sh
+  mosquitto_pub -h <broker> -u <user> -P <password>     -t 'homeassistant/device/geschirrspuler/config' -r -n
+  ```
+  The last path segment before `config` is the *slug* of the appliance name
+  as it appears in `devices.yaml` — `Geschirrspüler` becomes
+  `geschirrspuler`, not `Geschirrspüler` and not `geschirrspüler`. Copy the
+  topic verbatim from the daemon's own `hass.bundle_published` log line
+  rather than assembling it; that is the one spelling that cannot be wrong.
+  Repeat it once per appliance. Home Assistant will then re-adopt the same
+  entities from the per-entity configs, with their history.
+  **One capability is not yet carried over.** Under the per-entity form, a
+  feature that leaves this daemon's set — excluded in `mapping.yaml`, dropped
+  by switching `HASS_DISCOVERY` from `full` to `curated`, or missing after an
+  appliance is replaced or its firmware changes — had its config retracted
+  and its entity disappeared. A device document does not remove a component
+  by omitting it, so such an entity now stays in Home Assistant, reading
+  *available* and showing its last value, until it is deleted by hand. To
+  remove one: **restart Home Assistant (or reload the MQTT integration)
+  first** — the delete option only appears once the entity is no longer being
+  provided — then open the device page and delete the entity there.
+- The daemon now re-publishes discovery on every broker (re)connect, not only
+  when an appliance reconnects or Home Assistant restarts. A broker that came
+  back without its retained store previously left every entity missing until
+  the daemon itself was restarted.
+
 ### Fixed
+- **A second instance of this daemon on the same broker could have its button
+  entities deleted by the first.** Two instances with different `MQTT_TOPIC`
+  roots, the same `HASS_BASE_TOPIC` and an appliance name in common publish
+  byte-identical config topics and unique ids, so the orphan cleanup tells
+  them apart by the topics inside the payload. A `button` config carries no
+  `state_topic` — twenty per appliance — and for those the check fell back to
+  the shared `homeconnect_` name prefix and claimed the other instance's as
+  its own. Reachable with one instance in `curated` mode and one in `full`,
+  and whenever `HASS_DISCOVERY_REFRESH` was used. The check now reads every
+  topic a payload names (`state_topic`, `command_topic`, the availability
+  sources) and requires all of them to be under this instance's own root.
+- The daemon's own birth and death markers could rejoin the MQTT circuit
+  breaker after a refactor, because the topic that keeps them off it was
+  spelled twice at the composition root. A connection drop opens the breaker,
+  so the first act of a reconnected daemon — announcing itself online — would
+  have been refused, leaving every entity unavailable until a recovery probe
+  happened to succeed.
+- Discovery could still be published after the daemon announced itself
+  offline on shutdown, leaving a retained "online"-era config behind.
 - **Eleven entities per appliance were being discarded by Home Assistant
   without a word.** `mapping.yaml` mirrors the official `home_connect`
   integration, where thirteen features are *binary* sensors, so it gives them

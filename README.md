@@ -78,6 +78,38 @@ the add-on options and stay on your Home Assistant host.
 Feature names use dotted notation (`BSH.Common.Status.OperationState`) mapped to
 slash-separated MQTT paths.
 
+### Home Assistant discovery
+
+Discovery is published as one retained **device document** per appliance:
+
+```
+<hass_base_topic>/device/<appliance slug>/config    # e.g. homeassistant/device/geschirrspuler/config
+```
+
+The last segment before `config` is the *slug* of the appliance name in
+`devices.yaml`: lower case, with everything outside `a-z0-9` collapsed to a
+single `_`, and German umlauts transliterated — `Geschirrspüler` becomes
+`geschirrspuler`. The daemon logs the exact topic as
+`hass.bundle_published topic=…` on every publish; copy it from there rather
+than assembling it by hand.
+
+Earlier releases published one retained config per entity, under
+`<hass_base_topic>/<platform>/<appliance slug>/<feature>/config`. Those are
+retracted automatically on the first start of this release, before the
+document goes out, because Home Assistant refuses either form while the other
+is still retained.
+
+**Rolling back to a pre-device-document release** therefore needs one manual
+step, once per appliance: the retained document has to be cleared, or the old
+release's per-entity configs are refused and you get no entities.
+
+```sh
+mosquitto_pub -h <broker> -u <user> -P <password>   -t 'homeassistant/device/geschirrspuler/config' -r -n
+```
+
+`-u`/`-P` are required on an authenticated broker, which is what the Home
+Assistant add-on always uses.
+
 ## Building
 
 ```sh

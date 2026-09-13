@@ -6,9 +6,12 @@ package hass
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 
+	"github.com/SukramJ/go-hamqtt/discovery"
 	"github.com/SukramJ/go-hamqtt/publisher"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
@@ -36,6 +39,13 @@ import (
 // comparison each.
 type ConfigWriter interface {
 	Publish(ctx context.Context, topic string, payload []byte) (bool, error)
+
+	// PublishBundle writes one appliance's retained device document,
+	// retracting the per-entity configs it supersedes first and refusing
+	// the whole migration if the broker would not accept a packet that
+	// size. Both halves are haplane.Plane's; see there for why the refusal
+	// has to happen before the retraction rather than after it.
+	PublishBundle(ctx context.Context, b *discovery.Bundle) (bool, error)
 }
 
 // Enricher supplies operator-configured per-feature overrides (implemented by
@@ -348,6 +358,133 @@ func (d *Discovery) publishProgramControls(ctx context.Context, device string, e
 	}
 }
 
+// BundleTopic is where this appliance's device document is retained:
+// <HASS_BASE_TOPIC>/device/<slugify(device name)>/config.
+//
+// Exported because three readers outside the publish path need the exact
+// string and a second derivation of it is how they drift. The
+// HASS_DISCOVERY_REFRESH migration clears it; the operator documentation
+// for a DOWNGRADE names it in a `mosquitto_pub -r -n` the user runs by
+// hand; and a test compares both against the node id the renderer actually
+// produces. go-mtec2mqtt documented the topic in five places and got it
+// wrong in three, because the node id is the SLUG of the device name and
+// not the name — here "Geschirrspüler" is addressed as `geschirrspuler`,
+// which is neither the raw name nor merely its lower case.
+func (d *Discovery) BundleTopic(device string) string {
+	return publisher.BundleConfigTopic(d.baseTopic, sanitize(device))
+}
+
+// PublishDeviceBundle renders one appliance's device document and publishes
+// it, retracting the per-entity configs it supersedes first.
+//
+// It returns the config topic it addressed and the error that stopped it,
+// if any. The topic is returned even on a failure, because the caller has
+// to be able to name what it did NOT publish.
+//
+// # Why every refusal here is a refusal to write anything at all
+//
+// The document and the retraction of the 687 per-entity configs it replaces
+// are one migration, and Home Assistant forces their order: a retained
+// per-entity config and a document carrying the same `unique_id` cannot
+// coexist, and whichever arrives second is refused with a single
+// `WARNING [mqtt.entity] Received a conflicting MQTT discovery message` and
+// no entities. publisher.Runtime.PublishBundle therefore retracts first and
+// publishes second, which means every failure mode between the two leaves
+// the appliance with NO discovery config rather than with its old one.
+//
+// So each of the four gates below fails before the retraction:
+//
+//   - A render error. Nothing to publish, and a half-rendered document is
+//     not a smaller fleet, it is a wrong one.
+//   - An empty component set. A document with no components supersedes
+//     nothing and declares nothing, so publishing it would retract nothing
+//     and leave 687 orphans; but the state it describes — an appliance that
+//     classified to zero entities — is a fault somewhere upstream, and
+//     writing it to the broker turns that fault into a fleet-wide deletion
+//     the moment the sweep runs.
+//   - A BLOCKING discovery.Validate. Home Assistant validates a document as
+//     one unit and drops the whole thing, so a single refused component
+//     costs the appliance all of its entities — which is exactly why F13
+//     had to be fixed before this step (#43). An advisory ValidationError
+//     is logged and published, because advisory means Home Assistant
+//     accepts it.
+//   - A packet the broker will not take. That refusal lives in
+//     haplane.Plane.PublishBundle, before the retraction, and is reported
+//     here as haplane.ErrDocumentTooLarge.
+func (d *Discovery) PublishDeviceBundle(ctx context.Context, device string, info profile.DeviceInfo, entities []*homeconnect.Entity) (string, error) {
+	b, err := d.BundleFor(device, info, entities)
+	if err != nil {
+		d.logger.Error("hass.bundle_render", slog.String("device", device), slog.String("err", err.Error()))
+		return "", err
+	}
+	return d.publishBundle(ctx, device, b)
+}
+
+// publishBundle is PublishDeviceBundle's gates and its write, separated
+// from the render so a test can drive them with a document of its own.
+//
+// Without that separation the blocking-validation gate is unreachable from
+// a test: a document this daemon renders is never blocking (that is what
+// #43 fixed), so the only way to assert that a blocking one is withheld is
+// to hand one in.
+func (d *Discovery) publishBundle(ctx context.Context, device string, b *discovery.Bundle) (string, error) {
+	topic := publisher.BundleConfigTopic(d.baseTopic, b.NodeID)
+	if len(b.Components) == 0 {
+		err := fmt.Errorf("hass: device document for %q has no components", device)
+		d.logger.Error("hass.bundle_empty",
+			slog.String("device", device), slog.String("topic", topic),
+			slog.String("consequence", "withheld; the per-entity configs are left in place"))
+		return topic, err
+	}
+	if err := d.validateBundle(device, topic, b); err != nil {
+		return topic, err
+	}
+	sent, err := d.mqtt.PublishBundle(ctx, b)
+	if err != nil {
+		d.logger.Error("hass.bundle_publish",
+			slog.String("device", device), slog.String("topic", topic),
+			slog.Int("components", len(b.Components)),
+			slog.String("err", err.Error()))
+		return topic, err
+	}
+	d.logger.Info("hass.bundle_published",
+		slog.String("device", device), slog.String("topic", topic),
+		slog.Int("components", len(b.Components)), slog.Bool("written", sent))
+	return topic, nil
+}
+
+// validateBundle runs discovery.Validate and decides what a finding costs.
+//
+// Blocking refuses the publish; advisory logs and continues. The split
+// matters because the two are not degrees of the same thing: Home Assistant
+// drops a document it cannot validate in its entirety, so "blocking" means
+// zero entities for the appliance, while "advisory" means Home Assistant
+// accepts the document as it is.
+func (d *Discovery) validateBundle(device, topic string, b *discovery.Bundle) error {
+	err := discovery.Validate(b)
+	if err == nil {
+		return nil
+	}
+	var ve *discovery.ValidationError
+	if !errors.As(err, &ve) {
+		d.logger.Error("hass.bundle_invalid",
+			slog.String("device", device), slog.String("topic", topic), slog.String("err", err.Error()))
+		return err
+	}
+	if ve.Blocking() {
+		d.logger.Error("hass.bundle_invalid",
+			slog.String("device", device), slog.String("topic", topic),
+			slog.Int("components", len(b.Components)),
+			slog.String("err", err.Error()),
+			slog.String("consequence",
+				"withheld; Home Assistant drops a device document whole, so publishing it would cost the appliance every entity"))
+		return err
+	}
+	d.logger.Warn("hass.bundle_advisory",
+		slog.String("device", device), slog.String("topic", topic), slog.String("err", err.Error()))
+	return nil
+}
+
 // publishedPlatforms is the set of Home Assistant platforms this daemon
 // emits. Home Assistant declares 32; six of them are reachable from
 // classify, and a retained config on any of the other 26 belongs to
@@ -419,18 +556,101 @@ func (d *Discovery) ConfigTopicFor(t publisher.ConfigTopic) string {
 	return publisher.EntityConfigTopic(d.baseTopic, t.Platform, t.NodeID, t.ObjectID)
 }
 
-// IsOwnConfig reports whether a retained HA discovery config payload was
-// published by this daemon (its unique_id is in our `homeconnect_` namespace
-// and its state topic is under our root), so orphan cleanup never touches
-// configs owned by another integration or bridge instance.
+// IsOwnConfig reports whether a retained Home Assistant discovery config
+// payload was published by THIS instance of this daemon.
+//
+// It is the second half of the ownership rule, and on the hard case it is
+// the only half. Two instances with different MQTT_TOPIC roots, the same
+// HASS_BASE_TOPIC and an appliance name in common publish byte-identical
+// config topics, node ids, platforms and `unique_id`s — MQTT_TOPIC appears
+// in none of the four identity strings (F8) — so nothing in the TOPIC can
+// tell them apart and nothing in the identity plane can either. The only
+// place the two differ is the set of MQTT topics the payload points at,
+// every one of which sits under the publishing instance's own root.
+//
+// # Why the namespace prefix is not enough, and why a missing state topic
+// used to make it the whole rule
+//
+// This read `unique_id` has our prefix AND (`state_topic` is empty OR it is
+// under our root). The empty branch was there for a reason — a write-only
+// platform has no state topic — but it collapsed the rule to the bare
+// `homeconnect_` prefix for exactly those payloads, and a sibling instance
+// shares that prefix. Measured against the pins: 20 of 687 configs per
+// appliance are buttons, 6 of 177 in the curated set, and a sweep with an
+// empty claim set cleared three of a sibling's buttons outright. The
+// reachable triggers needed no device document at all — one instance in
+// `curated` and one in `full`, or a HASS_DISCOVERY_REFRESH, which runs
+// fleet-wide with nothing claimed — and with the migration to a device
+// document it becomes ALL of a sibling's buttons unconditionally, because
+// an upgraded instance publishes no per-entity configs, so every one of the
+// sibling's is unclaimed at once.
+//
+// # The rule
+//
+// A button carries no `state_topic` and never did, but it has always
+// carried a `command_topic`, and since F1 every config of every platform
+// carries both availability sources. Pre-F1 payloads carry the flat
+// `availability_topic` instead. So: gather every MQTT topic the payload
+// names, require at least one, and require all of them to be under this
+// instance's root.
+//
+// Both directions of that are deliberate:
+//
+//   - At least one. A payload that names no topic at all cannot be proven
+//     ours, and ownership that cannot be proven is not claimed. No config
+//     this daemon has ever published is in that position.
+//   - All of them. Every topic this daemon renders is under MQTT_TOPIC, so
+//     a payload mixing roots is not ours whatever else it says. Being
+//     strict here leaves a stale entity behind at worst; being loose
+//     deletes a live instance's fleet.
 func (d *Discovery) IsOwnConfig(payload []byte) bool {
-	var cfg struct {
-		UniqueID   string `json:"unique_id"`
-		StateTopic string `json:"state_topic"`
-	}
+	var cfg retainedConfig
 	if json.Unmarshal(payload, &cfg) != nil {
 		return false
 	}
-	return strings.HasPrefix(cfg.UniqueID, "homeconnect_") &&
-		(cfg.StateTopic == "" || strings.HasPrefix(cfg.StateTopic, d.rootTopic+"/"))
+	if !strings.HasPrefix(cfg.UniqueID, "homeconnect_") {
+		return false
+	}
+	root := d.rootTopic + "/"
+	seen := false
+	for _, topic := range cfg.topics() {
+		if topic == "" {
+			continue
+		}
+		if !strings.HasPrefix(topic, root) {
+			return false
+		}
+		seen = true
+	}
+	return seen
+}
+
+// retainedConfig is the part of a retained per-entity discovery config
+// [Discovery.IsOwnConfig] reads: the identity string, and every MQTT topic
+// the payload points at.
+//
+// The four topic-bearing keys are not interchangeable and none is
+// redundant. `state_topic` covers 667 of this appliance's 687 configs;
+// `command_topic` is what a BUTTON has instead, and buttons are the 20 that
+// used to fall through to the bare namespace prefix; `availability` is the
+// two-source list every config has carried since F1; `availability_topic`
+// is the flat key those payloads had before it, which is exactly the shape
+// of the stale configs a sweep exists to clear.
+type retainedConfig struct {
+	UniqueID          string `json:"unique_id"`
+	StateTopic        string `json:"state_topic"`
+	CommandTopic      string `json:"command_topic"`
+	AvailabilityTopic string `json:"availability_topic"`
+	Availability      []struct {
+		Topic string `json:"topic"`
+	} `json:"availability"`
+}
+
+func (c retainedConfig) topics() []string {
+	out := make([]string, 0, 3+len(c.Availability))
+	out = append(out, c.StateTopic, c.CommandTopic, c.AvailabilityTopic)
+	for _, a := range c.Availability {
+		out = append(out, a.Topic)
+	}
+	return out
 }

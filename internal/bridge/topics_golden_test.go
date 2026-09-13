@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"log/slog"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/SukramJ/go-hamqtt/discovery"
 	hagomqtt "github.com/SukramJ/go-hamqtt/publisher/gomqtt"
 
 	"github.com/SukramJ/go-mqtt"
@@ -167,12 +169,66 @@ type subRecorder struct {
 	// this stub deliberately does NOT add this daemon's own publishes to
 	// it, so a sweep pin says exactly what it was given.
 	retained map[string][]byte
+	// fail names one topic this stub refuses, so a test can drive the
+	// difference between a document that was BUILT and one that was
+	// PUBLISHED. A refused publish is recorded nowhere: the broker did not
+	// take it.
+	fail string
+}
+
+// setFail makes the stub refuse one topic. Empty clears the refusal.
+func (s *subRecorder) setFail(topic string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.fail = topic
+}
+
+// lastPayload is the most recent payload written to topic.
+func (s *subRecorder) lastPayload(topic string) ([]byte, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := len(s.pubs) - 1; i >= 0; i-- {
+		if s.pubs[i].topic == topic {
+			return s.pubs[i].payload, true
+		}
+	}
+	return nil, false
+}
+
+// publishedTopics is every non-retraction publish the stub accepted.
+func (s *subRecorder) publishedTopics() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []string
+	for _, p := range s.pubs {
+		if !p.retraction {
+			out = append(out, p.topic)
+		}
+	}
+	return out
+}
+
+// discoveryWindows is every snapshot subscription the sweep opened. The
+// SUBSCRIBE list is read rather than the live handler map, because the
+// window unsubscribes on the way out: a pin that read the map could not
+// tell a sweep that ran from one that never started.
+func (s *subRecorder) discoveryWindows(prefix string) []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []string
+	for _, f := range s.filters {
+		if strings.HasPrefix(f.Filter, prefix) {
+			out = append(out, f.Filter)
+		}
+	}
+	return out
 }
 
 type pubCall struct {
-	topic  string
-	qos    mqtt.QoS
-	retain bool
+	topic   string
+	payload []byte
+	qos     mqtt.QoS
+	retain  bool
 	// retraction records an empty retained payload, which is MQTT's
 	// deletion of a retained message. It is a separate field rather than
 	// len(payload)==0 at the read site because the sweep pins care about
@@ -184,7 +240,10 @@ type pubCall struct {
 func (s *subRecorder) Publish(_ context.Context, topic string, payload []byte, qos mqtt.QoS, retain bool, _ ...mqtt.PublishOption) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.pubs = append(s.pubs, pubCall{topic, qos, retain, len(payload) == 0 && retain})
+	if s.fail != "" && topic == s.fail {
+		return errors.New("subRecorder: refused " + topic)
+	}
+	s.pubs = append(s.pubs, pubCall{topic, append([]byte(nil), payload...), qos, retain, len(payload) == 0 && retain})
 	return nil
 }
 
@@ -341,6 +400,12 @@ func renderPayloads(t *testing.T, dev *Device) map[string]map[string]any {
 type payloadRecorder struct {
 	mu       sync.Mutex
 	payloads map[string]map[string]any
+}
+
+// PublishBundle satisfies hass.ConfigWriter. The topic pin drives the
+// per-entity builder, which is the form the pinned tree records.
+func (p *payloadRecorder) PublishBundle(context.Context, *discovery.Bundle) (bool, error) {
+	return false, errors.New("payloadRecorder: the device document path is not driven here")
 }
 
 func (p *payloadRecorder) Publish(_ context.Context, topic string, payload []byte) (bool, error) {

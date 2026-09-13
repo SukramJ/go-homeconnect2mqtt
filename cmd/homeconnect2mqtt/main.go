@@ -15,6 +15,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -119,20 +120,24 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	// sides cannot drift — under `availability_mode: all` a typo would
 	// grey out the whole fleet with nothing on the wire naming the cause.
 	haLink := &haplane.Transport{}
-	plane := haplane.New(haLink, haplane.Config{
-		Prefix:      cfg.HASSBaseTopic,
-		StatusTopic: layout.Bridge(cfg.MQTTTopic),
-		Layout:      hass.NewLayout(cfg.MQTTTopic),
-		QoS:         haplane.QoS(cfg.MQTTQoS),
-		Retain:      cfg.RetainEnabled(),
-		Logger:      logger,
-	})
+	// The broker's Maximum Packet Size is read through a holder filled in
+	// below, for the same ordering reason haLink exists: the plane must be
+	// built before the client, because the client's Last Will comes off the
+	// plane. An atomic rather than a plain variable because the hook is
+	// called from every device worker's publish path while this goroutine
+	// is still wiring; it answers "not known" until the client exists,
+	// which is the same answer as a link that has not connected.
+	var clientRef atomic.Pointer[mqtt.TCPClient]
+	plane := haplane.New(haLink, haPlaneConfig(cfg, func() (uint32, bool) {
+		return brokerMaxPacketSize(clientRef.Load())
+	}, logger))
 	will, err := plane.Will()
 	if err != nil {
 		return fmt.Errorf("mqtt: last will: %w", err)
 	}
 
 	client := mqtt.NewTCPClient(mqttClientConfig(cfg, will, logger))
+	clientRef.Store(client)
 	lc := mqtt.NewLifecycle(mqtt.LifecycleConfig{
 		InitialBackoff: cfg.ReconnectInitialDuration(),
 		MaxBackoff:     cfg.ReconnectMaxDuration(),
@@ -153,7 +158,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 				slog.String("to", to.String()))
 		},
 	})
-	haLink.Wire(haTransport(layout.Bridge(cfg.MQTTTopic), breaker, client))
+	haLink.Wire(haPlaneTransport(plane, breaker, client))
 
 	// The MQTT surface handed to the bridge, same split.
 	session := mqtt.SplitClient(breaker, client)
@@ -196,10 +201,24 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	defer func() {
 		stopCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
-		// Drain the discovery runtime's birth-replay worker BEFORE the
-		// offline marker: a replay that landed after it would write
-		// "online"-era configs to a broker this daemon has already told
-		// Home Assistant it left.
+		// Stop discovery BEFORE the offline marker. That marker is the
+		// only availability signal a graceful shutdown produces at all —
+		// a clean DISCONNECT suppresses the Last Will — and a discovery
+		// publish landing after it writes "online"-era retained configs
+		// to a broker this daemon has already told Home Assistant it
+		// left. Two things here publish asynchronously and outlive the
+		// call that started them: the Home Assistant birth handler and
+		// the (re)connect republish.
+		//
+		// publisher.Runtime.Close is NOT what closes that window, and the
+		// comment that used to stand here said it was. Close drains the
+		// runtime's birth-replay worker, which exists only once
+		// publisher.Runtime.WatchBirth has been called — and this daemon
+		// watches the birth topic itself (internal/bridge's
+		// subscribeBirth), so the worker is never created and the call is
+		// inert. It is kept because the runtime is the library's to
+		// finish with.
+		br.StopDiscovery()
 		plane.Close()
 		if err := plane.AnnounceOffline(stopCtx); err != nil {
 			logger.Warn("homeconnect2mqtt.offline_failed", slog.String("err", err.Error()))
@@ -235,6 +254,29 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 //   - The two availability markers on statusTopic bypass the breaker, as
 //     they always have. See haplane.BypassFor for why that asymmetry is
 //     load-bearing rather than an oversight.
+//
+// haPlaneTransport wires the plane's transport, deriving the bypass topic
+// from the PLANE rather than rendering it a second time.
+//
+// It takes the plane rather than the topic for the reason go-mtec2mqtt's
+// review gave for the same shape: a function handed the finished string can
+// only ever be tested against the string the test hands it, so the
+// derivation — the part that can be wrong — is not covered. serve() cannot
+// be driven, so the derivation has to live somewhere that can be.
+//
+// publisher.New has already reconciled haplane.Config.StatusTopic against
+// the layout and refused them if they disagreed, so the plane's answer is
+// the one string that cannot drift from the one the Last Will writes and
+// every discovery payload names. Spelling layout.Bridge(cfg.MQTTTopic) here
+// a second time is how the two come apart — and when they do, the
+// availability markers silently rejoin the circuit breaker, a drop opens
+// it, the reconnect's first act is refused with ErrCircuitOpen, and every
+// entity sits unavailable under `availability_mode: all`. #44 caught
+// exactly that as M41 and it came back one line away.
+func haPlaneTransport(plane *haplane.Plane, breaker mqtt.Publisher, client mqtt.Client) publisher.Transport {
+	return haTransport(plane.StatusTopic(), breaker, client)
+}
+
 func haTransport(statusTopic string, breaker mqtt.Publisher, client mqtt.Client) publisher.Transport {
 	return haplane.BypassFor(statusTopic,
 		hagomqtt.Split(breaker, client),
@@ -243,6 +285,66 @@ func haTransport(statusTopic string, breaker mqtt.Publisher, client mqtt.Client)
 
 // shutdownTimeout bounds the final offline marker and the DISCONNECT.
 const shutdownTimeout = 5 * time.Second
+
+// haPlaneConfig builds the Home Assistant publish plane's configuration.
+//
+// A function rather than a literal inside serve() for the reason
+// mqttClientConfig and haTransport are functions: serve needs a broker and
+// an appliance and cannot be driven by a test, so a value spelled there is
+// a value nothing checks. That is not a style preference — go-mtec2mqtt's
+// equivalent step spelled publisher.Config.LegacyEntityTopics once in
+// main.go and once in its test fixture, and dropping it from the
+// composition root was caught by nothing at all, because the fixture went
+// on stating the right thing while the daemon published into a tree it had
+// retracted nothing from (its PR #53's worst first-pass blind spot).
+//
+// Every field this daemon depends on is therefore stated HERE, once, and
+// asserted off this function. Note what is deliberately NOT stated:
+// publisher.Config.LegacyEntityTopics stays nil, which means the
+// five-segment publisher.LegacyTopicWithNodeID form alone — the form this
+// bridge's whole installed fleet is on, measured 687 of 687 at step 4.
+// Naming any form REPLACES that default rather than extending it, so the
+// well-meant addition of a second shape would silently stop retracting the
+// first. TestThePlaneStatesTheDefaultLegacyTopicForm reads that back off
+// this value.
+func haPlaneConfig(cfg *config.Config, brokerMax func() (uint32, bool), logger *slog.Logger) haplane.Config {
+	return haplane.Config{
+		Prefix:              cfg.HASSBaseTopic,
+		StatusTopic:         layout.Bridge(cfg.MQTTTopic),
+		Layout:              hass.NewLayout(cfg.MQTTTopic),
+		QoS:                 haplane.QoS(cfg.MQTTQoS),
+		Retain:              cfg.RetainEnabled(),
+		BrokerMaxPacketSize: brokerMax,
+		Logger:              logger,
+	}
+}
+
+// brokerMaxPacketSize reports the largest packet the BROKER said it would
+// accept, and whether that answer is known.
+//
+// It reads mqtt.ConnectResult.MaximumPacketSize, the MQTT 5.0 Maximum
+// Packet Size property (0x27) off the CONNACK. It is emphatically not
+// mqtt.TCPConfig.MaximumPacketSize, which is the largest packet this CLIENT
+// accepts INBOUND and defaults to 1 MiB regardless of what the broker will
+// take; confusing the two is how a device document gets published against a
+// limit nobody measured.
+//
+// Unknown is reported as unknown. A nil client, a connection that has not
+// completed, an MQTT 3.1.1 link with no property block to carry the value,
+// and a broker that deliberately set no limit all come back as "not known"
+// or zero — and haplane.Plane publishes in every one of those cases. An
+// unknown limit read as a small one would refuse the migration outright on
+// every v3.1.1 broker.
+func brokerMaxPacketSize(client *mqtt.TCPClient) (uint32, bool) {
+	if client == nil {
+		return 0, false
+	}
+	res, ok := client.ConnectResult()
+	if !ok {
+		return 0, false
+	}
+	return res.MaximumPacketSize, true
+}
 
 // mqttClientConfig builds the broker client configuration, including the
 // Last Will. It is a function rather than a literal inside run() so the

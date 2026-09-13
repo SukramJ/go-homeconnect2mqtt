@@ -16,15 +16,28 @@ func newDisc() *Discovery {
 
 func TestIsOwnConfig(t *testing.T) {
 	d := newDisc()
+	// The rows are real payload shapes, not minimal ones, and that is the
+	// whole point: this rule is the ONLY thing separating two instances of
+	// this daemon that share a HASS_BASE_TOPIC and an appliance name, and
+	// it used to be asked only about payloads carrying a state_topic — the
+	// class it already handled. A button carries none, and 20 of every
+	// appliance's 687 configs are buttons.
+	const avail = `"availability":[{"topic":"homeconnect/status"},{"topic":"homeconnect/dw/availability"}],`
+	const sibAvail = `"availability":[{"topic":"other/status"},{"topic":"other/dw/availability"}],`
 	cases := []struct {
 		name    string
 		payload string
 		want    bool
 	}{
-		{"ours", `{"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/dw/X/state"}`, true},
-		{"ours no state (button)", `{"unique_id":"homeconnect_dw_btn"}`, true},
+		{"ours, a sensor", `{` + avail + `"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/dw/X/state"}`, true},
+		{"ours, a button (no state_topic)", `{` + avail + `"unique_id":"homeconnect_dw_btn","command_topic":"homeconnect/dw/X/set"}`, true},
+		{"ours, a pre-F1 payload with the flat availability topic", `{"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/dw/X/state","availability_topic":"homeconnect/dw/availability"}`, true},
+		{"a SIBLING pre-F1 button, keyed only on the flat availability topic", `{"unique_id":"homeconnect_dw_btn","command_topic":"other/dw/X/set","availability_topic":"other/dw/availability"}`, false},
+		{"a SIBLING instance's sensor", `{` + sibAvail + `"unique_id":"homeconnect_dw_op","state_topic":"other/dw/X/state"}`, false},
+		{"a SIBLING instance's button — the one this rule used to claim", `{` + sibAvail + `"unique_id":"homeconnect_dw_btn","command_topic":"other/dw/X/set"}`, false},
 		{"foreign unique_id", `{"unique_id":"zigbee2mqtt_x","state_topic":"zigbee2mqtt/x"}`, false},
 		{"foreign state root", `{"unique_id":"homeconnect_dw_op","state_topic":"other/dw/X/state"}`, false},
+		{"ours by namespace but naming no topic at all — unprovable, so not claimed", `{"unique_id":"homeconnect_dw_btn"}`, false},
 		{"not json", `not-json`, false},
 	}
 	for _, c := range cases {

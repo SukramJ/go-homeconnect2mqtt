@@ -5,6 +5,7 @@ package bridge
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -64,8 +65,32 @@ func ourConfig(key string) string {
 // because MQTT_TOPIC appears in none of them. That is finding F8, and the
 // state topic is the only place the two differ.
 func siblingConfig(key string) string {
-	return `{"unique_id":"homeconnect_geschirrspuler_` + key +
+	return `{"availability":[{"topic":"other_root/status"},{"topic":"other_root/` + pinDevice +
+		`/availability"}],"unique_id":"homeconnect_geschirrspuler_` + key +
 		`","state_topic":"other_root/` + pinDevice + `/X/state"}`
+}
+
+// ourButtonConfig and siblingButtonConfig are the class the payload
+// ownership rule used to get wrong, and the reason both sibling pins below
+// now carry one.
+//
+// A button is write-only: Home Assistant declares no state_topic on it, so
+// 20 of every appliance's 687 configs (6 of the curated 177) carry none —
+// and a rule that fell back to the bare `homeconnect_` namespace when the
+// state topic was absent claimed a sibling instance's buttons as its own.
+// What a button does carry is a command_topic and, since F1, both
+// availability sources, every one of them under the publishing instance's
+// own root.
+func ourButtonConfig(key string) string {
+	return `{"availability":[{"topic":"` + pinRoot + `/status"},{"topic":"` + pinRoot + `/` + pinDevice +
+		`/availability"}],"unique_id":"homeconnect_geschirrspuler_` + key +
+		`","command_topic":"` + pinRoot + `/` + pinDevice + `/BSH/Common/Command/` + key + `/set"}`
+}
+
+func siblingButtonConfig(key string) string {
+	return `{"availability":[{"topic":"other_root/status"},{"topic":"other_root/` + pinDevice +
+		`/availability"}],"unique_id":"homeconnect_geschirrspuler_` + key +
+		`","command_topic":"other_root/` + pinDevice + `/BSH/Common/Command/` + key + `/set"}`
 }
 
 // shortWindow shrinks the snapshot window for the duration of a test. The
@@ -73,9 +98,9 @@ func siblingConfig(key string) string {
 // window only has to be long enough to be entered.
 func shortWindow(t *testing.T) {
 	t.Helper()
-	prev := reconcileCollectWindow
-	reconcileCollectWindow = 20 * time.Millisecond
-	t.Cleanup(func() { reconcileCollectWindow = prev })
+	prev := reconcileCollectWindow.Get()
+	reconcileCollectWindow.Set(20 * time.Millisecond)
+	t.Cleanup(func() { reconcileCollectWindow.Set(prev) })
 }
 
 // TestReportOnlySweepOverTheRealFleet is the measurement this migration
@@ -168,8 +193,14 @@ func TestSweepSparesASiblingInstancesConfigs(t *testing.T) {
 	shortWindow(t)
 	b, dev, _, rec := pinBridge(t)
 
-	sibling := "homeassistant/sensor/geschirrspuler/sibling_only/config"
-	seedRetained(rec, map[string]string{sibling: siblingConfig("sibling_only")})
+	// Both platform classes, because they are protected by different parts
+	// of the payload: a sensor by its state_topic, a button — which has
+	// none — by its command_topic and its availability sources. A pin that
+	// used sensors alone exercised only the half that already worked.
+	seedRetained(rec, map[string]string{
+		"homeassistant/sensor/geschirrspuler/sibling_only/config":                siblingConfig("sibling_only"),
+		"homeassistant/button/geschirrspuler/bsh_common_command_opendoor/config": siblingButtonConfig("opendoor"),
+	})
 
 	// Nothing published: the claim set is empty, which is the WORST case
 	// — every owned topic is unclaimed, so only the payload check stands
@@ -198,6 +229,14 @@ func TestAStaggeredUpgradeDoesNotDeleteTheSiblingsFleet(t *testing.T) {
 	tree := map[string]string{}
 	for _, key := range []string{"mode", "operationstate", "doorstate"} {
 		tree["homeassistant/sensor/geschirrspuler/"+key+"/config"] = siblingConfig(key)
+	}
+	// The buttons are the part this step makes strictly worse. An upgraded
+	// instance publishes no per-entity configs AT ALL, so every one of the
+	// sibling's is unclaimed at once — and a rule that fell back to the
+	// bare namespace for a payload with no state_topic would clear all 20
+	// of its buttons per shared-name appliance, unconditionally.
+	for _, key := range []string{"abortprogram", "opendoor", "pauseprogram"} {
+		tree["homeassistant/button/geschirrspuler/bsh_common_command_"+key+"/config"] = siblingButtonConfig(key)
 	}
 	seedRetained(rec, tree)
 
@@ -241,14 +280,25 @@ func TestSweepRetractsOurOwnOrphan(t *testing.T) {
 	b, dev, _, rec := pinBridge(t)
 
 	orphan := "homeassistant/sensor/geschirrspuler/retired_feature/config"
-	seedRetained(rec, map[string]string{orphan: ourConfig("retired_feature")})
+	// A button of OURS, retained and no longer published. It is the other
+	// half of the same rule: the fix that stops a sibling's buttons being
+	// claimed must not stop our own being cleared, which is the mutation
+	// that would otherwise pass as "safer".
+	ourButton := "homeassistant/button/geschirrspuler/bsh_common_command_retired/config"
+	seedRetained(rec, map[string]string{
+		orphan:    ourConfig("retired_feature"),
+		ourButton: ourButtonConfig("retired"),
+	})
 
-	if cleared := b.reconcileOrphansOnce(t.Context(), dev.name, map[string]bool{}); cleared != 1 {
-		t.Fatalf("cleared %d, want 1 — the sweep retracted nothing, which is how every "+
+	if cleared := b.reconcileOrphansOnce(t.Context(), dev.name, map[string]bool{}); cleared != 2 {
+		t.Fatalf("cleared %d, want 2 — the sweep retracted nothing, which is how every "+
 			"other test in this file passes for the wrong reason", cleared)
 	}
-	if got := retractedTopics(rec); len(got) != 1 || got[0] != orphan {
-		t.Errorf("retracted %v, want [%s]", got, orphan)
+	if got := retractedTopics(rec); !slices.Contains(got, ourButton) {
+		t.Errorf("our own orphaned BUTTON survived the sweep: %v", got)
+	}
+	if got := retractedTopics(rec); !slices.Contains(got, orphan) {
+		t.Errorf("retracted %v, want it to include %s", got, orphan)
 	}
 }
 
@@ -342,9 +392,9 @@ func TestSweepWindowIsTheOnlyDiscoverySubscription(t *testing.T) {
 // which is what the flag means to clear.
 func TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished(t *testing.T) {
 	shortWindow(t)
-	prevSettle := refreshSettleDelay
-	refreshSettleDelay = time.Millisecond
-	t.Cleanup(func() { refreshSettleDelay = prevSettle })
+	prevSettle := refreshSettleDelay.Get()
+	refreshSettleDelay.Set(time.Millisecond)
+	t.Cleanup(func() { refreshSettleDelay.Set(prevSettle) })
 
 	b, _, _, rec := pinBridge(t)
 	b.cfg.HASSDiscoveryRefresh = true
@@ -354,9 +404,17 @@ func TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished(t *test
 	// fixture and leave half an installed base standing.
 	b.devices = append(b.devices, &Device{name: "Backofen", topics: newDeviceTopics(pinRoot, "Backofen")})
 
+	// The two device documents are in the wanted set and the sweep cannot
+	// find them: OwnsConfigTopic declines the device-document form, so they
+	// are named explicitly from the configured device list. A refresh that
+	// cleared only the per-entity leftovers would leave the one retained
+	// topic that actually holds this fleet's entities — which is the config
+	// the flag exists to make Home Assistant re-read.
 	ours := []string{
 		"homeassistant/sensor/geschirrspuler/anything/config",
 		"homeassistant/sensor/backofen/anything/config",
+		"homeassistant/device/geschirrspuler/config",
+		"homeassistant/device/backofen/config",
 	}
 	seedRetained(rec, map[string]string{
 		ours[0]: ourConfig("anything"),
@@ -369,9 +427,10 @@ func TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished(t *test
 
 	got := retractedTopics(rec)
 	sort.Strings(ours)
-	if len(got) != len(ours) || got[0] != ours[0] || got[1] != ours[1] {
-		t.Errorf("refresh cleared %v, want %v — every appliance of ours, and neither the "+
-			"sibling instance's nor the foreign integration's configs", got, ours)
+	if !slices.Equal(got, ours) {
+		t.Errorf("refresh cleared %v, want %v — every appliance of ours, its device document "+
+			"included, and neither the sibling instance's nor the foreign integration's configs",
+			got, ours)
 	}
 }
 

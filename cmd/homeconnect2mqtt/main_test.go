@@ -260,14 +260,28 @@ func (c *recordingClient) Publish(_ context.Context, topic string, _ []byte, _ m
 // thing a reconnected daemon does is announce itself online.
 func TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker(t *testing.T) {
 	t.Parallel()
-	const status = "homeconnect/status"
+	// The status topic is taken from the SAME expression serve() takes it
+	// from — the plane's own answer — rather than from a literal here. A
+	// test that supplies its own constant cannot see the two halves of the
+	// composition root drift apart, and they did: this file's own const
+	// meant appending "/x" to serve()'s second spelling of the topic
+	// survived the whole suite. #44 caught that once as M41 and it came
+	// back one line away.
+	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: 1}
+	plane := haplane.New(&haplane.Transport{}, haPlaneConfig(cfg, nil, slog.New(slog.DiscardHandler)))
+	status := plane.StatusTopic()
+	if status != layout.Bridge(cfg.MQTTTopic) {
+		t.Fatalf("the plane's status topic is %q, the layout renders %q", status, layout.Bridge(cfg.MQTTTopic))
+	}
 	client := &recordingClient{}
 	failing := &failingPublisher{}
 	// A breaker whose underlying publisher always fails, tripped open, so
 	// a publish that goes THROUGH it is refused and one that bypasses it
 	// reaches the client. That is the state a reconnect actually finds.
 	breaker := mqtt.NewBreaker(failing, mqtt.BreakerConfig{FailureThreshold: 1})
-	tr := haTransport(status, breaker, client)
+	// haPlaneTransport, not haTransport: the derivation of the bypass topic
+	// is the part that can be wrong, so it has to be inside what is driven.
+	tr := haPlaneTransport(plane, breaker, client)
 	_ = tr.Publish(t.Context(), "homeassistant/sensor/x/y/config", []byte("{}"), 1, true)
 
 	if err := tr.Publish(t.Context(), "homeassistant/sensor/x/y/config", []byte("{}"), 1, true); !errors.Is(err, mqtt.ErrCircuitOpen) {
@@ -288,3 +302,82 @@ func TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker(t *testing.T) {
 			"breaker, or a brownout would stop the daemon resubscribing", client.subscribed)
 	}
 }
+
+// TestThePlaneConfigStatesEveryFieldTheMigrationDependsOn drives the
+// composition root's own value.
+//
+// This is the blind-spot shape the sibling project's migration shipped with:
+// a value spelled once in main.go and once in a test fixture, with nothing
+// comparing them. Dropping publisher.Config.LegacyEntityTopics from
+// go-mtec2mqtt's composition root was caught by NOTHING, because its
+// fixture went on stating the right thing while the daemon published a
+// device document into a tree it had retracted none of.
+//
+// So every field the device-document migration depends on is read back off
+// haPlaneConfig here, and the two that decide whether the migration works
+// at all — the retraction form and the packet-size hook — are read off a
+// real haplane.Plane built from it.
+func TestThePlaneConfigStatesEveryFieldTheMigrationDependsOn(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{
+		MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect",
+		HASSBaseTopic: "homeassistant", MQTTQoS: 0, MQTTRetain: boolPtr(false),
+	}
+	var asked bool
+	got := haPlaneConfig(cfg, func() (uint32, bool) { asked = true; return 1024, true }, slog.New(slog.DiscardHandler))
+
+	if got.Prefix != cfg.HASSBaseTopic {
+		t.Errorf("Prefix = %q, want %q", got.Prefix, cfg.HASSBaseTopic)
+	}
+	if want := layout.Bridge(cfg.MQTTTopic); got.StatusTopic != want {
+		t.Errorf("StatusTopic = %q, want %q", got.StatusTopic, want)
+	}
+	if got.Layout == nil {
+		t.Error("no Layout stated: publisher.New could not then check StatusTopic against anything")
+	}
+	// MQTT_QOS 0 must reach the plane as the deliberate at-most-once
+	// sentinel, not as the zero value the library reads as "unset" (F9).
+	if got.QoS != haplane.QoS(0) || got.QoS == 0 {
+		t.Errorf("QoS = %v, want the QoS(0) sentinel", got.QoS)
+	}
+	if got.Retain != cfg.RetainEnabled() {
+		t.Errorf("Retain = %v, want %v", got.Retain, cfg.RetainEnabled())
+	}
+	if got.BrokerMaxPacketSize == nil {
+		t.Fatal("no BrokerMaxPacketSize hook: a device document would be published against a " +
+			"limit nobody measured, and the failure lands AFTER the retraction")
+	}
+	if size, known := got.BrokerMaxPacketSize(); !asked || !known || size != 1024 {
+		t.Errorf("the hook was not the one handed in: (%d, %v)", size, known)
+	}
+
+	// The retraction form, read off a real plane rather than off the
+	// absent field. Nil means publisher.LegacyTopicWithNodeID alone, which
+	// is the five-segment form this bridge's fleet is on (687 of 687,
+	// step 4). Naming any form REPLACES the default rather than extending
+	// it, so an addition made in good faith stops retracting the shape
+	// that exists — and the failure looks clean.
+	plane := haplane.New(&haplane.Transport{}, got)
+	if forms := plane.LegacyForms(); len(forms) != 1 ||
+		!strings.Contains(forms[0], "LegacyTopicWithNodeID") {
+		t.Errorf("the plane retracts under %v, want the five-segment node-id form alone", forms)
+	}
+}
+
+// TestBrokerMaximumIsUnknownBeforeTheClientExists. The hook is built before
+// the MQTT client is, because the client's Last Will comes off the plane.
+// Until then — and on an MQTT 3.1.1 link, which carries no property block —
+// the answer is "not known", and haplane publishes on "not known". Reading
+// it as a small limit would refuse the migration outright.
+func TestBrokerMaximumIsUnknownBeforeTheClientExists(t *testing.T) {
+	t.Parallel()
+	if size, known := brokerMaxPacketSize(nil); known || size != 0 {
+		t.Errorf("brokerMaxPacketSize(nil) = (%d, %v), want (0, false)", size, known)
+	}
+	client := mqtt.NewTCPClient(mqtt.TCPConfig{BrokerURL: "tcp://127.0.0.1:1", ClientID: "x"})
+	if size, known := brokerMaxPacketSize(client); known || size != 0 {
+		t.Errorf("an unconnected client answered (%d, %v), want (0, false)", size, known)
+	}
+}
+
+func boolPtr(b bool) *bool { return &b }

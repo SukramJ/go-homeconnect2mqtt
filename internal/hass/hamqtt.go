@@ -19,17 +19,21 @@ import (
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
 
-// This file is ADR 0070 phase 7, step 4: a SECOND rendering path, built on
+// This file was ADR 0070 phase 7, step 4: a SECOND rendering path, built on
 // github.com/SukramJ/go-hamqtt, that produces the same bytes the hand-built
 // map[string]any path in payload.go and discovery.go produces — and
-// publishes none of them.
+// published none of them. At step 6 one of its two entry points became the
+// production one: BundleFor renders the device document this daemon now
+// publishes, and hamqttComponents stays what it always was, the per-entity
+// rendering nothing publishes and everything is compared against.
 //
-// Nothing here is reachable from a production call site. Discovery.mqtt is
-// never touched, the coordinator is unchanged, and the only caller is
-// hamqtt_test.go, which compares the rendered bytes against the pinned
-// goldens in testdata/ and never regenerates them. The experiment is
-// deliberately arranged so that a mismatch is a finding rather than a
-// regenerated file.
+// That division is the point rather than a leftover. The five pinned files
+// in testdata/ record the per-entity form, they are READ and never
+// regenerated — the update flags are not reachable from the tests that use
+// them — and TestTheDocumentsComponentsArePinnedPayloads compares every
+// component of every document against them, under two enumerated
+// differences. So the artefact that ships is proved equal, entity by
+// entity, to bytes written before this library existed.
 //
 // What is being proved, and what is not. The library replaces the
 // RENDERING — turning a description into Home Assistant's JSON keys and
@@ -51,7 +55,7 @@ import (
 // discovery.Validate has the field it requires on a bundle; the per-entity
 // form this bridge publishes today carries no origin block, and
 // RenderComponent only attaches one when the name is non-empty — which is
-// why hamqttComponents passes the zero Origin and only hamqttBundle passes
+// why hamqttComponents passes the zero Origin and only BundleFor passes
 // this.
 const hamqttOriginName = "go-homeconnect2mqtt"
 
@@ -470,7 +474,9 @@ type hamqttRow struct {
 }
 
 // hamqttComponents renders the per-entity form — the form this bridge's
-// installed fleet is on — for every entity of one device.
+// installed fleet WAS on, and which step 6 retracts — for every entity of
+// one device. Nothing publishes it: it exists so the document's components
+// can be compared against the pins entity by entity.
 //
 // The topic is built by publisher.EntityConfigTopic, the library's own
 // renderer for the five-segment form, from the library's own NodeID. That is
@@ -501,11 +507,19 @@ func (d *Discovery) hamqttComponents(device string, info profile.DeviceInfo, ent
 	return rows, nil
 }
 
-// hamqttBundle renders the device-document form step 6 will publish. It is
-// built here only so discovery.Validate has something to check: nothing in
-// this repository publishes a bundle yet, and the superseded-topic
-// retraction that must precede the first one is step 6's work.
-func (d *Discovery) hamqttBundle(device string, info profile.DeviceInfo, entities []*homeconnect.Entity) (*discovery.Bundle, error) {
+// BundleFor renders one appliance's device document: the same entities
+// hamqttComponents renders per-entity, addressed as one retained document
+// at <prefix>/device/<node id>/config instead of 687 topics.
+//
+// It shares hamqttModel with the per-entity path rather than deriving the
+// component set a second time, which is what makes the byte-equality proof
+// of step 4 carry over: the components inside this document are the
+// payloads pinned in testdata/, minus the four keys a document hoists to
+// its own level (`device`, `origin`, `availability`, `availability_mode`)
+// and plus the `platform` the per-entity form carried in its topic.
+// TestTheDocumentsComponentsAreThePinnedPayloads is what asserts that
+// rather than stating it.
+func (d *Discovery) BundleFor(device string, info profile.DeviceInfo, entities []*homeconnect.Entity) (*discovery.Bundle, error) {
 	dev, ents := d.hamqttModel(device, info, entities)
 	b, err := discovery.Render(d.hamqttContext(), dev, ents, discovery.Origin{Name: hamqttOriginName})
 	if err != nil {

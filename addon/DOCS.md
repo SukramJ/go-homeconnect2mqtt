@@ -55,8 +55,38 @@ For a standard Home Assistant install with the Mosquitto broker:
 
 State is published under `<mqtt_topic>/<device>/<Feature/Path>/state`; writable
 features listen on `…/set`; availability/connection are at
-`<mqtt_topic>/<device>/availability` and `…/connection_state`. Home Assistant
-discovery configs are published under `homeassistant/<platform>/<unique_id>/config`.
+`<mqtt_topic>/<device>/availability` and `…/connection_state`.
+
+Home Assistant discovery is one retained **device document** per appliance, at
+`<hass_base_topic>/device/<appliance slug>/config` — for a `devices` entry named
+`Geschirrspüler` that is `homeassistant/device/geschirrspuler/config`. The slug
+is lower case with everything outside `a-z0-9` collapsed to `_` and umlauts
+transliterated; the add-on log prints the exact topic as
+`hass.bundle_published topic=…`.
+
+Earlier versions published one retained config per entity under
+`<hass_base_topic>/<platform>/<appliance slug>/<feature>/config`. They are
+retracted automatically when this version first starts, before the document is
+published, because Home Assistant refuses either form while the other is still
+retained. Nothing is renamed or re-keyed, so entity ids, history, areas,
+dashboard cards and automations are unaffected.
+
+**Downgrading to a version before the device document** needs one manual step
+per appliance, because the retained document would otherwise make the old
+version's configs be refused and you would see no entities. From a terminal
+with `mosquitto-clients` available (the *Mosquitto broker* add-on's own
+username and password are the ones the MQTT service hands this add-on):
+
+```sh
+mosquitto_pub -h core-mosquitto -u <user> -P <password>   -t 'homeassistant/device/geschirrspuler/config' -r -n
+```
+
+**Removing an entity.** A device document does not delete a component by
+leaving it out, so a feature you exclude in `mapping.yaml`, or lose by
+switching `hass_discovery` from `full` to `curated`, keeps its entity in Home
+Assistant, showing its last value. To get rid of it: restart Home Assistant
+(or reload the MQTT integration) first — the delete option only appears once
+the entity is no longer being provided — then delete it from the device page.
 
 ## Notes
 
