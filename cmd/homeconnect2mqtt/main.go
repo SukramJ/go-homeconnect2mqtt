@@ -153,15 +153,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 				slog.String("to", to.String()))
 		},
 	})
-	// Publish through the breaker, subscribe around it: subscriptions are
-	// startup-path calls with their own SUBACK-bounded wait and must not
-	// be rejected during a publish-side broker brownout.
-	//
-	// The two availability markers on the status topic bypass the breaker
-	// as they always have — see haplane.BypassFor for why that asymmetry
-	// is load-bearing rather than an oversight.
-	haLink.Wire(haplane.BypassFor(layout.Bridge(cfg.MQTTTopic),
-		hagomqtt.Split(breaker, client), hagomqtt.Transport(client)))
+	haLink.Wire(haTransport(layout.Bridge(cfg.MQTTTopic), breaker, client))
 
 	// The MQTT surface handed to the bridge, same split.
 	session := mqtt.SplitClient(breaker, client)
@@ -227,6 +219,26 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	g.Go(func() error { return br.Run(gctx) })
 	g.Go(func() error { return webSrv.Run(gctx) })
 	return g.Wait()
+}
+
+// haTransport is the transport the Home Assistant plane publishes and
+// subscribes through.
+//
+// A function rather than a literal inside serve() for the same reason
+// mqttClientConfig is one: serve needs a broker and cannot be driven by a
+// test, so a policy spelled inline there is a policy nothing checks. This
+// one carries two, and both are deliberate:
+//
+//   - Publish through the breaker, subscribe around it. Subscriptions are
+//     startup-path calls with their own SUBACK-bounded wait and must not
+//     be rejected during a publish-side broker brownout.
+//   - The two availability markers on statusTopic bypass the breaker, as
+//     they always have. See haplane.BypassFor for why that asymmetry is
+//     load-bearing rather than an oversight.
+func haTransport(statusTopic string, breaker mqtt.Publisher, client mqtt.Client) publisher.Transport {
+	return haplane.BypassFor(statusTopic,
+		hagomqtt.Split(breaker, client),
+		hagomqtt.Transport(client))
 }
 
 // shutdownTimeout bounds the final offline marker and the DISCONNECT.

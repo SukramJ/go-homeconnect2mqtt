@@ -15,7 +15,6 @@ import (
 
 	"github.com/SukramJ/go-mqtt"
 
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 )
 
@@ -400,13 +399,12 @@ func TestPublishOnlineRebuildsThePlaneAndAnnounces(t *testing.T) {
 // outcome. This watches the router alone, with no shouldDispatch in the
 // path at all.
 func TestTheRouterItselfDropsARetainedDelivery(t *testing.T) {
-	t.Parallel()
+	b, _, _, _ := pinBridge(t)
 	rec := &subRecorder{}
-	router := publisher.NewCommandRouter(hagomqtt.Transport(rec), publisher.CommandConfig{
-		QoS:             haplane.QoS(1),
-		DeliverRetained: false,
-		Logger:          slog.New(slog.DiscardHandler),
-	})
+	// The PRODUCTION policy, read off the function the daemon wires the
+	// router from — not a literal repeated here, which would pass whatever
+	// the daemon actually does.
+	router := publisher.NewCommandRouter(hagomqtt.Transport(rec), b.commandConfig(t.Context()))
 	var (
 		mu        sync.Mutex
 		delivered []string

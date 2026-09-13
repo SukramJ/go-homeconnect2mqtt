@@ -72,20 +72,7 @@ const commandDrainTimeout = 5 * time.Second
 // prefix), and the birth subscription is under the discovery prefix too,
 // so neither can multiply a command.
 func (b *Bridge) subscribeCommands(ctx context.Context) error {
-	router := publisher.NewCommandRouter(gomqtt.Transport(b.mqtt), publisher.CommandConfig{
-		// Stated, never defaulted: publisher.QoS's zero value is
-		// QoSUnset, which resolves to QoS 1, so an operator's MQTT_QOS: 0
-		// would be silently upgraded here (F9).
-		QoS: haplane.QoS(b.cfg.MQTTQoS),
-		// A retained command is somebody's `mosquitto_pub -r` left behind,
-		// and the broker replays it on every (re)subscribe.
-		DeliverRetained: false,
-		// The handler context derives from this, not from Start's: a
-		// handler whose write was cancelled because the call that started
-		// the router returned is a defect with nothing in the log.
-		Lifecycle: ctx,
-		Logger:    b.logger,
-	})
+	router := publisher.NewCommandRouter(gomqtt.Transport(b.mqtt), b.commandConfig(ctx))
 	for _, d := range b.devices {
 		dev := d
 		filter := dev.topics.CommandFilter()
@@ -103,6 +90,34 @@ func (b *Bridge) subscribeCommands(ctx context.Context) error {
 	}
 	b.commands = router
 	return b.subscribeBirth(ctx)
+}
+
+// commandConfig is the router's policy, in one function rather than a
+// literal inside subscribeCommands.
+//
+// It is a function for the same reason mqttClientConfig is one: two of
+// these fields are policy an assertion has to be able to reach.
+// DeliverRetained in particular is masked downstream by shouldDispatch's
+// own retained check — both are wanted, a retained command re-fires a
+// stale write on every (re)subscribe — so a test that only watched the
+// outcome would pass with either of them gone.
+// TestTheRouterItselfDropsARetainedDelivery builds a router from THIS
+// value, which is what makes the policy observable on its own.
+func (b *Bridge) commandConfig(ctx context.Context) publisher.CommandConfig {
+	return publisher.CommandConfig{
+		// Stated, never defaulted: publisher.QoS's zero value is
+		// QoSUnset, which resolves to QoS 1, so an operator's MQTT_QOS: 0
+		// would be silently upgraded here (F9).
+		QoS: haplane.QoS(b.cfg.MQTTQoS),
+		// A retained command is somebody's `mosquitto_pub -r` left behind,
+		// and the broker replays it on every (re)subscribe.
+		DeliverRetained: false,
+		// The handler context derives from this, not from Start's: a
+		// handler whose write was cancelled because the call that started
+		// the router returned is a defect with nothing in the log.
+		Lifecycle: ctx,
+		Logger:    b.logger,
+	}
 }
 
 // onCommand is the routed-command handler. It runs on a router worker,

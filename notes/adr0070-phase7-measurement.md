@@ -1956,14 +1956,107 @@ deliberately — it is not a guard to delete on sight.
 
 ### Mutation proof
 
-Forty mutations, applied one at a time to a filesystem COPY of the
+Forty-three mutations, applied one at a time to a filesystem COPY of the
 committed tree (never `git checkout --`; an agent in this family lost
 uncommitted work to a revert in its own harness), each run against the
-whole suite and reverted. **Thirty-nine caught.** The one survivor is
-equivalent over every call path this daemon has, and is asserted
-explicitly rather than left as coverage nobody checked.
+whole suite and reverted.
 
-MUTATION_TABLE_PLACEHOLDER
+**Thirty-nine caught. Four survivors, and all four are equivalent** —
+none is coverage nobody checked. The first pass left six survivors; two
+of them were NOT equivalent and were closed rather than explained away,
+which is the standard #43 set:
+
+- **M30** (the router delivers retained messages) survived because
+  `shouldDispatch`'s own retained check masks the router's policy, and
+  because the test that watched the router built its own
+  `CommandConfig` rather than the daemon's. The policy moved into
+  `Bridge.commandConfig`, and
+  `TestTheRouterItselfDropsARetainedDelivery` now builds a router from
+  that value.
+- **M41** (the availability markers go through the circuit breaker)
+  survived because the wiring lived inline in `serve()`, which needs a
+  broker and cannot be driven. It moved into `haTransport`, and
+  `TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker` drives it
+  against a deliberately tripped breaker — which is the state a
+  reconnect actually finds.
+
+| # | Mutation | Caught by |
+| --- | --- | --- |
+| M1 | QoS(0) returns the zero value (the F9 defect itself) | TestEveryPublishCarriesTheStatedQoS, TestMQTTQoSZeroStaysQoSZero, TestQoSTranslatesZeroToTheDeliberateSentinel (+3) |
+| M2 | QoS(1) returns at-most-once | TestEveryPublishCarriesTheStatedQoS, TestMQTTQoSZeroStaysQoSZero, TestPublishOnlineRebuildsThePlaneAndAnnounces (+3) |
+| M3 | QoS coerces an out-of-range level instead of panicking | TestQoSRefusesAValueNobodyChose |
+| M4 | StateConfig.QoS left at the zero value | TestEveryPublishCarriesTheStatedQoS, TestQoSZeroReachesTheTransportAsQoSZero, TestStatePublishesCarryMQTTQoSAndMQTTRetain |
+| M5 | StateConfig.PulseQoS left at the zero value | TestEveryPublishCarriesTheStatedQoS, TestStatePublishesCarryMQTTQoSAndMQTTRetain |
+| M6 | publisher.Config.QoS left at the zero value | TestEveryPublishCarriesTheStatedQoS, TestMQTTQoSZeroStaysQoSZero, TestQoSZeroReachesTheTransportAsQoSZero (+1) |
+| M7 | PublishState ignores MQTT_RETAIN and always retains | TestNonRetainedStateIsNeverDeduplicated, TestPublishStateHonoursMQTTRetain, TestStatePublishesCarryMQTTQoSAndMQTTRetain |
+| M8 | PublishState never retains | TestPublishStateDeduplicatesARetainedRepeat, TestPublishStateHonoursMQTTRetain, TestStatePublishesCarryMQTTQoSAndMQTTRetain |
+| M9 | an empty state payload goes to Publish instead of Evict | TestPublishStateHonoursMQTTRetain |
+| M10 | Reconnect keeps the discovery runtime | TestPublishOnlineRebuildsThePlaneAndAnnounces, TestReconnectOpensTheDedupGateAndRebuildsTheDiscoveryRuntime |
+| M11 | Reconnect does not open the dedup gate | TestReconnectOpensTheDedupGateAndRebuildsTheDiscoveryRuntime |
+| M12 | Encoding left at the library default (envelope) | **equivalent — see below** |
+| M13 | the deferred transport silently succeeds before it is wired | TestTransportRefusesUseBeforeItIsWired |
+| M14 | the will is spelled again at the composition root | TestWillIsCopiedFromTheRuntimeNotSpelledAgain |
+| M15 | the will loses its retain flag | TestWillIsTheAvailabilitySourceEveryEntityReads |
+| M16 | the sweep retracts on the topic namespace alone (ReportOnly off) | TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished, TestReportOnlySweepOverTheRealFleet, TestSweepRetractsOurOwnOrphan (+1) |
+| M17 | Inspect drops the payload ownership check (F8's protection) | TestAStaggeredUpgradeDoesNotDeleteTheSiblingsFleet, TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished, TestReportOnlySweepOverTheRealFleet (+1) |
+| M18 | the per-device reconcile judges the whole fleet | TestSweepDoesNotRetractASecondAppliancesConfigs |
+| M19 | orphanTopics forgets what this batch minted | TestSweepSparesAConfigWhoseOwnPublishFailed |
+| M20 | orphanTopics forgets what this process declared | TestSweepSparesADeclaredConfigOutsideThisBatch |
+| M21 | the refresh is device-scoped instead of fleet-wide | TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished |
+| M22 | the retraction becomes a no-op publish | TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished, TestSweepRetractsOurOwnOrphan |
+| M23 | Owns accepts a platform this daemon never emits | TestOwnsConfigTopic, TestReportOnlySweepOverTheRealFleet |
+| M24 | Owns accepts any node id | TestOwnsConfigTopic, TestReportOnlySweepOverTheRealFleet, TestSweepDoesNotRetractASecondAppliancesConfigs |
+| M25 | Owns accepts the device-document form | **equivalent — see below** |
+| M26 | Owns accepts a node-id-less (four-segment) config | **equivalent — see below** |
+| M27 | ConfigTopicFor drops the platform segment | TestConfigTopicForRebuildsTheTopicItParsed, TestReportOnlySweepOverTheRealFleet |
+| M28 | the command route loses MQTT 5.0 No Local | TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree, TestTopicGolden |
+| M29 | the router subscribes at the library default instead of MQTT_QOS | TestQoSZeroReachesTheTransportAsQoSZero |
+| M30 | the router delivers retained messages | TestTheRouterItselfDropsARetainedDelivery (added to kill it) |
+| M31 | shouldDispatch stops dropping a retained replay | TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree |
+| M32 | shouldDispatch stops checking that the topic is a command topic | TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree, TestCommandRouterRoutesEveryAdvertisedCommandTopic |
+| M33 | the routes are registered but never started | TestARoutedCommandReachesTheHandlerOffTheReadLoop, TestTheDaemonsOwnStateEchoIsNotDispatched |
+| M34 | PublishOnline does not rebuild the plane | TestPublishOnlineRebuildsThePlaneAndAnnounces |
+| M35 | PublishOnline does not announce | TestPublishOnlineRebuildsThePlaneAndAnnounces |
+| M36 | the state publish bypasses the plane's retain policy | TestStatePublishesCarryMQTTQoSAndMQTTRetain |
+| M37 | the birth topic is composed locally instead of by the library | **equivalent — see below** |
+| M38 | a nil plane is accepted at construction | TestNewValidations |
+| M39 | the topics golden digest is reverted to origin/main's | TestTopicsGoldenMatchesItsPinnedDigest |
+| M40 | a discovery golden digest is changed | TestGoldenFilesMatchTheirPinnedDigests |
+| M41 | the availability markers go through the circuit breaker | TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker (added to kill it) |
+| M42 | BypassFor routes everything around the breaker | TestBypassForKeepsTheAvailabilityMarkersOffTheBreaker |
+| M43 | BypassFor routes nothing around the breaker | TestBypassForKeepsTheAvailabilityMarkersOffTheBreaker |
+
+The four that remain are equivalent, and each has an assertion of its
+own so a later reader can tell "deliberately stated" from "silently
+ignored":
+
+- **M12 — `StateConfig.Encoding`.** Inert over every call path this
+  daemon has: it renders its own state payload and hands the BYTES to
+  `Publish`, which never consults the encoding. It is stated anyway
+  because the zero value is `EnvelopeEncoding`, and the day a call site
+  reaches for `PublishValue` that would wrap every payload in JSON the
+  667 configs on the broker have no `value_template` to read.
+  `TestStateEncodingIsInertAndStatedAnyway` asserts the inertness in
+  both directions — `Publish` ignores the encoding, and the two
+  encodings genuinely differ through the renderer.
+- **M25 and M26 — two guards in `OwnsConfigTopic`.** `t.Bundle` is
+  subsumed by `t.Platform == ""` (a device document's topic carries no
+  platform segment), and `t.NodeID == ""` is subsumed by the node scope
+  (the node-id-less forms parse with an empty node id, and
+  `validateDeviceName` refuses a name that slugifies to empty, so
+  `nodes[""]` can never be true). Both are kept because each states an
+  intent the next does not, and because **`t.Bundle` stops being
+  redundant the day this daemon publishes a device document** — step 6
+  does exactly that. `TestOwnsGuardsAreSubsumedByTheNodeScope` asserts
+  the subsumption and turns red the day either stops holding.
+- **M37 — `Discovery.BirthTopic` calling `publisher.BirthTopic`.** It
+  renders the same string as a local concatenation because `New`
+  already trims the prefix, so this is a second lock rather than a fix.
+  The defect it locks is real and was shipped by a sibling: against an
+  operator prefix of `"homeassistant/"`, `prefix + "/status"`
+  subscribes `homeassistant//status`, a legal and DIFFERENT topic.
+  `TestBirthTopicSurvivesATrailingSlashPrefix` asserts the property
+  through the raw operator value, so removing BOTH locks turns it red.
 
 ### Findings
 

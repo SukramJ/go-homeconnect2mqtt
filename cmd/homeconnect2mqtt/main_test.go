@@ -236,3 +236,55 @@ func TestMQTTQoSZeroStaysQoSZero(t *testing.T) {
 		}
 	}
 }
+
+// recordingClient is an mqtt.Client that records what reached it.
+type recordingClient struct {
+	recordingSubscriber
+	topics []string
+}
+
+func (c *recordingClient) Publish(_ context.Context, topic string, _ []byte, _ mqtt.QoS, _ bool, _ ...mqtt.PublishOption) error {
+	c.topics = append(c.topics, topic)
+	return nil
+}
+
+// TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker pins the two
+// policies of the transport the Home Assistant plane runs on, which serve()
+// cannot be driven to demonstrate.
+//
+// The asymmetry is the point and it is easy to lose: publisher.Runtime has
+// ONE transport, so wiring it straight through the breaker would put the
+// birth and death markers behind the same circuit as the 687 discovery
+// configs. mqtt.Breaker counts ErrNotConnected and ErrConnectionLost as
+// failures, so a connection drop is exactly what opens it — and the first
+// thing a reconnected daemon does is announce itself online.
+func TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker(t *testing.T) {
+	t.Parallel()
+	const status = "homeconnect/status"
+	client := &recordingClient{}
+	failing := &failingPublisher{}
+	// A breaker whose underlying publisher always fails, tripped open, so
+	// a publish that goes THROUGH it is refused and one that bypasses it
+	// reaches the client. That is the state a reconnect actually finds.
+	breaker := mqtt.NewBreaker(failing, mqtt.BreakerConfig{FailureThreshold: 1})
+	tr := haTransport(status, breaker, client)
+	_ = tr.Publish(t.Context(), "homeassistant/sensor/x/y/config", []byte("{}"), 1, true)
+
+	if err := tr.Publish(t.Context(), "homeassistant/sensor/x/y/config", []byte("{}"), 1, true); !errors.Is(err, mqtt.ErrCircuitOpen) {
+		t.Fatalf("a discovery config did not go through the breaker: %v", err)
+	}
+	if err := tr.Publish(t.Context(), status, []byte("online"), 1, true); err != nil {
+		t.Errorf("the birth marker was refused by the open breaker (%v) — every entity would "+
+			"sit unavailable until a recovery probe happened to succeed", err)
+	}
+	if len(client.topics) != 1 || client.topics[0] != status {
+		t.Errorf("the client saw %v, want only %q", client.topics, status)
+	}
+	if err := tr.Subscribe(t.Context(), "homeassistant/#", 1, nil); err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	if len(client.subscribed) != 1 {
+		t.Errorf("subscriptions did not reach the client: %v — they must bypass the publish-side "+
+			"breaker, or a brownout would stop the daemon resubscribing", client.subscribed)
+	}
+}
