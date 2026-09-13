@@ -156,7 +156,12 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	// Publish through the breaker, subscribe around it: subscriptions are
 	// startup-path calls with their own SUBACK-bounded wait and must not
 	// be rejected during a publish-side broker brownout.
-	haLink.Wire(hagomqtt.Split(breaker, client))
+	//
+	// The two availability markers on the status topic bypass the breaker
+	// as they always have — see haplane.BypassFor for why that asymmetry
+	// is load-bearing rather than an oversight.
+	haLink.Wire(haplane.BypassFor(layout.Bridge(cfg.MQTTTopic),
+		hagomqtt.Split(breaker, client), hagomqtt.Transport(client)))
 
 	// The MQTT surface handed to the bridge, same split.
 	session := mqtt.SplitClient(breaker, client)

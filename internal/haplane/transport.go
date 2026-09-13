@@ -108,3 +108,57 @@ func (d *Transport) Unsubscribe(ctx context.Context, filter string) error {
 	}
 	return tr.Unsubscribe(ctx, filter)
 }
+
+// BypassFor routes publishes for one topic around gated and sends
+// everything else through it. Subscriptions always go through gated,
+// which is the subscribe half of the same client either way.
+//
+// It exists to keep a property this daemon had before its planes moved
+// onto go-hamqtt, and which is easy to lose because it is invisible in
+// the composition: the two availability markers on <MQTT_TOPIC>/status
+// deliberately bypass the circuit breaker, while the discovery configs
+// and the state plane deliberately do not.
+//
+// The asymmetry is the point. The breaker exists for volume — 687
+// retained configs and a state topic per feature, each of which would
+// otherwise stall for the full AckTimeout during a degraded-broker phase.
+// The birth and death markers are one publish each, and they are the
+// publishes an operator cannot afford to lose:
+//
+//   - mqtt.Breaker counts ErrNotConnected and ErrConnectionLost as
+//     failures, so a connection drop is exactly what opens it. Without
+//     this bypass the FIRST thing a reconnected daemon does — announce
+//     itself online — would fail fast with ErrCircuitOpen until a
+//     recovery probe 30 seconds later happened to succeed, and every
+//     entity in Home Assistant would sit unavailable in the meantime
+//     under `availability_mode: all`. A daemon that is demonstrably
+//     connected and reporting nothing is the worst of the two states.
+//   - At shutdown the offline marker is the only one that goes out at
+//     all: a graceful DISCONNECT suppresses the Last Will, so a marker
+//     the breaker refused leaves a retained "online" standing forever.
+func BypassFor(topic string, gated, direct publisher.Transport) publisher.Transport {
+	return &bypass{topic: topic, gated: gated, direct: direct}
+}
+
+type bypass struct {
+	topic  string
+	gated  publisher.Transport
+	direct publisher.Transport
+}
+
+var _ publisher.Transport = (*bypass)(nil)
+
+func (b *bypass) Publish(ctx context.Context, topic string, payload []byte, qos byte, retain bool) error {
+	if topic == b.topic {
+		return b.direct.Publish(ctx, topic, payload, qos, retain)
+	}
+	return b.gated.Publish(ctx, topic, payload, qos, retain)
+}
+
+func (b *bypass) Subscribe(ctx context.Context, filter string, qos byte, handler publisher.Handler) error {
+	return b.gated.Subscribe(ctx, filter, qos, handler)
+}
+
+func (b *bypass) Unsubscribe(ctx context.Context, filter string) error {
+	return b.gated.Unsubscribe(ctx, filter)
+}

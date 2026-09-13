@@ -485,3 +485,68 @@ func TestStateBytesReachTheWireUnwrapped(t *testing.T) {
 		t.Fatal("the two encodings are the same value, so the Encoding field proves nothing")
 	}
 }
+
+// TestBypassForKeepsTheAvailabilityMarkersOffTheBreaker pins the
+// asymmetry that is invisible in the composition root: the volume
+// publishes go through the circuit breaker and the two availability
+// markers do not.
+//
+// It matters most at the moment a breaker is open, which is exactly the
+// moment a reconnect announces online: mqtt.Breaker counts
+// ErrNotConnected and ErrConnectionLost as failures, so a connection drop
+// is what opens it, and a birth marker refused there leaves every entity
+// unavailable under `availability_mode: all` until a recovery probe
+// happens to succeed.
+func TestBypassForKeepsTheAvailabilityMarkersOffTheBreaker(t *testing.T) {
+	t.Parallel()
+	const status = "homeconnect/status"
+	gated, direct := &capture{}, &capture{}
+	p := New(BypassFor(status, gated, direct), Config{
+		Prefix:      "homeassistant",
+		StatusTopic: status,
+		Layout:      testLayout{},
+		QoS:         QoS(1),
+		Retain:      true,
+		Logger:      slog.New(slog.DiscardHandler),
+	})
+	ctx := t.Context()
+	if err := p.AnnounceOnline(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.AnnounceOffline(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Publish(ctx, "homeassistant/sensor/dev/x/config", []byte(`{"a":1}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.PublishState(ctx, "homeconnect/dev/x/state", []byte("42")); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(direct.records()); n != 2 {
+		t.Errorf("%d publishes bypassed the breaker, want the 2 availability markers: %v",
+			n, direct.records())
+	}
+	for _, r := range direct.records() {
+		if r.topic != status {
+			t.Errorf("%s bypassed the breaker; only the status topic may", r.topic)
+		}
+	}
+	if n := len(gated.records()); n != 2 {
+		t.Errorf("%d publishes went through the breaker, want the config and the state: %v",
+			n, gated.records())
+	}
+	for _, r := range gated.records() {
+		if r.topic == status {
+			t.Errorf("an availability marker went through the breaker — a reconnect after a " +
+				"drop would find it open and leave the whole fleet unavailable")
+		}
+	}
+	// Subscriptions always take the gated half, which is the same client's
+	// subscribe side either way.
+	if err := BypassFor(status, gated, direct).Subscribe(ctx, "homeassistant/#", 1, nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(gated.subs) != 1 || len(direct.subs) != 0 {
+		t.Errorf("subscriptions split %d/%d, want all on the gated half", len(gated.subs), len(direct.subs))
+	}
+}

@@ -1781,6 +1781,32 @@ from the one Home Assistant announces on, so after every Home Assistant
 restart the entities were gone until the daemon restarted, silent in both
 logs.
 
+### One asymmetry that had to be rebuilt, not inherited
+
+The composition root's old comment recorded that "the status-topic
+publishes intentionally bypass the breaker", and moving the availability
+markers onto `publisher.Runtime` would have quietly lost it: the runtime
+has ONE transport, and wiring it through `hagomqtt.Split(breaker,
+client)` puts the birth and death markers behind the same circuit as the
+687 discovery configs.
+
+That is not cosmetic. `mqtt.Breaker` counts `ErrNotConnected` and
+`ErrConnectionLost` as failures, so **a connection drop is exactly what
+opens it** — and the first thing a reconnected daemon does is announce
+itself online. A birth marker refused there leaves every entity
+unavailable under `availability_mode: all` until a recovery probe 30
+seconds later happens to succeed, and a daemon that is demonstrably
+connected and reporting nothing is the worse of the two states. At
+shutdown it is worse still: a graceful DISCONNECT suppresses the Last
+Will, so the offline marker is the only one that goes out at all, and a
+breaker that refused it leaves a retained `online` standing forever.
+
+`haplane.BypassFor` routes the status topic around the breaker and
+everything else through it, and
+`TestBypassForKeepsTheAvailabilityMarkersOffTheBreaker` pins the split in
+both directions. The asymmetry is right for the same reason it was right
+before: the breaker exists for volume, and these are one publish each.
+
 ### Rebuild-on-(re)connect — the mistake step 6 must not have available
 
 This PR publishes no bundle. It nevertheless builds the plumbing that
