@@ -207,11 +207,6 @@ func (p *Plane) PublishState(ctx context.Context, topic string, payload []byte) 
 	return err
 }
 
-// StateLatency summarises how long the broker has been taking to
-// acknowledge state publishes. Blind on a QoS 0 deployment, by
-// construction: an unacknowledged publish cannot be timed.
-func (p *Plane) StateLatency() publisher.StateLatency { return p.state.Latency() }
-
 // Close drains the discovery runtime's birth-replay worker. Call it
 // before the final offline marker, so a replay cannot write an
 // "online"-era config after it.
