@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/base64"
 	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -238,8 +239,13 @@ func TestNewValidations(t *testing.T) {
 	// publish: since ADR 0070 phase 7 step 5 the state plane is the only
 	// way a device worker reaches the broker, and a daemon that built
 	// without one would run silently and mirror nothing.
-	if _, err := New(Deps{Config: testCfg(), MQTT: stub}); err == nil {
-		t.Error("expected error for nil plane")
+	// The REASON is asserted, not merely that something failed: this call
+	// is also missing its devices, so a New that stopped checking the
+	// plane would still error and still pass a bare err != nil test. The
+	// daemon would then build without a state plane and mirror nothing.
+	if _, err := New(Deps{Config: testCfg(), MQTT: stub}); err == nil ||
+		!strings.Contains(err.Error(), "plane") {
+		t.Errorf("New without a plane = %v, want an error naming the plane", err)
 	}
 	if _, err := New(Deps{Config: testCfg(), MQTT: stub, Plane: testPlane(stub)}); err == nil {
 		t.Error("expected error for no devices")

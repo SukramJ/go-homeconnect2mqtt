@@ -278,6 +278,35 @@ func TestEnrichmentOverrideIsRefusedWhenThePlatformDoesNotDeclareIt(t *testing.T
 	}
 }
 
+// TestBirthTopicSurvivesATrailingSlashPrefix names the second of the two
+// locks on the birth topic, because only the first one is load-bearing
+// today and a mutation therefore cannot tell them apart.
+//
+// [Discovery.BirthTopic] calls publisher.BirthTopic rather than
+// concatenating, and New already trims a trailing slash off the prefix —
+// so replacing the library call with `d.baseTopic + "/status"` changes no
+// byte and fails no test. It is an EQUIVALENT mutation, not an untested
+// one, and the defect it guards against is real and was shipped by a
+// sibling bridge: `prefix + "/status"` against an operator prefix of
+// "homeassistant/" subscribes "homeassistant//status", which is a legal
+// and DIFFERENT topic from the one Home Assistant announces on. After
+// every Home Assistant restart the entities were gone until the daemon
+// restarted, silent in both logs.
+//
+// This asserts the property through the raw operator value, so removing
+// EITHER lock while adding the other keeps it green and removing both
+// turns it red.
+func TestBirthTopicSurvivesATrailingSlashPrefix(t *testing.T) {
+	t.Parallel()
+	for _, prefix := range []string{"homeassistant", "homeassistant/", "homeassistant//"} {
+		d := New(newStubPub(), prefix, "homeconnect", "en", false, nil)
+		if got := d.BirthTopic(); got != "homeassistant/status" {
+			t.Errorf("HASS_BASE_TOPIC %q -> BirthTopic %q, want homeassistant/status — "+
+				"an empty MQTT level is legal and is a different topic", prefix, got)
+		}
+	}
+}
+
 func TestBirthTopic(t *testing.T) {
 	d := New(newStubPub(), "homeassistant", "homeconnect", "en", false, nil)
 	if d.BirthTopic() != "homeassistant/status" {

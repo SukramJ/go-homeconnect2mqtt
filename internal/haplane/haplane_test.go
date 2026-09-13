@@ -403,6 +403,58 @@ func TestStatusTopicDisagreementIsRefused(t *testing.T) {
 	})
 }
 
+// TestStateEncodingIsInertAndStatedAnyway names a field that cannot
+// change a byte, which is a blind spot a pin can never see: a mutation to
+// an inert field fails nothing, so nothing distinguishes "deliberately
+// stated" from "silently ignored".
+//
+// StateConfig.Encoding selects what publisher renders in PublishValue and
+// PublishComponentValue. This daemon renders its own state payload
+// (bridge.payloadFor: a localized enum label, a bare number, a JSON
+// object) and hands the BYTES to Publish, which never consults the
+// encoding — deliberately, because publisher's own renderer writes a Go
+// bool as "true"/"false" and a float with its own formatting, and those
+// are not this daemon's bytes.
+//
+// So the field is stated for the day a call site reaches for the
+// convenience: the zero Encoding is EnvelopeEncoding, which would wrap
+// every payload in JSON that the 667 configs already on the broker have no
+// value_template to read. This asserts the inertness in both directions —
+// perturbing the encoding changes nothing through Publish, and the two
+// encodings genuinely differ through the renderer — so a later reader can
+// tell which of the two it is looking at.
+func TestStateEncodingIsInertAndStatedAnyway(t *testing.T) {
+	t.Parallel()
+	const topic = "homeconnect/dev/x/state"
+	rendered := map[discovery.Encoding]string{}
+	for _, enc := range []discovery.Encoding{discovery.RawEncoding, discovery.EnvelopeEncoding} {
+		c := &capture{}
+		sp := publisher.NewStatePublisher(c, publisher.StateConfig{
+			QoS:      publisher.QoSAtLeastOnce,
+			PulseQoS: publisher.QoSAtLeastOnce,
+			Encoding: enc,
+			Logger:   slog.New(slog.DiscardHandler),
+		})
+		if _, err := sp.Publish(t.Context(), topic, []byte("Run")); err != nil {
+			t.Fatal(err)
+		}
+		if got := string(c.records()[0].payload); got != "Run" {
+			t.Errorf("encoding %v: Publish wrote %q, want the caller's own bytes", enc, got)
+		}
+		if _, err := sp.PublishValue(t.Context(), topic+"/v", "Run", true); err != nil {
+			t.Fatal(err)
+		}
+		rendered[enc] = string(c.records()[1].payload)
+	}
+	if rendered[discovery.RawEncoding] == rendered[discovery.EnvelopeEncoding] {
+		t.Fatalf("the two encodings render identically (%q), so stating one proves nothing",
+			rendered[discovery.RawEncoding])
+	}
+	if rendered[discovery.RawEncoding] != "Run" {
+		t.Errorf("RawEncoding rendered %q, want the bare value", rendered[discovery.RawEncoding])
+	}
+}
+
 // TestStateBytesReachTheWireUnwrapped is StateConfig.Encoding's only
 // observable consequence here, and the test exists because the field is
 // otherwise INERT — an inert field is a blind spot a pin can never see.

@@ -15,6 +15,7 @@ import (
 
 	"github.com/SukramJ/go-mqtt"
 
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 )
 
@@ -386,5 +387,57 @@ func TestPublishOnlineRebuildsThePlaneAndAnnounces(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("no retained online marker on %s at MQTT_QOS: %v", layout.Bridge(pinRoot), pubs)
+	}
+}
+
+// TestTheRouterItselfDropsARetainedDelivery isolates the router's own
+// policy from [shouldDispatch]'s check, which would otherwise mask it.
+//
+// Both exist and both are wanted — a retained command is somebody's
+// `mosquitto_pub -r` left behind and the broker replays it on every
+// (re)subscribe, re-firing a stale write each time — but two statements
+// of one rule mean neither is tested by a test that only watches the
+// outcome. This watches the router alone, with no shouldDispatch in the
+// path at all.
+func TestTheRouterItselfDropsARetainedDelivery(t *testing.T) {
+	t.Parallel()
+	rec := &subRecorder{}
+	router := publisher.NewCommandRouter(hagomqtt.Transport(rec), publisher.CommandConfig{
+		QoS:             haplane.QoS(1),
+		DeliverRetained: false,
+		Logger:          slog.New(slog.DiscardHandler),
+	})
+	var (
+		mu        sync.Mutex
+		delivered []string
+	)
+	const filter = "root/dev/#"
+	if err := router.Handle(filter, func(_ context.Context, cmd publisher.Command) {
+		mu.Lock()
+		delivered = append(delivered, cmd.Topic)
+		mu.Unlock()
+	}); err != nil {
+		t.Fatalf("route: %v", err)
+	}
+	if err := router.Start(t.Context()); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	t.Cleanup(func() { _ = router.Stop(context.Background()) })
+
+	rec.mu.Lock()
+	h := rec.handlers[filter]
+	rec.mu.Unlock()
+	if h == nil {
+		t.Fatal("no handler registered")
+	}
+	h(&mqtt.Message{Topic: "root/dev/a/set", Payload: []byte("1"), Retain: true})
+	h(&mqtt.Message{Topic: "root/dev/b/set", Payload: []byte("1")})
+	router.WaitIdle()
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(delivered) != 1 || delivered[0] != "root/dev/b/set" {
+		t.Errorf("delivered %v, want only the live message — a retained command is replayed "+
+			"on every (re)subscribe and would re-fire its write each time", delivered)
 	}
 }

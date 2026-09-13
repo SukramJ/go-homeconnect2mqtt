@@ -98,3 +98,51 @@ func TestPublishDeviceReturnsTopics(t *testing.T) {
 		t.Errorf("published set missing OperationState (%d topics)", len(published))
 	}
 }
+
+// TestOwnsGuardsAreSubsumedByTheNodeScope names two guards in
+// [Discovery.OwnsConfigTopic] that cannot change a verdict today, because
+// an inert guard is a blind spot a mutation pass reports as a survivor
+// and a reader then deletes.
+//
+// Both are redundant by construction rather than by accident:
+//
+//   - `t.Bundle` is subsumed by `t.Platform == ""`. A device document's
+//     topic carries no platform segment — its components' platforms live
+//     inside the payload — so publisher.ParseConfigTopic always reports
+//     the two together.
+//   - `t.NodeID == ""` and `t.ObjectID == ""` are subsumed by the node
+//     scope. The node-id-less forms parse with an empty NodeID, and the
+//     scope is a set of slugified device names, which profile's
+//     validateDeviceName (since F2) refuses to let be empty — so
+//     nodes[""] can never be true.
+//
+// They are kept because each states an intent the next one does not, and
+// because `t.Bundle` stops being redundant the day this daemon publishes
+// a device document: step 6 does exactly that, and the line has to be
+// revisited deliberately rather than found by a failing test.
+func TestOwnsGuardsAreSubsumedByTheNodeScope(t *testing.T) {
+	t.Parallel()
+	bundle, ok := publisher.ParseConfigTopic("homeassistant", "homeassistant/device/geschirrspuler/config")
+	if !ok || !bundle.Bundle {
+		t.Fatalf("the device-document topic no longer parses as a bundle: %+v", bundle)
+	}
+	if bundle.Platform != "" {
+		t.Errorf("a device document now carries platform %q — `t.Bundle` has become "+
+			"load-bearing and this equivalence no longer holds", bundle.Platform)
+	}
+	short, ok := publisher.ParseConfigTopic("homeassistant", "homeassistant/sensor/homeconnect_geschirrspuler_x/config")
+	if !ok {
+		t.Fatal("the four-segment per-entity form no longer parses")
+	}
+	if short.NodeID != "" {
+		t.Errorf("the node-id-less form now parses with node id %q — `t.NodeID == \"\"` has "+
+			"become load-bearing", short.NodeID)
+	}
+	// The node scope can never hold the empty string, which is what makes
+	// the two guards above unreachable.
+	d := newDisc()
+	if d.OwnsConfigTopic("")(publisher.ConfigTopic{Platform: "sensor", ObjectID: "x"}) {
+		t.Error("a device name that slugifies to empty entered the node scope; " +
+			"profile.validateDeviceName is supposed to make that unreachable (F2)")
+	}
+}
