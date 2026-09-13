@@ -1941,23 +1941,6 @@ MUTATION_TABLE_PLACEHOLDER
 
 ### Findings
 
-<a name="f14"></a>
-#### F14 — a pinned row of `topics.json` was prose nothing measured · **low**
-
-`publish_qos_retain.bridge_will` said `qos=0 retain=true` from #40 until
-this step. #41's F1 fix changed the will to go out at `MQTT_QOS` in the
-same commit that made every entity read the topic, and the row did not
-move with it, because the whole `publish_qos_retain` map is descriptive
-strings compared against a copy of themselves. A pin that nothing
-measures is a pin that documents whatever was true when it was typed.
-
-Corrected here, and `TestWillRowMatchesTheWillTheRuntimeStates` now reads
-the value off `publisher.Will` at both `MQTT_QOS` levels. The other five
-rows of the map remain prose; they are all `MQTT_QOS`/`MQTT_RETAIN`
-statements that `TestStatePublishesCarryMQTTQoSAndMQTTRetain` and
-`TestQoSZeroReachesTheTransportAsQoSZero` do measure, off the transport,
-so the class is closed even though the strings are not derived.
-
 <a name="f15"></a>
 #### F15 — two library guards are structurally unusable on this bridge · **medium, unfixable at the filter**
 
@@ -1977,6 +1960,50 @@ recorded as a finding so that a later reader who notices the fields are
 unset does not "fix" it, and
 `TestCommandFilterCannotBeStatedToTheStatePlane` fails the day the filter
 becomes narrow enough for them to be usable.
+
+<a name="f14"></a>
+#### F14 — a pinned row of `topics.json` was prose nothing measured · **low**
+
+`publish_qos_retain.bridge_will` said `qos=0 retain=true` from #40 until
+this step. #41's F1 fix changed the will to go out at `MQTT_QOS` in the
+same commit that made every entity read the topic, and the row did not
+move with it, because the whole `publish_qos_retain` map is descriptive
+strings compared against a copy of themselves. A pin that nothing
+measures is a pin that documents whatever was true when it was typed.
+
+Corrected here, and `TestWillRowMatchesTheWillTheRuntimeStates` now reads
+the value off `publisher.Will` at both `MQTT_QOS` levels. The other five
+rows of the map remain prose; they are all `MQTT_QOS`/`MQTT_RETAIN`
+statements that `TestStatePublishesCarryMQTTQoSAndMQTTRetain` and
+`TestQoSZeroReachesTheTransportAsQoSZero` do measure, off the transport,
+so the class is closed even though the strings are not derived.
+
+<a name="f16"></a>
+#### F16 — the sweep window overlaps the Home Assistant birth subscription · **low, measured harmless**
+
+The sweep's snapshot window is `<HASS_BASE_TOPIC>/#`, which matches Home
+Assistant's own birth topic `<HASS_BASE_TOPIC>/status`. The two filters
+it replaced (`homeassistant/+/+/+/config` shapes) did not, so this
+overlap is new. A broker sends one copy per matching subscription and
+go-mqtt re-matches each copy locally, so while a window is open a birth
+message reaches the birth handler more than once.
+
+Measured harmless here, for three reasons that are stated rather than
+assumed — the general case is not harmless, and openccu-loom measured a
+doubled physical action from exactly this shape:
+
+- The sweep's handler discards anything that is not a parseable discovery
+  config topic, and `<prefix>/status` deliberately is not one.
+- The birth handler's effect is `publishDiscovery` per device, which is
+  idempotent: the per-device reconcile is gated against re-entrancy and
+  `publisher.Runtime` deduplicates a config against what it already
+  published, so a second run writes nothing.
+- **Neither subscription is in the command tree**, which is the property
+  that actually matters — no command handler can be reached twice.
+
+`TestTheSweepWindowOverlapsTheBirthSubscriptionHarmlessly` pins all
+three, and fails the day a third subscription appears under the discovery
+prefix, which is the point at which the reasoning has to be redone.
 
 ### What step 6 still has to do
 

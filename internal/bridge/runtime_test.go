@@ -441,3 +441,73 @@ func TestTheRouterItselfDropsARetainedDelivery(t *testing.T) {
 			"on every (re)subscribe and would re-fire its write each time", delivered)
 	}
 }
+
+// TestTheSweepWindowOverlapsTheBirthSubscriptionHarmlessly pins an
+// overlap this step CREATED, so that it is a measured fact rather than a
+// surprise.
+//
+// The sweep's snapshot window is `<prefix>/#`, which matches Home
+// Assistant's own birth topic `<prefix>/status`; the two hand-rolled
+// reconcile filters it replaced were `<prefix>/+/+/+/config` shapes and
+// did not. A broker sends one copy per matching subscription and go-mqtt
+// re-matches each copy locally, so while a window is open a birth message
+// reaches the birth handler more than once.
+//
+// That is harmless HERE and the reason is worth writing down rather than
+// assuming, because the general case is not harmless — openccu-loom
+// measured a doubled physical action from exactly this shape:
+//
+//   - The sweep's own handler ignores anything that is not a parseable
+//     discovery config topic, and `<prefix>/status` is deliberately not
+//     one (publisher.ParseConfigTopic does not match it).
+//   - The birth handler's effect is `publishDiscovery` per device, which
+//     is idempotent: the per-device reconcile is gated against
+//     re-entrancy and publisher.Runtime deduplicates a config against
+//     what it has already published, so the second run writes nothing.
+//   - Neither subscription is in the COMMAND tree, so no command handler
+//     can be reached twice. That is the property that actually matters,
+//     and TestCommandRoutesAreUnambiguous is where it is asserted.
+//
+// The test fails if a third subscription is ever added under the
+// discovery prefix, which is the point at which the reasoning above has
+// to be redone.
+func TestTheSweepWindowOverlapsTheBirthSubscriptionHarmlessly(t *testing.T) {
+	shortWindow(t)
+	b, dev, disc, rec := pinBridge(t)
+	if err := b.subscribeCommands(t.Context()); err != nil {
+		t.Fatalf("subscribeCommands: %v", err)
+	}
+	t.Cleanup(b.stopCommands)
+	b.reconcileOrphansOnce(t.Context(), dev.name, map[string]bool{})
+
+	rec.mu.Lock()
+	filters := append([]filterQoS(nil), rec.filters...)
+	rec.mu.Unlock()
+
+	var underPrefix []string
+	for _, f := range filters {
+		if strings.HasPrefix(f.Filter, pinPrefix) {
+			underPrefix = append(underPrefix, f.Filter)
+		}
+	}
+	if len(underPrefix) != 2 {
+		t.Fatalf("%d subscriptions under %s (%v), want exactly 2 — the sweep window and the "+
+			"birth topic. A third one needs the overlap reasoning redone.",
+			len(underPrefix), pinPrefix, underPrefix)
+	}
+	if !publisher.MatchFilter(pinPrefix+"/#", disc.BirthTopic()) {
+		t.Fatalf("%s no longer matches %s; this pin is stale", pinPrefix+"/#", disc.BirthTopic())
+	}
+	// The half that makes it harmless: the birth topic is not a config
+	// topic, so the sweep's own handler discards it.
+	if _, ok := publisher.ParseConfigTopic(pinPrefix, disc.BirthTopic()); ok {
+		t.Errorf("%s now parses as a discovery config topic — the sweep would judge Home "+
+			"Assistant's own birth topic", disc.BirthTopic())
+	}
+	// And neither reaches the command tree.
+	for _, f := range underPrefix {
+		if strings.HasPrefix(f, pinRoot) {
+			t.Errorf("%s is under this daemon's own publish root", f)
+		}
+	}
+}
