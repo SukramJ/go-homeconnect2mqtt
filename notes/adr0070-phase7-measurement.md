@@ -2419,7 +2419,81 @@ existed.
 
 ### Mutation proof
 
-MUTATION_TABLE_PLACEHOLDER
+Thirty-one mutations, applied one at a time to a filesystem COPY of the
+committed tree (never a `git checkout --`) and each run against the whole
+suite. **Twenty caught on the first pass, ten survived**, and the survivors
+are the useful half of the exercise: one of them was not a gap in coverage
+but a defect in a pin, and four were guards masked by other guards.
+
+**The first pass's ten survivors, and what each turned out to be:**
+
+| # | Mutation | First pass | After the follow-up |
+| --- | --- | --- | --- |
+| M6 | the error guard alone is removed from the sweep gate | survived | **masked by M7** — see below |
+| M7 | the claim guard alone is removed | survived | **masked by M6** — see below |
+| M6b | **BOTH sweep guards removed at once** | — | caught by `TestTheSweepIsSkippedWhenTheDocumentWasNotPublished`, once it stopped racing its own sweep |
+| M8 | an empty document is published | survived | caught — the test asserted a non-nil error, and `discovery.Validate` produces one too, whose text even contains "bundle has no components". The discriminator is now the TYPE |
+| M11 | ownership claimed for a payload naming no topic | (invalid mutant: it did not compile) | caught by `TestIsOwnConfig` |
+| M12 | a topic outside our root no longer disqualifies | survived | caught — a row whose topics disagree about their root |
+| M13 | `command_topic` is not read | survived | caught — a row carrying `command_topic` alone, under both roots |
+| M14 | the availability sources are not read | survived | caught — a row carrying the availability list alone |
+| M17 | the reconnect republish no longer waits for the one-shot refresh | survived | **a defect in the pin** — see below |
+| M22 | the shutdown no longer stops discovery | survived | caught, after the ordering moved into `shutdownHAPlane` |
+| M29 | a nil document is published | survived | caught — the test asserts haplane's own refusal, not the library's |
+| M30 | the migration budget is cut to one publish's | survived | caught — asserted against `publishTimeout`, which is the only thing an in-process stub can compare it to |
+
+**M17 was the finding.** `TestTheReconnectRepublishWaitsForTheOneShotRefresh`
+asserted the gate by sleeping 50 ms and then checking the document had not
+been published. The pass it was watching for is a 687-message retraction and
+a 460 KB document, so it had not finished — and had published nothing yet —
+**whether the gate held or not**. Removing the gate entirely left the test
+green. A negative asserted against slow work is a negative asserted by
+nothing. The fix is to make the observation cheap rather than to wait
+longer: the test empties the fleet, so the un-gated pass returns in
+microseconds and "it has not returned" can only mean "it is still on the
+gate".
+
+**M6/M7 are a masking pair, and they are kept as two.** A publish that
+failed is also a publish `publisher.Runtime` does not claim, so removing
+either alone changes no verdict and a mutation report reads both as
+survivors. They answer different questions and log different reasons, and
+the claim check is the one that would still hold if `PublishDeviceBundle`
+ever grew a path reporting success without writing. What is pinned is that
+removing BOTH is caught — and it was not, at first, for a reason worth
+recording: `reconcileOrphans` registers its device synchronously and then
+sweeps on a goroutine, so a test reading the window list the instant
+`publishDiscovery` returned was racing the subscribe, and losing that race
+looks exactly like a sweep that correctly did not run.
+
+**The twenty caught on the first pass:**
+
+| # | Mutation | Caught by |
+| --- | --- | --- |
+| M1 | `Plane.Reconnect` keeps the old runtime | TestTheRetractionsAreReSentAfterAReconnect, TestPublishOnlineRepublishesEveryAppliancesDocument, TestReconnectOpensTheDedupGateAndRebuildsTheDiscoveryRuntime (+1) |
+| M2 | the preflight's verdict is ignored | TestADocumentTooLargeForTheBrokerRetractsNothing, TestTheRefusalBoundaryIsThePacketSizeItMeasures |
+| M3 | an unknown limit is read as zero bytes | TestAnUnknownBrokerMaximumIsNotASmallOne |
+| M4 | `PacketSize` forgets the topic and the overhead | TestTheRefusalBoundaryIsThePacketSizeItMeasures |
+| M5 | the refusal boundary is doubled | TestADocumentTooLargeForTheBrokerRetractsNothing, TestTheRefusalBoundaryIsThePacketSizeItMeasures |
+| M9 | a blocking document is published | TestABlockingDocumentIsWithheld |
+| M10 | `IsOwnConfig` falls back to the bare namespace with no state topic (**the defect itself**) | TestAStaggeredUpgradeDoesNotDeleteTheSiblingsFleet, TestSweepSparesASiblingInstancesConfigs, TestIsOwnConfig |
+| M15 | `HASS_DISCOVERY_REFRESH` no longer clears the device documents | TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished |
+| M16 | a reconnect does not republish discovery | TestPublishOnlineRepublishesEveryAppliancesDocument, TestTheReconnectRepublishWaitsForTheOneShotRefresh |
+| M18 | `StopDiscovery` does nothing | TestStopDiscoveryClosesTheShutdownWindow |
+| M19 | the device availability payloads are swapped | TestTheDeviceAvailabilityPayloadsAreTheOnesEveryConfigDeclares |
+| M20 | the composition root drops the packet-size hook | TestThePlaneConfigStatesEveryFieldTheMigrationDependsOn |
+| M21 | the breaker bypass addresses a topic nothing writes | TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker |
+| M23 | the retraction form becomes the node-id-less one | TestThePlaneStatesTheDefaultLegacyTopicForm, TestTheMigrationRetractsEveryPerEntityConfigBeforeTheDocument, TestTheCrashWindowHealsOnTheNextBoot (+1) |
+| M24 | the document carries no origin block | TestHamqttBundleValidates |
+| M25 | `BundleTopic` uses the raw device name | TestAnEmptyDocumentIsWithheld, TestPublishOnlineRepublishesEveryAppliancesDocument, TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished (+1) |
+| M26 | `orphanTopics` forgets what the process declared | TestSweepSparesADeclaredConfigOutsideThisBatch |
+| M27 | the republish no longer coalesces | TestTheReconnectRepublishDoesNotOverlapItself |
+| M28 | the documented downgrade topic uses the raw appliance name | TestTheDocumentedDowngradeTopicMatchesTheCode |
+| M31 | a nil document reaches the library | TestANilDocumentIsRefusedRatherThanPublished |
+
+M10 is the one to read twice: it is finding F-A written as a mutation, and
+it is caught by two tests that DRIVE the sweep and one that questions the
+predicate — in that order of value.
+
 
 ---
 

@@ -327,14 +327,20 @@ func TestAnEmptyDocumentIsWithheld(t *testing.T) {
 	if err == nil {
 		t.Fatal("an empty document was published")
 	}
-	// The error has to be THIS refusal, not any refusal. discovery.Validate
-	// also rejects a document with no components, so a test content with a
-	// non-nil error passes with the guard removed — the gate would then be
-	// the validator's, which is a different gate with a different reason
-	// and no obligation to keep saying no.
-	if !strings.Contains(err.Error(), "has no components") {
-		t.Errorf("err = %v, want the empty-document refusal — an error from somewhere else "+
-			"means this guard is being masked by another", err)
+	// The error has to be THIS refusal, not any refusal, and not one whose
+	// TEXT merely resembles it. discovery.Validate rejects an empty
+	// document too, and its message is `bundle "x": bundle has no
+	// components` — so a substring check passes with the guard removed, and
+	// the gate would silently become the validator's: a different gate,
+	// with a different reason, under no obligation to keep saying no. The
+	// discriminator is the TYPE.
+	var ve *discovery.ValidationError
+	if errors.As(err, &ve) {
+		t.Errorf("err = %v, and it came from discovery.Validate — this guard is being masked "+
+			"by the validator rather than doing its own work", err)
+	}
+	if !strings.Contains(err.Error(), "device document for") {
+		t.Errorf("err = %v, want the empty-document refusal", err)
 	}
 	if want := d.BundleTopic(goldenDeviceEN); topic != want {
 		t.Errorf("topic = %q, want %q — the caller has to be able to name what was withheld", topic, want)
