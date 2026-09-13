@@ -41,9 +41,14 @@ var goldenDigests = map[string]string{
 	// from the select platform to the sensor platform
 	// (bsh_common_root_selectedprogramnoprograms). Its config topic and
 	// default_entity_id change with the platform; its unique_id does not.
+	//
+	// Moved a third time by F11, in the two GERMAN files only: "options"
+	// reorders on 91 rows of the full set and 19 of the curated one. The
+	// two English files are byte-identical across that change, and no key
+	// other than "options" moves in any row.
 	"discovery_full_en.json":    "07ccb6722c98fde08fd0cdec8869957e4587c560b9b614b09a1f375ee460b880",
-	"discovery_full_de.json":    "29a051f0640ea557a0b4b2b4d16099794b446f6805efbf531dc26c0443fa1b4b",
-	"discovery_curated_de.json": "d572fe509f06f557d1ce9c9e24746cf89e596ad4083e440cbfbf23893b33fc8b",
+	"discovery_full_de.json":    "7e2193d4ae54d0841b6c0b57f0c01cb2a43dbceabd81d080859ff066757d8dac",
+	"discovery_curated_de.json": "cf6f43d1a291be5948bb5746edb22a5f626dfb8d680a88283164ef31139fcca6",
 	"discovery_plain_en.json":   "9120a86322c7b308df91ef82fd4b96ee6e6f99f3d5add77eb431de074f963c78",
 	"identity_en.json":          "a725b3b2f3072047d8f2f95bdc7b078ae0f34aadb3b3e74c6cf46d72a9e7eb93",
 }

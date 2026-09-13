@@ -145,8 +145,9 @@ func (d *Discovery) applyEnrichment(e *homeconnect.Entity, payload map[string]an
 }
 
 // localizeOptions translates a select's enum options to the configured display
-// language so HA dropdown labels match the (also localized) published state.
-// Uncatalogued values pass through unchanged, keeping options and state aligned.
+// language so HA dropdown labels match the (also localized) published state,
+// and orders them in that language. Uncatalogued values pass through
+// unchanged, keeping options and state aligned.
 func (d *Discovery) localizeOptions(payload map[string]any) {
 	opts, ok := payload["options"].([]string)
 	if !ok {
@@ -156,6 +157,12 @@ func (d *Discovery) localizeOptions(payload map[string]any) {
 	for i, o := range opts {
 		loc[i] = i18n.EnumLabel(o, d.lang)
 	}
+	// Sort AFTER translating, not before. enumOptions sorts the raw
+	// enumeration member names, which are English, so a German dropdown
+	// used to come out ordered by its English originals: OperationState
+	// read ["Auto", "Aus", "Ein"], i.e. Auto/Off/On (F11). The user sees
+	// only the left column.
+	sortLocalized(loc)
 	payload["options"] = loc
 }
 

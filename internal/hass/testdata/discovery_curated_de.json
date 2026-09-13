@@ -2201,8 +2201,8 @@
       },
       "name": "Einschalter",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/PowerState/state",
@@ -2240,8 +2240,8 @@
       "entity_category": "config",
       "name": "Reinigungsmodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Option/CleaningMode/state",
@@ -2279,8 +2279,8 @@
       "entity_category": "config",
       "name": "Intensivstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/IntensiveLevel/state",
@@ -2318,8 +2318,8 @@
       "entity_category": "config",
       "name": "Lüfterstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/VentingLevel/state",
@@ -2357,8 +2357,8 @@
       "entity_category": "config",
       "name": "Bratsensor-Stufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/FryingSensorLevel/state",
@@ -2396,8 +2396,8 @@
       "entity_category": "config",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/PowerLevel/state",
@@ -2435,8 +2435,8 @@
       "entity_category": "config",
       "name": "Signaltonlautstärke",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/BuzzerBeepLevel/state",
@@ -2474,8 +2474,8 @@
       "entity_category": "config",
       "name": "Wärmestufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/WarmingLevel/state",
@@ -2513,8 +2513,8 @@
       "entity_category": "config",
       "name": "Sabbatmodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Setting/SabbathMode/state",
@@ -2552,8 +2552,8 @@
       "entity_category": "config",
       "name": "Leise-Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/SilentMode/state",
@@ -2591,8 +2591,8 @@
       "entity_category": "config",
       "name": "i-Dos 1 Grunddosierung",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/IDos1BaseLevel/state",
@@ -2630,8 +2630,8 @@
       "entity_category": "config",
       "name": "i-Dos 2 Grunddosierung",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/IDos2BaseLevel/state",
@@ -2669,8 +2669,8 @@
       "entity_category": "config",
       "name": "Eco-Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/EcoMode/state",
@@ -2708,8 +2708,8 @@
       "entity_category": "config",
       "name": "Frische-Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/FreshMode/state",
@@ -2747,8 +2747,8 @@
       "entity_category": "config",
       "name": "Sabbat-Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/SabbathMode/state",
@@ -2786,8 +2786,8 @@
       "entity_category": "config",
       "name": "Urlaubsmodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/VacationMode/state",
@@ -3229,8 +3229,8 @@
       "device_class": "enum",
       "name": "Tür",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/DoorState/state",
@@ -3267,8 +3267,8 @@
       "device_class": "enum",
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/OperationState/state",
@@ -3306,8 +3306,8 @@
       "entity_category": "diagnostic",
       "name": "Kamerastatus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/Video/CameraState/state",

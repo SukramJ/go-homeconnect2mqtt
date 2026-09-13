@@ -71,6 +71,10 @@ import (
 //     a read-only sensor, as the non-writable branch has always been.
 //     Asserted by TestNoSelectIsPublishedWithoutOptions and
 //     TestSelectedProgramWithNoProgramsFallsBackToASensor.
+//   - F11 — FIXED. Localised options are sorted in the display language,
+//     not in the English their raw enumeration names happen to be in.
+//     Asserted by TestOptionsAreSortedInTheDisplayLanguage and
+//     TestGermanOptionsAreNotInEnglishOrder.
 //   - F6 — the two synthetic program buttons carry neither
 //     entity_category nor enabled_by_default, so they are enabled and
 //     prominent while every other command button is disabled+config.
@@ -717,6 +721,58 @@ func TestBothButtonPathsShareTheCommonPayloadShape(t *testing.T) {
 	if synthetic != 2 || derived != 18 {
 		t.Errorf("buttons = %d synthetic + %d derived, want 2 + 18", synthetic, derived)
 	}
+}
+
+// TestOptionsAreSortedInTheDisplayLanguage is F11. enumOptions sorts the
+// raw enumeration member names, which are English; localizeOptions then
+// translated them. So a German dropdown came out ordered by its English
+// originals — OperationState read ["Auto", "Aus", "Ein"], i.e.
+// Auto/Off/On — and the user sees only the left column.
+//
+// The German sort key folds umlauts the way DIN 5007-1 collates them. A
+// plain byte sort would file every umlaut after "z".
+func TestOptionsAreSortedInTheDisplayLanguage(t *testing.T) {
+	for _, tc := range goldenCases {
+		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
+			checked := 0
+			for _, r := range publishPin(t, tc.lang, tc.device, tc.curated, tc.enriched) {
+				opts, ok := r.Payload["options"].([]any)
+				if !ok || len(opts) < 2 {
+					continue
+				}
+				checked++
+				for i := 1; i < len(opts); i++ {
+					prev, _ := opts[i-1].(string)
+					cur, _ := opts[i].(string)
+					if collateKey(prev) > collateKey(cur) {
+						t.Errorf("%s: options %v are not in %s order (%q before %q)",
+							r.Topic, opts, tc.lang, prev, cur)
+						break
+					}
+				}
+			}
+			if checked == 0 {
+				t.Fatal("no multi-option entities in the pin")
+			}
+			t.Logf("F11: %d option lists, all ordered in %s", checked, tc.lang)
+		})
+	}
+}
+
+// TestGermanOptionsAreNotInEnglishOrder is the specific row the finding
+// named, held as a literal so the ordering cannot silently revert.
+func TestGermanOptionsAreNotInEnglishOrder(t *testing.T) {
+	const want = `["Aus","Auto","Ein"]` // NOT ["Auto","Aus","Ein"], which is Auto/Off/On
+	for _, r := range publishPin(t, "de", goldenDeviceDE, false, true) {
+		if !strings.HasSuffix(r.Topic, "/bsh_common_status_operationstate/config") {
+			continue
+		}
+		if got := canonicalString(t, r.Payload["options"]); got != want {
+			t.Errorf("OperationState options = %s, want %s", got, want)
+		}
+		return
+	}
+	t.Fatal("bsh_common_status_operationstate not in the pin")
 }
 
 // TestGoldenPlatformCensus pins the per-platform entity counts for each

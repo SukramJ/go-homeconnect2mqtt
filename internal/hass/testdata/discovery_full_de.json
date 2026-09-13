@@ -4925,8 +4925,8 @@
       "entity_category": "config",
       "name": "Schätzstatus der Restprogrammzeit",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/RemainingProgramTimeEstimationState/state",
@@ -5001,8 +5001,8 @@
       },
       "name": "Einschalter",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/PowerState/state",
@@ -5041,8 +5041,8 @@
       "entity_category": "config",
       "name": "Fernsteuerungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/RemoteControlLevel/state",
@@ -5081,8 +5081,8 @@
       "entity_category": "config",
       "name": "Anzeigemodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/Time/DisplayMode/state",
@@ -5120,8 +5120,8 @@
       "entity_category": "config",
       "name": "Reinigungsmodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Option/CleaningMode/state",
@@ -5159,8 +5159,8 @@
       "entity_category": "config",
       "name": "Intensivstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/IntensiveLevel/state",
@@ -5198,8 +5198,8 @@
       "entity_category": "config",
       "name": "Lüfterstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/VentingLevel/state",
@@ -5237,8 +5237,8 @@
       "entity_category": "config",
       "name": "Bratsensor-Stufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/FryingSensorLevel/state",
@@ -5276,8 +5276,8 @@
       "entity_category": "config",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/PowerLevel/state",
@@ -5315,8 +5315,8 @@
       "entity_category": "config",
       "name": "Signaltonlautstärke",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/BuzzerBeepLevel/state",
@@ -5355,8 +5355,8 @@
       "entity_category": "config",
       "name": "Stufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/Level/state",
@@ -5395,8 +5395,8 @@
       "entity_category": "config",
       "name": "Pyrolyse-Stufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/PyrolysisLevel/state",
@@ -5435,8 +5435,8 @@
       "entity_category": "config",
       "name": "Dampfunterstützungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/SteamAssistLevel/state",
@@ -5474,8 +5474,8 @@
       "entity_category": "config",
       "name": "Wärmestufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/WarmingLevel/state",
@@ -5513,8 +5513,8 @@
       "entity_category": "config",
       "name": "Sabbatmodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Setting/SabbathMode/state",
@@ -5553,8 +5553,8 @@
       "entity_category": "config",
       "name": "Typ",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/FlexSpray/Type/state",
@@ -5593,8 +5593,8 @@
       "entity_category": "config",
       "name": "Urlaubsmodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/HolidayMode/state",
@@ -5633,8 +5633,8 @@
       "entity_category": "config",
       "name": "Reinigungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/LearningDishwasher/CleaningLevel/state",
@@ -5673,8 +5673,8 @@
       "entity_category": "config",
       "name": "Trockenstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/LearningDishwasher/DryingLevel/state",
@@ -5713,8 +5713,8 @@
       "entity_category": "config",
       "name": "Dauerstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/LearningDishwasher/DurationLevel/state",
@@ -5753,8 +5753,8 @@
       "entity_category": "config",
       "name": "Lüftergeschwindigkeitsmodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/HeatingVentilationAirConditioning/AirConditioner/Option/FanSpeedMode/state",
@@ -5792,8 +5792,8 @@
       "entity_category": "config",
       "name": "Leise-Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/SilentMode/state",
@@ -5832,8 +5832,8 @@
       "entity_category": "config",
       "name": "Helligkeitsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/BrightnessLevel/state",
@@ -5872,8 +5872,8 @@
       "entity_category": "config",
       "name": "Aktiver Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/DoorLightRing/ActiveMode/state",
@@ -5912,8 +5912,8 @@
       "entity_category": "config",
       "name": "Helligkeitsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/DoorLightRing/BrightnessLevel/state",
@@ -5952,8 +5952,8 @@
       "entity_category": "config",
       "name": "i-Dos 1 Dosierstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/IDos1DosingLevel/state",
@@ -5992,8 +5992,8 @@
       "entity_category": "config",
       "name": "i-Dos 2 Dosierstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/IDos2DosingLevel/state",
@@ -6032,8 +6032,8 @@
       "entity_category": "config",
       "name": "Ozon-Textilart",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/OzoneTextileType/state",
@@ -6071,8 +6071,8 @@
       "entity_category": "config",
       "name": "i-Dos 1 Grunddosierung",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/IDos1BaseLevel/state",
@@ -6110,8 +6110,8 @@
       "entity_category": "config",
       "name": "i-Dos 2 Grunddosierung",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/IDos2BaseLevel/state",
@@ -6150,8 +6150,8 @@
       "entity_category": "config",
       "name": "Programmmodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/WasherDryer/Option/ProgramMode/state",
@@ -6189,8 +6189,8 @@
       "entity_category": "config",
       "name": "Eco-Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/EcoMode/state",
@@ -6228,8 +6228,8 @@
       "entity_category": "config",
       "name": "Frische-Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/FreshMode/state",
@@ -6267,8 +6267,8 @@
       "entity_category": "config",
       "name": "Sabbat-Modus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/SabbathMode/state",
@@ -6306,8 +6306,8 @@
       "entity_category": "config",
       "name": "Urlaubsmodus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/VacationMode/state",
@@ -7701,8 +7701,8 @@
       "device_class": "enum",
       "name": "Tür",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/DoorState/state",
@@ -7807,8 +7807,8 @@
       "device_class": "enum",
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/OperationState/state",
@@ -8086,8 +8086,8 @@
       "entity_category": "diagnostic",
       "name": "Kamerastatus",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/Video/CameraState/state",
@@ -10139,8 +10139,8 @@
       "entity_category": "diagnostic",
       "name": "Zone 1 Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone001/PowerLevel/state",
@@ -10179,8 +10179,8 @@
       "entity_category": "diagnostic",
       "name": "Zone 2 Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone002/PowerLevel/state",
@@ -10423,8 +10423,8 @@
       "entity_category": "diagnostic",
       "name": "Bratsensorstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/100/FryingSensorLevel/state",
@@ -10598,8 +10598,8 @@
       "enabled_by_default": false,
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/100/OperationState/state",
@@ -10672,8 +10672,8 @@
       "entity_category": "diagnostic",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/100/PowerLevel/state",
@@ -10914,8 +10914,8 @@
       "entity_category": "diagnostic",
       "name": "Zustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/100/State/state",
@@ -10954,8 +10954,8 @@
       "entity_category": "diagnostic",
       "name": "Typ",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/100/Type/state",
@@ -11232,8 +11232,8 @@
       "entity_category": "diagnostic",
       "name": "Bratsensorstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/120/FryingSensorLevel/state",
@@ -11407,8 +11407,8 @@
       "enabled_by_default": false,
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/120/OperationState/state",
@@ -11481,8 +11481,8 @@
       "entity_category": "diagnostic",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/120/PowerLevel/state",
@@ -11723,8 +11723,8 @@
       "entity_category": "diagnostic",
       "name": "Zustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/120/State/state",
@@ -11763,8 +11763,8 @@
       "entity_category": "diagnostic",
       "name": "Typ",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/120/Type/state",
@@ -12041,8 +12041,8 @@
       "entity_category": "diagnostic",
       "name": "Bratsensorstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/121/FryingSensorLevel/state",
@@ -12216,8 +12216,8 @@
       "enabled_by_default": false,
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/121/OperationState/state",
@@ -12290,8 +12290,8 @@
       "entity_category": "diagnostic",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/121/PowerLevel/state",
@@ -12532,8 +12532,8 @@
       "entity_category": "diagnostic",
       "name": "Zustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/121/State/state",
@@ -12572,8 +12572,8 @@
       "entity_category": "diagnostic",
       "name": "Typ",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/121/Type/state",
@@ -12850,8 +12850,8 @@
       "entity_category": "diagnostic",
       "name": "Bratsensorstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/200/FryingSensorLevel/state",
@@ -13025,8 +13025,8 @@
       "enabled_by_default": false,
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/200/OperationState/state",
@@ -13099,8 +13099,8 @@
       "entity_category": "diagnostic",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/200/PowerLevel/state",
@@ -13341,8 +13341,8 @@
       "entity_category": "diagnostic",
       "name": "Zustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/200/State/state",
@@ -13381,8 +13381,8 @@
       "entity_category": "diagnostic",
       "name": "Typ",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/200/Type/state",
@@ -13659,8 +13659,8 @@
       "entity_category": "diagnostic",
       "name": "Bratsensorstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/201/FryingSensorLevel/state",
@@ -13834,8 +13834,8 @@
       "enabled_by_default": false,
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/201/OperationState/state",
@@ -13908,8 +13908,8 @@
       "entity_category": "diagnostic",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/201/PowerLevel/state",
@@ -14150,8 +14150,8 @@
       "entity_category": "diagnostic",
       "name": "Zustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/201/State/state",
@@ -14190,8 +14190,8 @@
       "entity_category": "diagnostic",
       "name": "Typ",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/201/Type/state",
@@ -14468,8 +14468,8 @@
       "entity_category": "diagnostic",
       "name": "Bratsensorstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/300/FryingSensorLevel/state",
@@ -14643,8 +14643,8 @@
       "enabled_by_default": false,
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/300/OperationState/state",
@@ -14717,8 +14717,8 @@
       "entity_category": "diagnostic",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/300/PowerLevel/state",
@@ -14959,8 +14959,8 @@
       "entity_category": "diagnostic",
       "name": "Zustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/300/State/state",
@@ -14999,8 +14999,8 @@
       "entity_category": "diagnostic",
       "name": "Typ",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/300/Type/state",
@@ -15277,8 +15277,8 @@
       "entity_category": "diagnostic",
       "name": "Bratsensorstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/301/FryingSensorLevel/state",
@@ -15452,8 +15452,8 @@
       "enabled_by_default": false,
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/301/OperationState/state",
@@ -15526,8 +15526,8 @@
       "entity_category": "diagnostic",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/301/PowerLevel/state",
@@ -15768,8 +15768,8 @@
       "entity_category": "diagnostic",
       "name": "Zustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/301/State/state",
@@ -15808,8 +15808,8 @@
       "entity_category": "diagnostic",
       "name": "Typ",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/301/Type/state",
@@ -16086,8 +16086,8 @@
       "entity_category": "diagnostic",
       "name": "Bratsensorstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/340/FryingSensorLevel/state",
@@ -16261,8 +16261,8 @@
       "enabled_by_default": false,
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/340/OperationState/state",
@@ -16335,8 +16335,8 @@
       "entity_category": "diagnostic",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/340/PowerLevel/state",
@@ -16577,8 +16577,8 @@
       "entity_category": "diagnostic",
       "name": "Zustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/340/State/state",
@@ -16617,8 +16617,8 @@
       "entity_category": "diagnostic",
       "name": "Typ",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/340/Type/state",
@@ -16895,8 +16895,8 @@
       "entity_category": "diagnostic",
       "name": "Bratsensor-Stufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/341/FryingSensorLevel/state",
@@ -17070,8 +17070,8 @@
       "enabled_by_default": false,
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/341/OperationState/state",
@@ -17144,8 +17144,8 @@
       "entity_category": "diagnostic",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/341/PowerLevel/state",
@@ -17386,8 +17386,8 @@
       "entity_category": "diagnostic",
       "name": "Zustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/341/State/state",
@@ -17426,8 +17426,8 @@
       "entity_category": "diagnostic",
       "name": "Typ",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/341/Type/state",
@@ -17704,8 +17704,8 @@
       "entity_category": "diagnostic",
       "name": "Bratsensor-Stufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/400/FryingSensorLevel/state",
@@ -17879,8 +17879,8 @@
       "enabled_by_default": false,
       "name": "Betriebszustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/400/OperationState/state",
@@ -17953,8 +17953,8 @@
       "entity_category": "diagnostic",
       "name": "Leistungsstufe",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/400/PowerLevel/state",
@@ -18195,8 +18195,8 @@
       "entity_category": "diagnostic",
       "name": "Zustand",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/400/State/state",
@@ -18235,8 +18235,8 @@
       "entity_category": "diagnostic",
       "name": "Typ",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Status/Zone/400/Type/state",
@@ -22400,8 +22400,8 @@
       "entity_category": "diagnostic",
       "name": "Textilart",
       "options": [
-        "Auto",
         "Aus",
+        "Auto",
         "Ein"
       ],
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Status/ProcessingData/TextileType/state",

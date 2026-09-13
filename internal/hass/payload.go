@@ -18,6 +18,7 @@
 package hass
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -502,6 +503,28 @@ func slugify(s string) string {
 
 // sanitize is slugify kept under its historical name for the device id prefix.
 func sanitize(s string) string { return slugify(s) }
+
+// sortLocalized orders display labels the way a reader of the target
+// language expects. The key lowercases and folds the German umlauts the
+// way DIN 5007-1 collates them (ä/ö/ü under a/o/u, ß under ss) — a plain
+// byte sort would file every umlaut after "z", because their UTF-8
+// encodings sit above ASCII. Equal keys fall back to the raw string so
+// the order stays deterministic.
+//
+// This is a display ordering, not a collation library: the project has no
+// third-party dependencies and both shipped languages are covered by the
+// same fold that slugify already applies.
+func sortLocalized(s []string) {
+	sort.SliceStable(s, func(i, j int) bool {
+		a, b := collateKey(s[i]), collateKey(s[j])
+		if a != b {
+			return a < b
+		}
+		return s[i] < s[j]
+	})
+}
+
+func collateKey(s string) string { return umlautReplacer.Replace(strings.ToLower(s)) }
 
 func sortStrings(s []string) {
 	for i := 1; i < len(s); i++ {
