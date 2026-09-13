@@ -201,28 +201,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	defer func() {
 		stopCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
-		// Stop discovery BEFORE the offline marker. That marker is the
-		// only availability signal a graceful shutdown produces at all —
-		// a clean DISCONNECT suppresses the Last Will — and a discovery
-		// publish landing after it writes "online"-era retained configs
-		// to a broker this daemon has already told Home Assistant it
-		// left. Two things here publish asynchronously and outlive the
-		// call that started them: the Home Assistant birth handler and
-		// the (re)connect republish.
-		//
-		// publisher.Runtime.Close is NOT what closes that window, and the
-		// comment that used to stand here said it was. Close drains the
-		// runtime's birth-replay worker, which exists only once
-		// publisher.Runtime.WatchBirth has been called — and this daemon
-		// watches the birth topic itself (internal/bridge's
-		// subscribeBirth), so the worker is never created and the call is
-		// inert. It is kept because the runtime is the library's to
-		// finish with.
-		br.StopDiscovery()
-		plane.Close()
-		if err := plane.AnnounceOffline(stopCtx); err != nil {
-			logger.Warn("homeconnect2mqtt.offline_failed", slog.String("err", err.Error()))
-		}
+		shutdownHAPlane(stopCtx, br, plane, logger)
 		_ = lc.Stop(stopCtx)
 	}()
 
@@ -285,6 +264,44 @@ func haTransport(statusTopic string, breaker mqtt.Publisher, client mqtt.Client)
 
 // shutdownTimeout bounds the final offline marker and the DISCONNECT.
 const shutdownTimeout = 5 * time.Second
+
+// discoveryStopper is the one thing [shutdownHAPlane] needs from the
+// bridge. An interface rather than *bridge.Bridge so the ordering below can
+// be driven without a Home Connect appliance and a broker.
+type discoveryStopper interface{ StopDiscovery() }
+
+// shutdownHAPlane takes the Home Assistant plane down in the order the
+// order matters in.
+//
+// Stop discovery FIRST. The retained "offline" marker is the only
+// availability signal a graceful shutdown produces at all — a clean
+// DISCONNECT suppresses the Last Will — and a discovery publish landing
+// after it writes "online"-era retained configs to a broker this daemon has
+// already told Home Assistant it left. Two things here publish
+// asynchronously and outlive the call that started them: the Home Assistant
+// birth handler, which reacts to a message that can arrive at any moment,
+// and the (re)connect republish.
+//
+// publisher.Runtime.Close is NOT what closes that window, and the comment
+// that used to stand at the call site said it was. Close drains the
+// runtime's birth-replay worker, and that worker exists only once
+// publisher.Runtime.WatchBirth has been called — this daemon watches the
+// birth topic itself (internal/bridge's subscribeBirth), so it is never
+// created and the call is inert. It is kept because the runtime is the
+// library's to finish with, and because the day WatchBirth is adopted the
+// drain must already be in the right place.
+//
+// It is a function rather than three lines inside serve()'s defer for the
+// reason every other policy here is one: serve() needs a broker and an
+// appliance and cannot be driven, so an ordering spelled there is an
+// ordering nothing checks.
+func shutdownHAPlane(ctx context.Context, br discoveryStopper, plane *haplane.Plane, logger *slog.Logger) {
+	br.StopDiscovery()
+	plane.Close()
+	if err := plane.AnnounceOffline(ctx); err != nil {
+		logger.Warn("homeconnect2mqtt.offline_failed", slog.String("err", err.Error()))
+	}
+}
 
 // haPlaneConfig builds the Home Assistant publish plane's configuration.
 //

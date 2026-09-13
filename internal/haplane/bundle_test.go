@@ -423,8 +423,17 @@ func TestANilDocumentIsRefusedRatherThanPublished(t *testing.T) {
 	t.Parallel()
 	tr := &broker{}
 	p := bundlePlane(t, tr, nil)
-	if _, err := p.PublishBundle(t.Context(), nil); err == nil {
+	_, err := p.PublishBundle(t.Context(), nil)
+	if err == nil {
 		t.Fatal("a nil document was accepted")
+	}
+	// THIS refusal, not any refusal. publisher.Runtime rejects a nil bundle
+	// too, so a test content with a non-nil error passes with the guard
+	// removed — and the guard is what keeps the refusal on this side of the
+	// preflight, where it can never be reordered after a retraction.
+	if !strings.Contains(err.Error(), "haplane: nil device document") {
+		t.Errorf("err = %v, want haplane's own refusal — an error from the library means "+
+			"this guard is being masked by it", err)
 	}
 	if calls := tr.take(); len(calls) != 0 {
 		t.Errorf("a nil document wrote %v", calls)
