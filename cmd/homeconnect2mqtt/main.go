@@ -149,12 +149,20 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 		}
 	}
 
+	// The MQTT surface handed to the bridge: Publish is gated by the
+	// circuit breaker, while Subscribe/Unsubscribe go straight to the
+	// client — subscriptions are startup-path calls with their own
+	// SUBACK-bounded wait and must not be rejected during a publish-side
+	// broker brownout. mqtt.SplitClient (go-mqtt v1.4.0) is exactly this
+	// shape; it replaces the struct this file used to hand-roll.
+	session := mqtt.SplitClient(breaker, client)
+
 	var store *state.Store
 	if cfg.WebEnable {
 		store = state.New(nil)
 	}
 
-	br, err := bridge.New(bridge.Deps{Config: cfg, MQTT: &mqttSession{Breaker: breaker, Subscriber: client}, Logger: logger, Devices: specs, HASS: disc, State: store})
+	br, err := bridge.New(bridge.Deps{Config: cfg, MQTT: session, Logger: logger, Devices: specs, HASS: disc, State: store})
 	if err != nil {
 		return err
 	}
@@ -172,20 +180,6 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	g.Go(func() error { return webSrv.Run(gctx) })
 	return g.Wait()
 }
-
-// mqttSession is the MQTT surface handed to the bridge: Publish is
-// gated by the circuit breaker, while Subscribe/Unsubscribe go straight
-// to the client — subscriptions are startup-path calls with their own
-// SUBACK-bounded wait and must not be rejected during a publish-side
-// broker brownout.
-type mqttSession struct {
-	*mqtt.Breaker
-	mqtt.Subscriber
-}
-
-// Compile-time contract: the session satisfies the bridge's combined
-// MQTT dependency.
-var _ mqtt.Client = (*mqttSession)(nil)
 
 func loadConfig(configPath string) (*config.Config, error) {
 	if configPath == "" {
