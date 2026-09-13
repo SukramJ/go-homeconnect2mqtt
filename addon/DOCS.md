@@ -95,8 +95,18 @@ publish of that connection. Every way that read can fail leaves *more*
 entities in place and never removes a different one, and a document published
 by a second instance of this add-on — which addresses the same topic, because
 `mqtt_topic` appears in neither the discovery prefix nor the appliance slug —
-is judged component by component against this instance's own root, so a
-sibling's entities are never deleted.
+is judged component by component: a component is carried forward only when
+its payload names a topic **only this instance renders**, which is
+`<mqtt_topic>/status` or `<mqtt_topic>/<appliance>/availability`. A sibling
+instance's entities are therefore never deleted.
+
+The match is exact, not "starts with our root", and that distinction is the
+guarantee itself: a prefix test claimed every component of an instance rooted
+*under* this one — `mqtt_topic: homeconnect` against `mqtt_topic:
+homeconnect/kitchen` — and deleted its live entities. What the rule cannot do
+is tell two instances apart that share a `mqtt_topic` root: nothing in the
+topic tree or the payload distinguishes them, so give each instance its own
+root.
 
 That matters most for the cheapest trigger there is, one option: on a
 three-appliance installation, flipping `hass_discovery` from `full` to

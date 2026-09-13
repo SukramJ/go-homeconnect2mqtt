@@ -25,7 +25,9 @@ const (
 
 // applyDefaults fills zero-valued, non-mandatory fields with sane
 // defaults. MQTT_RETAIN defaults to true via a pointer sentinel because a
-// false bool is indistinguishable from "unset".
+// false bool is indistinguishable from "unset"; MQTT_QOS uses one for the
+// same reason, because 0 is a level an operator may ask for and this
+// function used to overwrite it with 1.
 func applyDefaults(c *Config) {
 	if c.MQTTTopic == "" {
 		c.MQTTTopic = DefaultMQTTTopic
@@ -34,8 +36,9 @@ func applyDefaults(c *Config) {
 		v := true
 		c.MQTTRetain = &v
 	}
-	if c.MQTTQoS == 0 {
-		c.MQTTQoS = DefaultMQTTQoS
+	if c.MQTTQoS == nil {
+		v := DefaultMQTTQoS
+		c.MQTTQoS = &v
 	}
 	if c.HASSBaseTopic == "" {
 		c.HASSBaseTopic = DefaultHASSBaseTopic

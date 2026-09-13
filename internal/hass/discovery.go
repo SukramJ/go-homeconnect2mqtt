@@ -609,16 +609,36 @@ var publishedPlatforms = map[string]bool{
 //
 // Four narrowings, each one refusing a class this daemon does not publish:
 //
-//   - The device-document form (<prefix>/device/<node>/config). Nothing
-//     here publishes one yet; step 6 of the ADR 0070 rollout does, and it
-//     will have to revisit this line rather than inherit it.
+//   - The device-document form (<prefix>/device/<node>/config). Step 6 of
+//     the ADR 0070 rollout made this daemon the publisher of exactly that
+//     form, and the line was revisited rather than inherited: it stays,
+//     deliberately. The document is now the SINGLE retained topic holding
+//     every entity of an appliance, so admitting it to a pass whose job is
+//     to delete what nothing claims trades a leak for a fleet-wide
+//     deletion — and the payload half could not narrow it again, because
+//     [Discovery.IsOwnConfig] reads a top-level `unique_id` and topics
+//     that a document does not have at its top level.
+//     TestTheSweepNeverOffersTheDocumentItJustPublished is the pin.
+//
+//     What that costs is stated rather than hidden: a document whose node
+//     id is no longer configured — an appliance renamed or removed in
+//     devices.yaml — is never retracted by this daemon. It LEAKS, it does
+//     not delete, and it is cleared by hand with the one retained-empty
+//     publish the changelog, README and DOCS already document for the
+//     rollback path. The same is true of that appliance's per-entity
+//     configs and always has been, for the same reason: the last
+//     narrowing below scopes every judgement to the node ids this process
+//     is configured for.
+//
 //   - Any form without a node id. publisher.ParseConfigTopic accepts the
 //     four-segment (<prefix>/<platform>/<object>/config) and three-segment
 //     forms as well, which is what both sibling bridges and Tasmota
 //     publish into a shared discovery tree. This daemon's fleet is
 //     five-segment — measured, 687 of 687 — so a topic with no node id is
 //     never ours.
+//
 //   - A platform this daemon never emits.
+//
 //   - A node id that is not one of the device names this process is
 //     configured for. devices is the caller's scope, and it is
 //     deliberately a parameter rather than the whole fleet: a per-device
@@ -662,41 +682,67 @@ func (d *Discovery) ConfigTopicFor(t publisher.ConfigTopic) string {
 // place the two differ is the set of MQTT topics the payload points at,
 // every one of which sits under the publishing instance's own root.
 //
-// # Why the namespace prefix is not enough, and why a missing state topic
-// used to make it the whole rule
+// # Why a prefix is not an identity, and what a nested sibling did with it
 //
-// This read `unique_id` has our prefix AND (`state_topic` is empty OR it is
-// under our root). The empty branch was there for a reason — a write-only
-// platform has no state topic — but it collapsed the rule to the bare
-// `homeconnect_` prefix for exactly those payloads, and a sibling instance
-// shares that prefix. Measured against the pins: 20 of 687 configs per
-// appliance are buttons, 6 of 177 in the curated set, and a sweep with an
-// empty claim set cleared three of a sibling's buttons outright. The
-// reachable triggers needed no device document at all — one instance in
-// `curated` and one in `full`, or a HASS_DISCOVERY_REFRESH, which runs
-// fleet-wide with nothing claimed — and with the migration to a device
-// document it becomes ALL of a sibling's buttons unconditionally, because
-// an upgraded instance publishes no per-entity configs, so every one of the
-// sibling's is unclaimed at once.
+// This used to read: `unique_id` has our prefix, at least one topic is
+// named, and every topic named begins with `<root>/`. That is a topic
+// PREFIX test, and a prefix is not an identity. MQTT_TOPIC is only
+// required to be non-empty, so a second instance may legally be rooted
+// UNDER the first — `homeconnect` and `homeconnect/kitchen` is a more
+// natural way to keep one broker tidy than inventing two disjoint names —
+// and every topic the inner instance names then begins with the outer
+// instance's root. Driven over the shipped catalogue, the outer instance
+// accepted 687 of 687 of the inner one's components and tombstoned the
+// 510 of them that are LIVE: Home Assistant deletes those entities from
+// its registry, the inner instance republishes them, and the outer one
+// deletes them again on its next connection. That is go-daikin2mqtt #80's
+// permanent ping-pong, reached through the predicate that was supposed to
+// make it unreachable here.
+//
+// The break is asymmetric, which is what made it easy to miss: only the
+// strict topic-level ANCESTOR eats the descendant's components. The inner
+// instance declines the outer's correctly, because `homeconnect/…` does
+// not begin with `homeconnect/kitchen/`. Disjoint roots were and remain
+// safe — `homeconnect2`, `hc`, `homeconnectx`, `home` all decline 0 of
+// 687.
 //
 // # The rule
 //
-// A button carries no `state_topic` and never did, but it has always
-// carried a `command_topic`, and since F1 every config of every platform
-// carries both availability sources. Pre-F1 payloads carry the flat
-// `availability_topic` instead. So: gather every MQTT topic the payload
-// names, require at least one, and require all of them to be under this
-// instance's root.
+// Attribution is an EXACT match against a topic that only this instance
+// renders, not a prefix that every instance nested under it also satisfies:
 //
-// Both directions of that are deliberate:
+//   - `<root>/status` — [layout.Bridge], the daemon's own status topic,
+//     carried by every payload since F1 as the first of its two
+//     availability sources. `homeconnect/kitchen/status` is a different
+//     string from `homeconnect/status`, so no nesting can produce it.
+//   - `<root>/<device>/availability` with `<device>` a SINGLE topic level
+//     — the device availability topic, which is what a pre-F1 payload
+//     carries in the flat `availability_topic` key instead of the list.
+//     An instance rooted at `<root>/<s>` renders `<root>/<s>/status` and
+//     `<root>/<s>/<device>/availability`; neither can equal
+//     `<root>/<one level>/availability`, because `<s>/<device>` is never
+//     a single level. The anchor is kept for a reason that is not
+//     hypothetical: every installation upgrading from 0.12.0 has a
+//     retained tree of flat-availability payloads, and without it the
+//     orphan sweep would stop recognising its OWN stale configs and
+//     strand them forever.
 //
-//   - At least one. A payload that names no topic at all cannot be proven
-//     ours, and ownership that cannot be proven is not claimed. No config
-//     this daemon has ever published is in that position.
-//   - All of them. Every topic this daemon renders is under MQTT_TOPIC, so
-//     a payload mixing roots is not ours whatever else it says. Being
-//     strict here leaves a stale entity behind at worst; being loose
-//     deletes a live instance's fleet.
+// The prefix test stays, as the second half rather than the whole: every
+// topic a payload names must still be under this root, so a payload that
+// mixes roots is not ours whatever else it says. Both halves are needed —
+// the anchor proves WHOSE, the prefix proves that nothing else in the
+// payload points somewhere we never publish.
+//
+// And both directions of "at least one anchor" are deliberate:
+//
+//   - A payload that names no topic at all, or names only topics that
+//     could belong to an instance nested under us, cannot be PROVEN ours,
+//     and ownership that cannot be proven is not claimed. No config this
+//     daemon has ever published is in that position: every one carries
+//     either the availability list (since F1) or the flat availability
+//     topic (before it).
+//   - Being strict leaves a stale entity behind at worst. Being loose
+//     deletes a live instance's fleet — which is what the prefix rule did.
 func (d *Discovery) IsOwnConfig(payload []byte) bool {
 	var cfg retainedConfig
 	if json.Unmarshal(payload, &cfg) != nil {
@@ -706,7 +752,7 @@ func (d *Discovery) IsOwnConfig(payload []byte) bool {
 		return false
 	}
 	root := d.rootTopic + "/"
-	seen := false
+	anchored := false
 	for _, topic := range cfg.topics() {
 		if topic == "" {
 			continue
@@ -714,9 +760,30 @@ func (d *Discovery) IsOwnConfig(payload []byte) bool {
 		if !strings.HasPrefix(topic, root) {
 			return false
 		}
-		seen = true
+		if d.isIdentityAnchor(topic) {
+			anchored = true
+		}
 	}
-	return seen
+	return anchored
+}
+
+// isIdentityAnchor reports whether topic is one this instance renders and
+// no instance nested under it can. See [Discovery.IsOwnConfig] for why
+// attribution needs an exact match rather than a prefix, and why there are
+// two anchors rather than one.
+func (d *Discovery) isIdentityAnchor(topic string) bool {
+	if topic == layout.Bridge(d.rootTopic) {
+		return true
+	}
+	rel, ok := strings.CutPrefix(topic, d.rootTopic+"/")
+	if !ok {
+		return false
+	}
+	device, ok := strings.CutSuffix(rel, "/availability")
+	if !ok {
+		return false
+	}
+	return device != "" && !strings.Contains(device, "/")
 }
 
 // retainedConfig is the part of a retained per-entity discovery config

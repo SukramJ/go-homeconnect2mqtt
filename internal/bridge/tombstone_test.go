@@ -529,3 +529,42 @@ func TestTheReadBackReadsEveryAppliancesDocument(t *testing.T) {
 		}
 	}
 }
+
+// TestTheReadBackWindowSubscribesAtMQTTQoS pins the delivery guarantee of
+// the one subscription this release adds.
+//
+// The sweep window's level is pinned by
+// TestSweepWindowIsTheOnlyDiscoverySubscription and this one's was not, for
+// a reason worth naming: the recorder had the QoS all along and the helper
+// that read the read-back's windows threw it away. So the level was
+// asserted by nothing, and hard-coding publisher.QoSAtLeastOnce in
+// haplane.Plane.Snapshot — the exact shape of F9, where a struct literal
+// that omitted a field upgraded the whole installed base's delivery
+// guarantee and a broker capture was the only evidence — would have been
+// caught by nothing either.
+//
+// MQTT_QOS is what it must be: a plane configured at QoS 0 does not read
+// one window at QoS 1 because a library default happens to say so.
+func TestTheReadBackWindowSubscribesAtMQTTQoS(t *testing.T) {
+	b, dev, rec, _ := priorFixture(t, nil)
+	defer drainReconciles(t, b)
+
+	b.publishDiscovery(t.Context(), dev)
+	drainReconciles(t, b)
+
+	windows := rec.bundleWindows(pinPrefix)
+	if len(windows) != 1 {
+		t.Fatalf("the pass opened %d read-back windows, want 1", len(windows))
+	}
+	if want := pinPrefix + "/device/+/config"; windows[0].Filter != want {
+		t.Errorf("read-back filter = %q, want %q", windows[0].Filter, want)
+	}
+	if windows[0].QoS != int(pinQoS) {
+		t.Errorf("read-back window qos = %d, want %d (MQTT_QOS, the plane's own)",
+			windows[0].QoS, int(pinQoS))
+	}
+	if len(windows[0].Options) != 0 {
+		t.Errorf("read-back window carries subscribe options %v; it is a plain retained read",
+			windows[0].Options)
+	}
+}

@@ -1479,6 +1479,10 @@
       "qos": 1
     },
     {
+      "filter": "homeassistant/device/+/config",
+      "qos": 1
+    },
+    {
       "filter": "homeassistant/status",
       "qos": 1
     },

@@ -24,6 +24,11 @@ func TestIsOwnConfig(t *testing.T) {
 	// appliance's 687 configs are buttons.
 	const avail = `"availability":[{"topic":"homeconnect/status"},{"topic":"homeconnect/dw/availability"}],`
 	const sibAvail = `"availability":[{"topic":"other/status"},{"topic":"other/dw/availability"}],`
+	// The nested sibling: MQTT_TOPIC "homeconnect/kitchen", which is a
+	// legal value (internal/config/validate.go asks only for non-empty)
+	// and a natural way to keep one broker tidy.
+	const nestedAvail = `"availability":[{"topic":"homeconnect/kitchen/status"},` +
+		`{"topic":"homeconnect/kitchen/dw/availability"}],`
 	cases := []struct {
 		name    string
 		payload string
@@ -46,18 +51,58 @@ func TestIsOwnConfig(t *testing.T) {
 		// the mutation survives. Each pair below is the same payload under
 		// two roots, so the key is shown to decide the answer in both
 		// directions.
-		{"state_topic alone, ours", `{"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/dw/X/state"}`, true},
+		//
+		// The two ANCHOR keys claim on their own; the two that carry a
+		// variable-depth path do not, and that is the nested-sibling fix
+		// rather than a regression: `homeconnect/dw/X/state` is a topic
+		// the instance rooted at `homeconnect/dw` renders just as
+		// readily as the one rooted at `homeconnect`, so it proves
+		// nothing on its own. No config this daemon has ever published is
+		// in that position — every one carries the availability list
+		// (since F1) or the flat availability topic (before it).
+		{"state_topic alone, unattributable — it is under our root AND under a nested sibling's", `{"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/dw/X/state"}`, false},
 		{"state_topic alone, the sibling's", `{"unique_id":"homeconnect_dw_op","state_topic":"other/dw/X/state"}`, false},
-		{"command_topic alone, ours", `{"unique_id":"homeconnect_dw_btn","command_topic":"homeconnect/dw/X/set"}`, true},
+		{"state_topic plus our anchor", `{` + avail + `"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/dw/X/state"}`, true},
+		{"command_topic alone, unattributable", `{"unique_id":"homeconnect_dw_btn","command_topic":"homeconnect/dw/X/set"}`, false},
 		{"command_topic alone, the sibling's", `{"unique_id":"homeconnect_dw_btn","command_topic":"other/dw/X/set"}`, false},
+		{"command_topic plus our anchor", `{` + avail + `"unique_id":"homeconnect_dw_btn","command_topic":"homeconnect/dw/X/set"}`, true},
 		{"availability_topic alone, ours", `{"unique_id":"homeconnect_dw_op","availability_topic":"homeconnect/dw/availability"}`, true},
 		{"availability_topic alone, the sibling's", `{"unique_id":"homeconnect_dw_op","availability_topic":"other/dw/availability"}`, false},
 		{"the availability list alone, ours", `{` + avail + `"unique_id":"homeconnect_dw_op"}`, true},
 		{"the availability list alone, the sibling's", `{` + sibAvail + `"unique_id":"homeconnect_dw_op"}`, false},
+		// A sibling instance rooted a topic level UNDER ours. Every topic
+		// it names begins with `homeconnect/`, so the topic-PREFIX rule
+		// claimed all 687 of its components and tombstoned the 510 that
+		// were live. The anchors are exact strings: its status topic is
+		// `homeconnect/kitchen/status`, and its device availability topic
+		// carries one level more than ours can.
+		{"a NESTED sibling's sensor", `{` + nestedAvail + `"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/kitchen/dw/X/state"}`, false},
+		{"a NESTED sibling's button", `{` + nestedAvail + `"unique_id":"homeconnect_dw_btn","command_topic":"homeconnect/kitchen/dw/X/set"}`, false},
+		{"a NESTED sibling's pre-F1 payload, keyed on its flat availability topic", `{"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/kitchen/dw/X/state","availability_topic":"homeconnect/kitchen/dw/availability"}`, false},
+		{"a NESTED sibling's status topic is not ours, though it starts with our root", `{"unique_id":"homeconnect_dw_op","availability_topic":"homeconnect/kitchen/status"}`, false},
+		// The other direction of the same nesting, asserted separately
+		// because the break was ASYMMETRIC: the inner instance always
+		// declined the outer one's, and must go on doing so.
+		{"our own payload, judged by the nested sibling", `{` + avail + `"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/dw/X/state"}`, true},
 		// A payload whose topics do not agree about their root was
 		// published by nobody, and "all of them, or not ours" is the safe
 		// reading: a rule that took the first match it liked would be a
 		// rule an attacker-shaped payload could satisfy.
+		//
+		// The first row below is the one that keeps the two halves of the
+		// rule from masking each other. It carries OUR anchor and a
+		// foreign state topic, so the anchor alone would claim it and only
+		// the "every topic under our root" half refuses it; the second
+		// carries no anchor either, and would be refused by the anchor
+		// half whatever the prefix half did. Without the first, deleting
+		// the prefix half changes no verdict in this table and the
+		// mutation survives — which it did.
+		{"our anchor, somebody else's state topic", `{` + avail + `"unique_id":"homeconnect_dw_op","state_topic":"other/dw/X/state"}`, false},
+		// Deliberately NOT a row: our anchor plus a topic in a nested
+		// sibling's sub-tree. No instance publishes that — a sibling names
+		// its own status topic, not ours — and the anchor is the thing
+		// that decides, so the rule claims it. Asserting otherwise would
+		// be asserting a promise the rule does not make.
 		{"topics that disagree about their root", `{"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/dw/X/state","command_topic":"other/dw/X/set"}`, false},
 		{"not json", `not-json`, false},
 	}

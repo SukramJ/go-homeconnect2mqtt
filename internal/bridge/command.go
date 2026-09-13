@@ -108,7 +108,7 @@ func (b *Bridge) commandConfig(ctx context.Context) publisher.CommandConfig {
 		// Stated, never defaulted: publisher.QoS's zero value is
 		// QoSUnset, which resolves to QoS 1, so an operator's MQTT_QOS: 0
 		// would be silently upgraded here (F9).
-		QoS: haplane.QoS(b.cfg.MQTTQoS),
+		QoS: haplane.QoS(b.cfg.QoSLevel()),
 		// A retained command is somebody's `mosquitto_pub -r` left behind,
 		// and the broker replays it on every (re)subscribe.
 		DeliverRetained: false,

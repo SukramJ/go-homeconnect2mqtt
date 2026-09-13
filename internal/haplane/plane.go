@@ -119,6 +119,36 @@ type Plane struct {
 	rt     atomic.Pointer[publisher.Runtime]
 	state  *publisher.StatePublisher
 	logger *slog.Logger
+
+	// snapshotQoS is the wire level [Plane.Snapshot] subscribes at,
+	// resolved ONCE, here, at the same moment publisher.New resolves its
+	// own from the same Config.QoS.
+	//
+	// Resolved rather than re-derived at the call site, because a second
+	// `cfg.QoS.Or(publisher.QoSAtLeastOnce)` inside Snapshot is a second
+	// spelling of the library's default: it agrees today and there is
+	// nothing that would notice if one of them were edited. That is F9's
+	// shape exactly — a struct literal that omitted a field upgraded the
+	// installed base's delivery guarantee, with a broker capture as the
+	// only evidence — and it is why internal/haplane/qos.go exists.
+	snapshotQoS byte
+}
+
+// resolveWireQoS is publisher's own resolveQoS, which is unexported.
+//
+// It panics for the same reason [QoS] does: a QoS that is not a level is a
+// configuration that cannot be honoured, and the alternative to failing at
+// construction is a daemon that silently reads or writes at a level the
+// operator never chose. internal/config validates MQTT_QOS long before
+// this, so the panic is the marker on an unreachable state rather than an
+// error an operator can hit.
+func resolveWireQoS(field string, q publisher.QoS) byte {
+	resolved := q.Or(publisher.QoSAtLeastOnce)
+	wire, ok := resolved.Wire()
+	if !ok {
+		panic("haplane: " + field + " = " + resolved.String() + " is not an MQTT quality-of-service level")
+	}
+	return wire
 }
 
 // New builds the plane over tr.
@@ -143,7 +173,8 @@ func New(tr publisher.Transport, cfg Config) *Plane {
 				Logger:      logger,
 			})
 		},
-		logger: logger,
+		logger:      logger,
+		snapshotQoS: resolveWireQoS("Config.QoS", cfg.QoS),
 	}
 	p.rt.Store(p.newRT())
 	p.state = publisher.NewStatePublisher(tr, publisher.StateConfig{
@@ -414,23 +445,40 @@ func (p *Plane) Snapshot(
 		return errors.New("haplane: snapshot without a transport")
 	}
 	var (
-		closed   atomic.Bool
+		// visitMu makes "closed" mean it: it is held ACROSS the visit, and
+		// taken again to set the flag, so a delivery that has passed the
+		// check has finished its visit before Snapshot's own goroutine can
+		// get past the store.
+		//
+		// The idiom this was inherited from — publisher.Runtime.snapshot —
+		// reads an atomic and then calls out, which lets a delivery that
+		// passed the read be descheduled and run its callback after
+		// Snapshot has returned. That is harmless while the callback only
+		// touches state the caller has finished with; it is not harmless
+		// here, because the tombstone read-back's map ESCAPES into
+		// bridge.priorDocuments under a different mutex, and one live map
+		// under two mutexes is a concurrent map write.
+		visitMu  sync.Mutex
+		closed   bool
 		complete = make(chan struct{})
 		once     sync.Once
 	)
 	gated := func(topic string, payload []byte, _ bool) {
-		if closed.Load() || len(payload) == 0 {
+		if len(payload) == 0 {
+			return
+		}
+		visitMu.Lock()
+		defer visitMu.Unlock()
+		if closed {
 			return
 		}
 		if visit(topic, payload) {
 			once.Do(func() { close(complete) })
 		}
 	}
-	// The same level the sweep window subscribes at: publisher.Runtime
-	// resolves its own QoS through Or, so a plane configured MQTT_QOS 0
-	// does not silently read this one window at QoS 1.
-	qos, _ := p.cfg.QoS.Or(publisher.QoSAtLeastOnce).Wire()
-	if err := p.tr.Subscribe(ctx, filter, qos, gated); err != nil {
+	// The same level the sweep window subscribes at, resolved once at
+	// construction rather than spelled again here. See Plane.snapshotQoS.
+	if err := p.tr.Subscribe(ctx, filter, p.snapshotQoS, gated); err != nil {
 		return fmt.Errorf("haplane: snapshot subscribe %s: %w", filter, err)
 	}
 	timer := time.NewTimer(window)
@@ -440,7 +488,9 @@ func (p *Plane) Snapshot(
 	case <-timer.C:
 	case <-ctx.Done():
 	}
-	closed.Store(true)
+	visitMu.Lock()
+	closed = true
+	visitMu.Unlock()
 
 	// On a context of its own: the caller's may already be cancelled, and
 	// that is precisely the case where leaving the subscription installed

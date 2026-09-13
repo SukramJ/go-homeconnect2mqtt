@@ -241,7 +241,7 @@ func (s *subRecorder) publishedTopics() []string {
 // read-back's `<prefix>/device/+/config` — and a prefix match would count
 // both, so "the sweep did not run" would be asserted by a list that is
 // never empty. See [subRecorder.bundleWindows] for the read-back's.
-func (s *subRecorder) discoveryWindows(prefix string) []string {
+func (s *subRecorder) discoveryWindows(prefix string) []filterQoS {
 	return s.windowsMatching(func(f string) bool { return f == prefix+"/#" })
 }
 
@@ -249,17 +249,22 @@ func (s *subRecorder) discoveryWindows(prefix string) []string {
 // opened: the narrow filter over the device documents, which is a
 // DIFFERENT filter from the sweep's on purpose — see
 // haplane.Plane.Snapshot.
-func (s *subRecorder) bundleWindows(prefix string) []string {
+// The QoS is CARRIED rather than discarded. The sweep window's level is
+// pinned (TestSweepWindowIsTheOnlyDiscoverySubscription); this one's was
+// not, because this helper returned bare filter strings — so hard-coding a
+// level here instead of the plane's own would have been caught by nothing,
+// in a repository whose F9 was exactly a second spelling of a QoS default.
+func (s *subRecorder) bundleWindows(prefix string) []filterQoS {
 	return s.windowsMatching(func(f string) bool { return f == prefix+"/device/+/config" })
 }
 
-func (s *subRecorder) windowsMatching(want func(string) bool) []string {
+func (s *subRecorder) windowsMatching(want func(string) bool) []filterQoS {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	var out []string
+	var out []filterQoS
 	for _, f := range s.filters {
 		if want(f.Filter) {
-			out = append(out, f.Filter)
+			out = append(out, f)
 		}
 	}
 	return out
@@ -398,7 +403,7 @@ func pinBridgeQoS(t *testing.T, qos int) (*Bridge, *Device, *hass.Discovery, *su
 	desc := &profile.Description{Info: pincatalog.Info, Entries: entries}
 
 	cfg := testCfg()
-	cfg.MQTTQoS = qos
+	cfg.MQTTQoS = intPtr(qos)
 	cfg.MQTTTopic = pinRoot
 	cfg.Language = "de"
 	cfg.HASSEnable = true
@@ -544,7 +549,20 @@ func TestTopicGolden(t *testing.T) {
 	// window at MQTT_QOS is what publisher.Runtime.Sweep opens, because it
 	// parses all three discovery topic forms out of one subscription
 	// rather than encoding one of them in a filter.
-	filters = append(filters, filterQoS{Filter: pinPrefix + "/#", QoS: int(pinQoS)})
+	// The tombstone read-back's snapshot window, in the same shape and for
+	// the same reason: it is installed for reconcileCollectWindow and taken
+	// down again, so it is not in the recorder after subscribeCommands
+	// either. It is a REAL per-connection subscription — one message per
+	// appliance over `<prefix>/device/+/config`, deliberately narrower than
+	// the sweep's `<prefix>/#` — and it was missing from this artefact
+	// because the builder drives subscribeCommands alone and the sweep's
+	// line was the only one anybody had added by hand. "No golden moved"
+	// was true, and true for a reason that meant the pinned wire
+	// under-reported what the daemon does on it. Measured off the
+	// transport by TestTheReadBackWindowSubscribesAtMQTTQoS.
+	filters = append(filters,
+		filterQoS{Filter: pinPrefix + "/#", QoS: int(pinQoS)},
+		filterQoS{Filter: pinPrefix + "/device/+/config", QoS: int(pinQoS)})
 	sort.Slice(filters, func(i, j int) bool { return filters[i].Filter < filters[j].Filter })
 
 	states, commands := advertised(t, dev)

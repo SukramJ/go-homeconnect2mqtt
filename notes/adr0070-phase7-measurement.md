@@ -2851,7 +2851,11 @@ exists to prevent. Here `PublishDeviceBundle` applies the tombstones and
 `TestThePreflightMeasuresTheDocumentTheRemovalsProduced` drives a broker
 limit chosen **between** the two sizes, which is the only interval in which
 the two orderings give different answers. Measured: **39.8 bytes per
-removal** on the small fixture.
+removal** on the small fixture — and **67.9** on the real catalogue
+(157 548 - 122 900 = 34 648 bytes over 510 removals), which is the figure
+that matters against a broker limit. The small-fixture number is the one
+the preflight pin drives, because it is the one whose two sizes a test can
+sit a broker limit between.
 
 The empty-document gate moved with it. It read `len(b.Components) == 0`, and
 a tombstone IS an entry — an appliance that classified to zero entities
@@ -2974,6 +2978,201 @@ platform-only entry anyway (no `unique_id`), so deleting the platform filter
 alone changed no verdict. The table row that isolates it now names a
 component that is ours by identity AND by every topic it carries, so the
 missing platform is the only thing that can refuse it.
+
+---
+
+## Adversarial review of #49 — seven findings, and two routed in late
+
+Reviewed at `20fa6a3`. The finding that matters is F1: **the attribution
+rule the whole PR rests on was defeated by a nested sibling root**, and it
+was defeated over the real catalogue, not in principle.
+
+### F1 — a sibling rooted UNDER us had 510 live components tombstoned
+
+`Discovery.IsOwnConfig` accepted a component when every topic it named
+began with `<MQTT_TOPIC>/`. That is a topic-PREFIX test, and a prefix is
+not an identity. `internal/config/validate.go` asks only that `MQTT_TOPIC`
+be non-empty, so `homeconnect` and `homeconnect/kitchen` are two legal
+roots — and nesting the second instance's tree under the first is a
+*tidier*-looking configuration than inventing two disjoint names, not a
+perverse one. German appliance names are model-independent, so a shared
+name across two Home Connect accounts is likely, which is F8's
+precondition.
+
+Driven over the shipped 687-component catalogue, with both instances
+rendering the pin appliance under the same `HASS_BASE_TOPIC`:
+
+```
+nested sibling root "homeconnect/kitchen": 687 of 687 components accepted as OURS
+=> we tombstone 510 of the sibling's LIVE components
+```
+
+In Home Assistant: instance A deletes 510 of B's live entities from the
+registry — recorder history, area, rename, and every automation, script
+and dashboard card naming them. B republishes; A deletes again on its next
+connection. **go-daikin2mqtt #80's permanent ping-pong, reached through the
+one predicate #49 argued could not be fooled here.**
+
+The break was **asymmetric**, which is why nothing noticed: only the strict
+topic-level ancestor eats the descendant's components. The inner instance
+declined the outer's correctly (`homeconnect/…` does not begin with
+`homeconnect/kitchen/`), and disjoint roots — `homeconnect2`, `hc`,
+`homeconnectx`, `home` — declined **0 of 687** then and now.
+
+**The rule now attributes on an EXACT match against a topic only this
+instance renders**, with the prefix test kept as the second half rather
+than the whole:
+
+1. `<root>/status` — `layout.Bridge`, carried by every payload since F1 as
+   the first of its two availability sources. `homeconnect/kitchen/status`
+   is a different string; no nesting can produce it.
+2. `<root>/<device>/availability` with `<device>` a SINGLE topic level —
+   the device availability topic, which is what a pre-F1 payload carries in
+   the flat `availability_topic` key instead of the list. An instance
+   rooted at `<root>/<s>` renders `<root>/<s>/status` and
+   `<root>/<s>/<device>/availability`; neither can equal
+   `<root>/<one level>/availability`, because `<s>/<device>` is never one
+   level.
+
+The second anchor was kept deliberately, against the reviewer's
+bridge-topic-only proposal. Every installation upgrading from 0.12.0 has a
+retained tree of flat-`availability_topic` payloads: the 687 the migration
+supersedes are retracted by topic regardless, but an orphan at a topic this
+release no longer renders (the `select`→`sensor` correction, a renamed
+feature) is reached only by the sweep, and a bridge-only rule would stop
+recognising those as ours and strand them for ever. The anchor closes the
+nesting hole without that cost, and it closes it by construction rather
+than by measurement.
+
+**And the prefix half is not redundant**: a payload naming our anchor and a
+topic under somebody else's root is refused. That was worth finding out the
+hard way — the first version of the table had no row carrying our anchor
+AND a foreign topic, so the two halves masked each other and deleting the
+prefix half changed no verdict (M1d survived 0/3 before the row, 3/3
+after).
+
+Verified over **all four pinned configurations**: ours all claimed (687,
+687, 177, 687), the nested sibling **0**, the disjoint roots **0**, and the
+nested instance claims **0** of ours.
+`TestAttributionOverTheWholeCatalogue` and
+`TestTheReadBackDeclinesANestedSiblingsWholeDocument` drive the pinned
+payloads and the document they assemble into; the sibling's payloads are
+the pinned ones re-rooted, and
+`TestAReRootedPayloadIsWhatASiblingReallyPublishes` renders a real sibling
+instance and requires the re-rooting to reproduce it exactly, so the cheap
+form is evidence rather than an assumption.
+
+### The other six
+
+- **F2 — the duplicate-name guard guarded the wrong string.**
+  `profile.LoadDevices` rejected two identical names; what collides is
+  `slug.Slug(name)`, the node id, and the fold is many-to-one (`My Oven`
+  and `my-oven` are both `my_oven`). Both appliances then share one
+  document topic, one `unique_id` namespace and one `priorDocuments` key,
+  so each pass tombstones what the other just declared. The fold moved
+  into `internal/slug` — `internal/profile` cannot import `internal/hass`,
+  and a second copy of the fold is the shape F9 already cost this
+  repository once — and the guard is on the node id.
+  `TestTheNodeIDIsTheFoldProfileGuards` keeps the two packages' answer the
+  same string.
+- **F3 — half of "both gates run on the published shape" was unpinned.**
+  The preflight half was caught; making `discovery.Validate` run on a
+  tombstone-free copy survived the whole suite, because
+  `TestTheTombstonedDocumentStillValidatesAndIsMeasured` asserts that OUR
+  tombstoned document validates — never that the validator is SHOWN it.
+  `TestTheValidatorIsShownTheDocumentTheRemovalsProduced` drives a removal
+  whose platform is one Home Assistant has no MQTT support for (the
+  tombstone's platform comes from the PRIOR document, which no render of
+  this daemon vouches for), with a control publish first so the refusal can
+  only be the tombstone.
+- **F4 — the read-back window's QoS was a second spelling of the library's
+  default, asserted by nothing.** It is resolved once now, in
+  `haplane.New`, beside the resolution `publisher.New` does from the same
+  field, and `Wire`'s validity flag is no longer dropped.
+  `TestSnapshotSubscribesAtTheConfiguredQoS` drives **QoS 0, 1 and 2**,
+  which is what makes it able to fail: MQTT_QOS's default is 1 and so is
+  the library's, so every fixture in the bridge tests agrees with a
+  hard-coded level.
+- **F5 — `internal/bridge/testdata/topics.json` under-reported the wire.**
+  The read-back's `homeassistant/device/+/config` subscription was
+  missing, because the golden's builder drives `subscribeCommands` alone
+  and only the sweep's transient window had ever been stated by hand. The
+  row is added and the digest moved; nothing on the wire changed with it.
+- **F6 — the operator-facing half of F1.** `README.md`, `addon/DOCS.md`
+  and both tombstone file comments promised unconditionally that "a
+  sibling's entities are never deleted". The promise is now stated as what
+  it is: conditional on attributability, exact-match rather than prefix,
+  and silent on two instances that share one root — which nothing can tell
+  apart, and which is a configuration question rather than a code one.
+- **F7 — a visit could run after `Snapshot` returned.** `gated` read the
+  closed flag and then called out, so a delivery that passed the read could
+  be descheduled past the window's end. Inherited from
+  `publisher.Runtime.snapshot`; what is new here is that the map escapes
+  into `bridge.priorDocuments` under a different mutex, which makes it a
+  concurrent map write rather than a stale read. The flag is now taken and
+  set under one mutex held ACROSS the visit.
+
+### Two findings routed here late
+
+- **F9 was closed at the translation point and defeated one layer below
+  it.** `internal/haplane/qos.go` maps `MQTT_QOS: 0` to at-most-once and
+  `TestMQTTQoSZeroStaysQoSZero` asserts the whole chain from there to the
+  will — over a `config.Config` built BY HAND. `applyDefaults` read an
+  explicit `0` as "unset" and wrote `1`, because the field was a bare
+  `int`, so the level this daemon documents, offers in
+  `config-template.yaml` and accepts in `Validate` could not be reached
+  from a config file at all. The fix is the idiom already in the file
+  immediately above it — `MQTT_RETAIN`'s pointer sentinel, whose comment
+  names this exact reason — and the pin drives `config.Load`, from the
+  file and from `HC2M_MQTT_QOS`, rather than constructing the struct. The
+  earlier "That is F9 closed" was true of the conversion and false of the
+  loader.
+- **F8's "revisit this line" comment is now a decision rather than a
+  promise.** `OwnsConfigTopic` still declines the device-document form,
+  and step 6 is the reason to keep it: the document is the single retained
+  topic holding an appliance's entire fleet, and the payload half cannot
+  narrow a widened predicate again, because `IsOwnConfig` reads a
+  top-level `unique_id` and topics a document does not have at its top
+  level. The residual cost is stated in the comment instead of implied: a
+  document whose node id is no longer configured leaks rather than being
+  retracted — as that appliance's per-entity configs always have, because
+  every judgement is scoped to the node ids this process is configured
+  for — and it is cleared with the one retained-empty publish already
+  documented for the rollback path. Making the sweep able to reach it is a
+  fleet-SCOPE change, not a predicate change, and it is deliberately left
+  out of this PR.
+
+### Mutation record
+
+| # | Mutation | Runs | Result |
+| --- | --- | ---: | --- |
+| N1 | attribution is the topic PREFIX again | 3 | 3/3 |
+| N1 | …against the DRIVEN catalogue tests alone | 3 | 3/3 |
+| N1b | the availability anchor accepts any depth | 3 | 3/3 (3/3 driven-only) |
+| N1c | the bridge anchor is a prefix+suffix test, not an exact one | 3 | 3/3 (3/3 driven-only) |
+| N1d | the "every topic under our root" half is dropped | 3 | **survived 0/3** first; 3/3 once the table carried our anchor beside a foreign topic |
+| N2a | the duplicate guard keys on the raw name again | 3 | 3/3 |
+| N2b | the published node id is not the fold profile guards | 3 | 3/3 |
+| N3 | `discovery.Validate` runs on a tombstone-free copy | 3 | 3/3 — and the preflight pin, "the tombstoned document validates" and the blocking-document pin stay GREEN under it (0/3), which is the finding |
+| N4 | the read-back hard-codes the library's default QoS | 3 | 3/3 |
+| N5a | the read-back shares the sweep's `<prefix>/#` filter | 3 | 3/3 |
+| N5b | the golden omits the read-back window | 3 | 3/3 |
+| N6 | `gated` checks the flag and then visits | 5 | **survived 0/3** against an inline-replay stub — the visit finishes before the window opens; 5/5 once the delivery came from another goroutine |
+| N7 | `applyDefaults` overwrites an explicit `MQTT_QOS: 0` again | 3 | 3/3 — and `TestMQTTQoSZeroStaysQoSZero`, the pin F9 was closed with, stays GREEN under it (0/3) |
+
+N1d, N6 and N7 are the three worth reading, and they are the same lesson
+#49's own M8 recorded: **a mutation that does not perturb what the claim is
+about proves nothing.** N1d's first table refused the mutant's payloads for
+the other half's reason; N6's first stub could not produce a visit that was
+still running when the window closed; N7 is the finding itself — the pin
+that "closed" F9 cannot fail under it.
+
+Every mutation was applied on its own to a copy of the tree that had no
+`.git` in it at all. The first harness copied a linked worktree verbatim,
+so the copy's `.git` FILE still pointed at the original worktree's gitdir:
+`git checkout -- .` inside the copy reverted the ORIGINAL and left the
+copy's mutation in place, which made every run after the first cumulative.
+Every number above is from the rebuilt harness.
 
 ---
 

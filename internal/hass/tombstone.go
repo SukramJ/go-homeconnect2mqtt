@@ -48,6 +48,16 @@ import (
 // [Discovery.IsOwnConfig] — the payload rule, the only one that can tell
 // the two apart — and a component that is not provably ours is not prior
 // state, so it can never be tombstoned.
+//
+// That promise is CONDITIONAL on attributability, and stating it
+// unconditionally is how it went wrong once already. [Discovery.IsOwnConfig]
+// attributes on an exact match against a topic only this instance renders;
+// while it was a topic PREFIX test instead, an instance rooted at
+// `homeconnect` claimed all 687 components of one rooted at
+// `homeconnect/kitchen` and tombstoned the 510 that were live. Two
+// instances sharing one MQTT_TOPIC root remain indistinguishable — nothing
+// in the topic tree or in the payload separates them — and that is a
+// configuration this daemon cannot make safe, only document.
 
 // BundleComponents reads a retained device document and returns the
 // components it declared that are provably THIS instance's.

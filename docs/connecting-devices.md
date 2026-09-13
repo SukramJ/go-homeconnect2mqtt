@@ -214,6 +214,15 @@ booleans (normalised automatically):
 mosquitto_pub -h <broker> -t 'homeconnect/dishwasher/BSH/Common/Setting/PowerState/set' -m 'On'
 ```
 
+**The device segment is the name from `devices.yaml`, verbatim.** The state and
+command tree uses the RAW name — an appliance called `Geschirrspüler` publishes
+under `homeconnect/Geschirrspüler/…`, umlaut and capital included — while Home
+Assistant's discovery topic uses the slug of the same name
+(`homeassistant/device/geschirrspuler/config`). The two are different strings on
+purpose and neither is derived from the other at the broker, so a command topic
+copied from the discovery tree addresses nothing. Copy the device segment from
+`devices.yaml`, or read it off the appliance's own `state_topic`.
+
 Programs are controlled via the `…/Root/SelectedProgram/set` (select) and
 `…/Root/ActiveProgram/set` (start; send `off` to stop) topics, using the program
 feature name as the value. The bridge picks the device-appropriate start path

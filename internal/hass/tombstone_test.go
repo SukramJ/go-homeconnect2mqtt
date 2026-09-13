@@ -14,6 +14,7 @@ import (
 	"sync"
 	"testing"
 
+	hacatalog "github.com/SukramJ/go-ha-catalog"
 	"github.com/SukramJ/go-hamqtt/discovery"
 	"github.com/SukramJ/go-hamqtt/publisher"
 
@@ -205,10 +206,24 @@ func TestATombstoneNeverOverwritesALiveComponent(t *testing.T) {
 // something that proved nothing".
 func TestEveryFailureDirectionOfTheReadBackProducesFewerTombstones(t *testing.T) {
 	d := New(nil, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
+	// Both carry the two-source availability list every rendered payload
+	// has carried since F1, because that list is where attribution now
+	// lives: `<root>/status` is an exact string, and a fixture without it
+	// is not a smaller real payload but one this daemon never publishes.
 	ours := `{"platform":"sensor","unique_id":"homeconnect_geschirrspuler_a",` +
+		`"availability":[{"topic":"` + goldenRoot + `/status"},{"topic":"` + goldenRoot +
+		`/Geschirrspüler/availability"}],` +
 		`"state_topic":"` + goldenRoot + `/Geschirrspüler/A/state"}`
 	sibling := `{"platform":"sensor","unique_id":"homeconnect_geschirrspuler_a",` +
+		`"availability":[{"topic":"other_root/status"},{"topic":"other_root/Geschirrspüler/availability"}],` +
 		`"state_topic":"other_root/Geschirrspüler/A/state"}`
+	// A NESTED sibling: rooted one topic level under us, which is the
+	// configuration the prefix rule could not tell from our own. Every
+	// topic it names begins with `homeconnect/`.
+	nested := `{"platform":"sensor","unique_id":"homeconnect_geschirrspuler_a",` +
+		`"availability":[{"topic":"` + goldenRoot + `/kitchen/status"},{"topic":"` + goldenRoot +
+		`/kitchen/Geschirrspüler/availability"}],` +
+		`"state_topic":"` + goldenRoot + `/kitchen/Geschirrspüler/A/state"}`
 
 	for _, tc := range []struct {
 		name    string
@@ -225,11 +240,19 @@ func TestEveryFailureDirectionOfTheReadBackProducesFewerTombstones(t *testing.T)
 		// purpose: the first version of this row named no topic either,
 		// which meant the ownership rule refused it and the platform check
 		// could be deleted with the suite green.
-		{"a component of ours with no platform", `{"components":{"a":{"unique_id":"homeconnect_x_a","state_topic":"` + goldenRoot + `/x/state"}}}`},
+		{"a component of ours with no platform", `{"components":{"a":{"unique_id":"homeconnect_x_a","availability":[{"topic":"` + goldenRoot + `/status"}],"state_topic":"` + goldenRoot + `/x/state"}}}`},
 		{"a tombstone this daemon wrote itself", `{"components":{"a":{"platform":"sensor"}}}`},
-		{"a component with a foreign unique_id", `{"components":{"a":{"platform":"sensor","unique_id":"zigbee_a","state_topic":"` + goldenRoot + `/x/state"}}}`},
+		{"a component with a foreign unique_id", `{"components":{"a":{"platform":"sensor","unique_id":"zigbee_a","availability":[{"topic":"` + goldenRoot + `/status"}],"state_topic":"` + goldenRoot + `/x/state"}}}`},
 		{"a component naming no topic at all", `{"components":{"a":{"platform":"sensor","unique_id":"homeconnect_x_a"}}}`},
 		{"a SIBLING INSTANCE's document", `{"components":{"a":` + sibling + `}}`},
+		// The one the topic-prefix rule accepted: every topic is under
+		// `homeconnect/`, the unique_id is one we would produce, and the
+		// components are somebody else's LIVE entities.
+		{"a NESTED sibling instance's document", `{"components":{"a":` + nested + `}}`},
+		// Our anchor, somebody else's state topic: the component is
+		// refused by the "every topic under our root" half of the rule
+		// alone, which nothing else here exercises.
+		{"a component carrying our anchor and a foreign state topic", `{"components":{"a":{"platform":"sensor","unique_id":"homeconnect_geschirrspuler_a","availability":[{"topic":"` + goldenRoot + `/status"}],"state_topic":"other_root/Geschirrspüler/A/state"}}}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := d.BundleComponents([]byte(tc.payload)); got != nil {
@@ -494,5 +517,67 @@ func TestTheCuratedWarningDescribesTheBehaviourThisReleaseHas(t *testing.T) {
 			t.Errorf("the warning does not say %q; flipping this option now deletes entities "+
 				"and their history, which is what an operator has to be told", want)
 		}
+	}
+}
+
+// TestTheValidatorIsShownTheDocumentTheRemovalsProduced is the other half
+// of "both gates run on the published shape".
+//
+// The size preflight's half is pinned by
+// TestThePreflightMeasuresTheDocumentTheRemovalsProduced. The validator's
+// was not: TestTheTombstonedDocumentStillValidatesAndIsMeasured asserts
+// that OUR tombstoned document validates, which stays true if
+// discovery.Validate is handed a tombstone-free copy — the mutation that
+// matters survived the whole suite. What it costs is the thing the gate
+// exists for: a document whose REMOVAL entries make it blocking is
+// published anyway, and Home Assistant drops the document entire, so the
+// appliance loses all 687 entities rather than the one bad removal.
+//
+// The removal is where a bad platform can come from, and it is not
+// hypothetical: the tombstone's platform is the PRIOR document's, read
+// back from the broker, so it was written by some other version of this
+// daemon (or by nothing at all) and no render of this one vouches for it.
+//
+// The control comes first. The identical publish with no prior state must
+// succeed, so the refusal below can only be the tombstone — a test whose
+// failure could come from the rendered components would prove nothing
+// about which document the validator saw.
+func TestTheValidatorIsShownTheDocumentTheRemovalsProduced(t *testing.T) {
+	entities := pinEntities(t)
+	control := &bundleRecorder{}
+	d := New(control, goldenPrefix, goldenRoot, "en", true, slog.New(slog.DiscardHandler))
+	d.SetEnricher(pinEnricher(t))
+	if _, _, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, pincatalog.Info, entities, nil); err != nil {
+		t.Fatalf("the control publish was refused, so nothing below is attributable: %v", err)
+	}
+	if control.written() == 0 {
+		t.Fatal("the control publish wrote nothing")
+	}
+
+	// A key no render of this daemon produces, so it becomes a tombstone,
+	// carrying a platform Home Assistant has no MQTT support for.
+	prior := map[string]discovery.Component{
+		"a_component_no_render_of_ours_declares": {
+			Platform: hacatalog.Platform("toaster"),
+			UniqueID: "homeconnect_dishwasher_gone",
+		},
+	}
+	rec := &bundleRecorder{}
+	d2 := New(rec, goldenPrefix, goldenRoot, "en", true, slog.New(slog.DiscardHandler))
+	d2.SetEnricher(pinEnricher(t))
+	_, live, err := d2.PublishDeviceBundle(t.Context(), goldenDeviceEN, pincatalog.Info, entities, prior)
+	if err == nil {
+		t.Fatal("a document whose REMOVAL entry is blocking was published: Home Assistant drops " +
+			"the whole document, so the appliance loses every entity it has")
+	}
+	var ve *discovery.ValidationError
+	if !errors.As(err, &ve) || !ve.Blocking() {
+		t.Fatalf("err = %v, want a blocking discovery.ValidationError", err)
+	}
+	if live != nil {
+		t.Errorf("a refused document reported %d live components as the next prior state", len(live))
+	}
+	if rec.written() != 0 {
+		t.Errorf("a refused document still wrote %d messages", rec.written())
 	}
 }

@@ -27,6 +27,7 @@ import (
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/slug"
 )
 
 // Platforms.
@@ -501,26 +502,13 @@ func humanize(e *homeconnect.Entity) string {
 	return b.String()
 }
 
-// umlautReplacer transliterates German umlauts to match HA's slugify.
-var umlautReplacer = strings.NewReplacer("ä", "a", "ö", "o", "ü", "u", "ß", "ss")
-
 // slugify lowercases, transliterates umlauts and reduces any run of
 // non-alphanumeric characters to a single underscore (HA-compatible).
-func slugify(s string) string {
-	s = umlautReplacer.Replace(strings.ToLower(s))
-	var b strings.Builder
-	prevUnderscore := false
-	for _, r := range s {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			b.WriteRune(r)
-			prevUnderscore = false
-		} else if !prevUnderscore {
-			b.WriteByte('_')
-			prevUnderscore = true
-		}
-	}
-	return strings.Trim(b.String(), "_")
-}
+//
+// The fold itself lives in internal/slug, because internal/profile has to
+// apply the SAME one to reject two configured appliances whose names fold
+// to one node id, and it cannot import this package. See slug.Slug.
+func slugify(s string) string { return slug.Slug(s) }
 
 // sanitize is slugify kept under its historical name for the device id prefix.
 func sanitize(s string) string { return slugify(s) }
@@ -545,7 +533,7 @@ func sortLocalized(s []string) {
 	})
 }
 
-func collateKey(s string) string { return umlautReplacer.Replace(strings.ToLower(s)) }
+func collateKey(s string) string { return slug.Fold(s) }
 
 func sortStrings(s []string) {
 	for i := 1; i < len(s); i++ {

@@ -51,11 +51,33 @@ func retractedTopics(rec *subRecorder) []string {
 	return out
 }
 
+// ownAvailability is the two-source availability list every payload this
+// daemon renders has carried since F1, for an appliance of the instance
+// rooted at root.
+//
+// It is what makes a payload ATTRIBUTABLE rather than merely
+// prefix-compatible: `<root>/status` is an exact string only the instance
+// rooted at root renders, where `<root>/…` is a prefix every instance
+// nested UNDER it satisfies too. A fixture that omitted it was not a
+// smaller version of a real payload, it was a payload this daemon has
+// never published — and the rule now declines it, which is the point.
+func ownAvailability(root, device string) string {
+	return `"availability":[{"topic":"` + root + `/status"},{"topic":"` + root + `/` + device +
+		`/availability"}],`
+}
+
 // ourConfig is a retained config payload of THIS instance: a unique_id in
-// the homeconnect_ namespace and a state topic under this daemon's root.
+// the homeconnect_ namespace, a state topic under this daemon's root, and
+// the availability list that names this instance's own status topic.
 func ourConfig(key string) string {
-	return `{"unique_id":"homeconnect_geschirrspuler_` + key +
+	return `{` + ownAvailability(pinRoot, pinDevice) + `"unique_id":"homeconnect_geschirrspuler_` + key +
 		`","state_topic":"` + pinRoot + `/` + pinDevice + `/X/state"}`
+}
+
+// backofenConfig is a second appliance of OURS, in the same shape.
+func backofenConfig(key string) string {
+	return `{` + ownAvailability(pinRoot, "Backofen") + `"unique_id":"homeconnect_backofen_` + key +
+		`","state_topic":"` + pinRoot + `/Backofen/X/state"}`
 }
 
 // siblingConfig is the same entity published by a SECOND instance of this
@@ -144,7 +166,7 @@ func TestReportOnlySweepOverTheRealFleet(t *testing.T) {
 		// Another appliance of ours, which this per-device pass is not
 		// asked about. It is claimed by nobody in this test, so only the
 		// device scope keeps it alive.
-		"homeassistant/sensor/backofen/other_device/config": `{"unique_id":"homeconnect_backofen_x","state_topic":"` + pinRoot + `/Backofen/X/state"}`,
+		"homeassistant/sensor/backofen/other_device/config": backofenConfig("x"),
 		// Already cleared by somebody.
 		"homeassistant/sensor/geschirrspuler/emptied/config": "",
 	}
@@ -263,7 +285,7 @@ func TestSweepDoesNotRetractASecondAppliancesConfigs(t *testing.T) {
 
 	other := "homeassistant/sensor/backofen/bsh_common_status_operationstate/config"
 	seedRetained(rec, map[string]string{
-		other: `{"unique_id":"homeconnect_backofen_x","state_topic":"` + pinRoot + `/Backofen/X/state"}`,
+		other: backofenConfig("x"),
 	})
 
 	if cleared := b.reconcileOrphansOnce(t.Context(), dev.name, map[string]bool{}); cleared != 0 {
@@ -428,7 +450,7 @@ func TestRefreshDiscoveryOnceIsFleetWide(t *testing.T) {
 	}
 	seedRetained(rec, map[string]string{
 		ours[0]: ourConfig("anything"),
-		ours[1]: `{"unique_id":"homeconnect_backofen_anything","state_topic":"` + pinRoot + `/Backofen/X/state"}`,
+		ours[1]: backofenConfig("anything"),
 		"homeassistant/sensor/geschirrspuler/sibling/config": siblingConfig("sibling"),
 		"homeassistant/sensor/zigbee2mqtt_bridge/x/config":   `{"unique_id":"zigbee2mqtt_x"}`,
 	})
