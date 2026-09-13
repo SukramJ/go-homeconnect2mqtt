@@ -700,7 +700,24 @@ func TestBothButtonPathsShareTheCommonPayloadShape(t *testing.T) {
 // TestGoldenPlatformCensus pins the per-platform entity counts for each
 // shipped configuration, as literals, so a re-platformed entity is caught
 // even if its payload happens to round-trip.
+//
+// The literals below were added after the fact: the doc comment claimed
+// them from the start, but the body only logged the census and asserted
+// that it was non-empty. The measurement document's own census table
+// (notes/adr0070-phase7-measurement.md §2.2) is one off in two rows
+// because of it — 499 sensors / 36 selects and a 176-entity curated set,
+// against the 498 / 37 / 177 the builder actually produces. A census that
+// is only logged is not a pin.
 func TestGoldenPlatformCensus(t *testing.T) {
+	// Held as literals, in Go, so a re-platformed entity is caught even
+	// when its payload happens to round-trip and even immediately after a
+	// golden regeneration.
+	want := map[string]map[string]int{
+		"discovery_full_en.json":    {"sensor": 498, "binary_sensor": 103, "select": 37, "button": 20, "switch": 15, "number": 14},
+		"discovery_full_de.json":    {"sensor": 498, "binary_sensor": 103, "select": 37, "button": 20, "switch": 15, "number": 14},
+		"discovery_curated_de.json": {"sensor": 93, "binary_sensor": 43, "select": 18, "number": 11, "button": 6, "switch": 6},
+		"discovery_plain_en.json":   {"sensor": 498, "binary_sensor": 103, "select": 37, "button": 20, "switch": 15, "number": 14},
+	}
 	for _, tc := range goldenCases {
 		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
 			got := map[string]int{}
@@ -712,8 +729,8 @@ func TestGoldenPlatformCensus(t *testing.T) {
 				total += n
 			}
 			t.Logf("%s: %d entities %v", tc.file, total, got)
-			if total == 0 {
-				t.Fatal("nothing published")
+			if diff := canonicalString(t, got); diff != canonicalString(t, want[tc.file]) {
+				t.Errorf("%s census = %s, want %s", tc.file, diff, canonicalString(t, want[tc.file]))
 			}
 		})
 	}
