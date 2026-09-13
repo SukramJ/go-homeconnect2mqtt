@@ -1,7 +1,9 @@
 # ADR 0070 phase 7 — measurement for go-homeconnect2mqtt
 
-- Status: measurement (steps 0), plus the step 1+2 outcome and the F1/F10
+- Status: measurement (step 0), plus the step 1+2 outcome and the F1/F10
   decisions — see [Step 2 outcome](#step-2-outcome--what-was-fixed-what-was-decided-what-stays)
+  — plus the step 4 byte-equality result and F13, see
+  [Step 4 outcome](#step-4-outcome--the-byte-equality-experiment)
 - Date: 2026-09-13
 - Subject: [ADR 0070](https://github.com/SukramJ/openccu-loom/blob/main/docs/adr/0070-shared-ha-discovery-model-module.md)
   and its rollout table, row *"7 | `go-homeconnect2mqtt` (716) | Proves the
@@ -1035,6 +1037,263 @@ bundles can decide it in one sitting.
 
 ---
 
+## Step 4 outcome — the byte-equality experiment
+
+This section was written by phase 7 step 4, the PR that renders the same
+catalogue through `go-hamqtt` and publishes none of it. The measurement and
+the step-2 outcome above are unchanged; one new finding is added below as
+F13.
+
+### The result
+
+**Byte-equality holds, for 2 238 of 2 238 payloads.**
+
+| Configuration | Payloads | Reproduced |
+| --- | ---: | ---: |
+| `discovery_full_en.json` | 687 | **687** |
+| `discovery_full_de.json` | 687 | **687** |
+| `discovery_curated_de.json` | 177 | **177** |
+| `discovery_plain_en.json` | 687 | **687** |
+| `identity_en.json` (the four registry keys) | 687 | **687** |
+
+No golden was regenerated — `-update-discovery-golden` and
+`-update-topics-golden` were never passed, the new test file cannot reach
+either flag, and **all six SHA-256 literals are untouched**. The comparison
+runs against the files as #41 left them.
+
+Nothing reaches a broker. `Discovery.mqtt` is never called from the new
+path; `TestHamqttRenderPathPublishesNothing` drives every entry point with a
+`Publisher` that fails the test on contact.
+
+### What it took
+
+`internal/hass/hamqtt.go`, ~420 lines including its argument:
+
+- **`hamqttLayout`** — a `topic.Layout` delegating to `internal/layout`, so
+  the library path and the daemon's own publish path cannot disagree about a
+  topic. `topic.Default` is unusable for two independent reasons: its
+  `Bridge()` is `<root>/bridge/status` and this daemon's is `<root>/status`
+  (§4), and its `State()` inserts a bucket segment and addresses the device
+  by its identity rather than by its raw name (F2).
+- **`hamqttContext`** — `discovery.StdContext` with `NodeID`, `ObjectID` and
+  `UniqueID` overridden onto this bridge's `slugify`. That is F10 applied,
+  not reopened.
+- **`describe` / `enrichDescription` / `localizeDescriptionOptions` /
+  `sanitizeDescriptionForPlatform`** — `payloadFor`, `applyEnrichment`,
+  `localizeOptions` and `sanitizeForPlatform` projected onto a
+  `model.Description` in the same order.
+- Rendering itself is `discovery.RenderComponent` + `Component.EntityJSON`,
+  and the config topic is `publisher.EntityConfigTopic` from the library's
+  own `NodeID` — deliberately not `configTopic`, so the step finds out
+  whether the library agrees rather than assuming it.
+
+The classification stays put. `classify`, `deviceClassAndUnit`,
+`stateClassFor`, `entityCategoryFor`, `enabledByDefault`, `humanize`,
+`enumOptions` and the enrichment chain are this bridge's domain logic over
+the Home Connect profile; the library replaces the *rendering*, not them.
+
+Two library settings are load-bearing and would each have been a silent
+2 238-row diff:
+
+- **`discovery.RawEncoding`.** The zero `Encoding` is `EnvelopeEncoding`,
+  which attaches a `value_template` to every entity with a state topic —
+  667 of them.
+- **`discovery.Origin{}` on the per-entity form.** `RenderComponent`
+  attaches an origin block only when the name is non-empty; this bridge's
+  per-entity configs carry none.
+
+### The topic form — verdict, with evidence
+
+**Confirmed: five segments with a node id, go-hamqtt's DEFAULT
+`publisher.LegacyTopicWithNodeID`.** Step 6 passes no `forms` argument to
+`SupersededTopics`.
+
+The evidence is not a reading of `configTopic`.
+`TestHamqttTopicFormIsTheFiveSegmentNodeIDForm` takes all 687 **pinned**
+config topics from `identity_en.json`, runs each through the library's own
+`publisher.ParseConfigTopic`, and re-renders it:
+
+| Form | Reproduces |
+| --- | ---: |
+| `publisher.LegacyTopicWithNodeID` (the default) | **687 of 687** |
+| `publisher.LegacyTopicByUniqueID` (what both siblings needed) | **0 of 687** |
+
+The two are unambiguously distinguishable here, which is what makes the
+verdict safe rather than merely correct: the object id is `featureKey(e)`
+and the unique id is `homeconnect_<node>_<featureKey>`, so no topic could
+be produced by both.
+
+### F13 — a new finding, and the reason step 4 exists
+
+<a name="f13"></a>
+#### F13 — the operator catalogue assigns binary-sensor device classes to features that become sensors · **high**
+
+`discovery.ValidateBody` refuses **11 of 687** payloads in each of the three
+enriched configurations and **0 of 687** in the unenriched one, which places
+the cause in `mapping.yaml` rather than in the heuristic:
+
+```
+sensor: device_class "battery_charging" is not valid for platform "sensor"
+sensor: device_class "plug" is not valid for platform "sensor"
+sensor: device_class "door" is not valid for platform "sensor"   (x9)
+```
+
+The mechanism is `deviceClassAllowed` (`payload.go`): `case platformSensor:
+return true`. `sensor` and `number` carry Home Assistant's open-ended value
+classes, so the filter trusts the operator catalogue absolutely there — and
+`mapping.yaml` is generated to mirror the official `home_connect`
+integration, where these features **are** binary sensors. Measured at the
+source, independently of the pin fixture: **13 catalogued features carry a
+device class that Home Assistant's `sensor` platform does not declare**, all
+13 of them legal `binary_sensor` classes.
+
+| Feature | `device_class` |
+| --- | --- |
+| `BSH.Common.Appliance.Connected` | `connectivity` |
+| `BSH.Common.Status.BatteryChargingState` | `battery_charging` |
+| `BSH.Common.Status.ChargingConnection` | `plug` |
+| `BSH.Common.Status.InteriorIlluminationActive` | `light` |
+| `Refrigeration.Common.Status.Door.*` (9) | `door` |
+
+Whether a given one lands on `sensor` depends on how the appliance models
+the element: a read-only boolean becomes a `binary_sensor`, where the class
+is legal, and anything else — an enumeration, a string — becomes a `sensor`,
+where it is not. The pin fixture's synthesised descriptors put 11 of the 13
+on `sensor`; a real appliance that reports a door status as an enumeration
+rather than a boolean reaches the same place. **13 is the bound, 11 is what
+this catalogue measures.**
+
+A second, quieter consequence rides along: `sanitizeForPlatform`'s enum
+branch is keyed on `device_class == "enum"`, so an enum sensor whose class
+the catalogue has overridden falls through to `delete(p, "options")` and
+loses its options list too.
+
+What Home Assistant does with it is what makes it worth a finding: nothing
+visible. The config is dropped during schema validation, before the entity
+is constructed — no error on the wire, no log line naming the cause, and an
+entity indistinguishable from one the bridge never published.
+
+**Not fixed here.** A fix moves bytes in three of the four goldens, and step
+4 must regenerate nothing. It is pinned exactly instead — by entity key and
+class in `TestHamqttPayloadsPassDiscoveryValidate`, and by feature name and
+class in `TestCatalogueAssignsBinarySensorClassesToThirteenFeatures` — so
+the step that fixes it produces a diff a reviewer can read, and so it cannot
+silently grow. The fix belongs at step 7 (operator-visible) or in a step of
+its own: either `deviceClassAllowed` stops trusting the catalogue on
+`sensor` and filters against `go-ha-catalog`'s per-platform tables, or the
+13 catalogue entries move to a platform-aware form. The first is the smaller
+change and the one that closes the class of defect rather than these 13
+instances.
+
+**Why the stakes change at step 6, again.** Today the damage is 11 entities
+per appliance quietly missing. A device bundle is validated as one document
+and `discovery.Validate` reports it `Blocking()` — and a blocking bundle
+publishes **nothing at all**, so the same 11 rows would cost the device all
+687 of its entities. `discovery.ValidateIgnoring` is not the escape: the
+class is not a key Home Assistant is known to drop, it is a value it
+refuses. **F13 must be fixed before step 6**, and it is the one finding in
+this phase with that ordering constraint.
+
+For contrast: go-mtec2mqtt's equivalent step validated clean, and that it
+passed was previously unknown. Neither sibling bridge had ever validated its
+own output against Home Assistant's schemas. This is what the check buys.
+
+### Two things asserted because no golden can see them
+
+The standard #41 set — every new assertion verified to fail under mutation —
+turned up two places where nothing could be made to fail. Both are named
+rather than left as coverage nobody checked:
+
+- **`hamqttLayout` ignores `Slot.Address`, `Channel` and `Bucket`.**
+  `Address` is `model.Device.UID()`, i.e. `homeconnect_geschirrspuler` — the
+  *identity*, which F2 measured to be a different string from the topic
+  segment `Geschirrspüler`. A layout that started reading it would move
+  every state, command and availability topic of a non-ASCII device name.
+  `Channel` and `Bucket` have no counterpart in this tree at all.
+  `TestHamqttLayoutIgnoresAddressChannelAndBucket` asserts the inertness in
+  both directions: perturbing those three changes nothing, perturbing
+  `Scope` or `Path` changes everything.
+- **`sanitizeForPlatform`'s button branch is inert over this catalogue.** No
+  command feature in `mapping.yaml` carries a `device_class`, and the
+  heuristic derives none for a command, so across all 2 238 pinned payloads
+  the branch is never taken.
+  `TestButtonDeviceClassFilterIsInertOverThisCatalogue` asserts the premise
+  (no button in the pin carries a class) and then the behaviour directly, on
+  both renderers.
+
+### Mutation proof
+
+Twenty-one mutations, applied one at a time to `hamqtt.go`, `hamqtt_test.go`
+and `payload.go`, each run against the whole `internal/hass` and
+`internal/bridge` suite and reverted. **Nineteen caught.**
+
+| # | Mutation | Caught by |
+| --- | --- | --- |
+| M1 | `NodeID` uses `topic.Slug` instead of `slugify` | byte (de + curated) + bundle |
+| M2 | `UniqueID` drops the device-id prefix | byte (all four) + identity + buttons |
+| M3 | `ObjectID` slugifies the two halves separately | **equivalent mutant — see below** |
+| M4 | `Layout.Bridge` takes `topic.Default`'s `<root>/bridge/status` | byte + layout-agreement |
+| M5 | `Layout.State` suffix `/state` → `/value` | byte + layout-agreement + inertness |
+| M6 | `Layout.Command` suffix `/set` → `/write` | byte + layout-agreement + inertness |
+| M7 | `Layout.Availability` → `ConnectionState` | byte + layout-agreement + inertness |
+| M8 | `Layout` addresses the device by `Slot.Address` (the identity) | byte + layout-agreement + inertness |
+| M9 | `Encoding` left at the library default (envelope) | byte (all four) |
+| M10 | the per-entity form gains an origin block | byte (all four) |
+| M11 | availability narrowed to `model.BridgeOnly()` | byte (all four) |
+| M12 | the two synthetic program buttons are dropped | byte (all four) + buttons |
+| M13 | synthetic buttons use `commandPressPayload` | byte (all four) + buttons |
+| M14 | `sanitizeDescriptionForPlatform` stops filtering `device_class` | validate + bundle + button-inertness |
+| M15 | it keeps `options` on a non-enum sensor | validate + bundle |
+| M16 | `enabled_by_default` is never emitted | byte (all four) |
+| M17 | a button gains a readable state binding | **equivalent mutant — see below** |
+| M18 | the config topic is built from the four-segment unique-id form | compile |
+| M19 | the F13 rejection set loses one row | validate + bundle |
+| M20 | `deviceClassAllowed` accepts everything on `button` | button-inertness |
+| M21 | the verdict test accepts the four-segment form | topic-form |
+
+Two could not be made to fail, and both are **equivalent**, not missed. #41's
+standard is that such a thing is named rather than left as coverage nobody
+checked, so each has an assertion of its own:
+
+- **M3.** `slugify(device + "_" + key)` and `slugify(device) + "_" +
+  slugify(key)` are equal for every input the daemon can reach — `slugify`
+  collapses a run of separators to one underscore and trims the ends, so the
+  two can only differ when one half slugifies to empty, and
+  `profile.validateDeviceName` refuses a device name with no ASCII letter or
+  digit for exactly that reason.
+  `TestObjectIDCompositionIsAnEquivalentMutant` asserts the equivalence over
+  6 183 device × key pairs *and* the one input that breaks it; it fails if
+  `slugify` stops trimming.
+- **M17.** Giving a button a readable state binding changes no byte, because
+  go-hamqtt projects `state_topic` only onto the platforms whose schema
+  declares it and `button` is one of the ten that do not. That is the
+  library's guarantee, and a test that only ever renders correct input never
+  exercises it.
+  `TestGoHamqttRefusesAStateTopicOnAWriteOnlyPlatform` renders the wrong
+  input deliberately and asserts the refusal.
+
+### `button` — the platform new to this rollout
+
+Neither sibling bridge publishes one. All **20** per appliance are
+reproduced byte for byte — 18 command-derived (`payload_press: "true"`,
+`entity_category: config`, `enabled_by_default: false`) and 2 synthetic
+(`payload_press: "PRESS"`, neither key), which is F6's three deliberate
+differences intact. The library's projection is right for the platform
+without help: it declines to project a `state_topic` onto a platform whose
+schema does not declare one, and it takes the command topic from a
+write-only binding rather than requiring a readable one.
+
+### F8 — nothing new
+
+The rendering work revealed nothing that changes F8's analysis. It did
+confirm the mechanism from the library's side: `discovery.Bundle.Topic` is
+`<prefix>/device/<node_id>/config` and the node id is `slugify(device)` with
+no `MQTT_TOPIC` anywhere in it, so two instances with a device name in
+common publish to one topic and each publish replaces the other's entire
+component set. Still decided-nothing, as #41 left it.
+
+---
+
 ## Sequencing — the rest of phase 7
 
 Ordered so each step de-risks the next, following the shape phases 5 and
@@ -1046,7 +1305,7 @@ Ordered so each step de-risks the next, following the shape phases 5 and
 | 1 | Housekeeping the bump enables: delete `mqttSession` for `mqtt.SplitClient`; exclude `go-ha-catalog` from Dependabot auto-merge. Payloads untouched — the goldens must not move. | Small, mechanical, and a free check that the pins do not fire on a non-payload change. |
 | 2 | **Fix the defects, one commit per finding, goldens regenerated with the diff reviewed.** F3 (one state-topic builder) and F4 (`/set` check before the goroutine) first — neither changes a byte on the wire. Then F6, F5, F11, F7. | The byte-equality proof in step 4 must compare against *corrected* bytes, not against bugs. |
 | 3 | **Decide the two questions that are not implementation.** (a) F10: consumer-supplied `discovery.Context` keeping `slugify`, or accept re-registration for non-ASCII device names. (b) F1/availability: keep device-only and stay byte-equal, or take the library's `{LevelBridge, LevelDevice}` default and change all 687 payloads. Written down, not discovered. | Both are irreversible for an installed base. Phase 6 hit (a) at step 3 and paid for it. |
-| 4 | **Render through go-hamqtt, publishing nothing.** Add `internal/hass/hamqtt.go` building a `discovery.Bundle` from the same entities, behind no config flag, and a test that compares its per-component output against `testdata/discovery_*.json` — **against the files, not against the builder it replaces**. Neither pin regenerated. | This is where a `Layout`, `Context` or `Slot` mismatch surfaces, at zero risk. |
+| 4 | **DONE (see [Step 4 outcome](#step-4-outcome--the-byte-equality-experiment)).** **Render through go-hamqtt, publishing nothing.** Add `internal/hass/hamqtt.go` building a `discovery.Bundle` from the same entities, behind no config flag, and a test that compares its per-component output against `testdata/discovery_*.json` — **against the files, not against the builder it replaces**. Neither pin regenerated. | This is where a `Layout`, `Context` or `Slot` mismatch surfaces, at zero risk. |
 | 5 | Adopt the library on the **state and command** planes (`publisher.StatePublisher`, `publisher.CommandRouter`, `publisher.AvailabilityPublisher`), discovery still per-entity from the old path. | The state plane has no registry keys to orphan; it is the cheap half. |
 | 6 | **Switch discovery to the device bundle.** `publisher.PublishBundle` + `SupersededTopics(prefix, bundle)` with the **default** `LegacyTopicWithNodeID` form (§2.3), retracting all 687 per-entity configs before the bundle lands. Verify against a live Home Assistant that no `Received a conflicting MQTT discovery message` warning appears. | The one step that cannot be proved by a unit test. Everything above exists to make it a small diff. |
 | 7 | Apply the step-3 decisions, changelog + `addon/CHANGELOG.md`, version bump across the five spots `CLAUDE.md` names. | Operator-visible last. |

@@ -61,6 +61,8 @@ Go module dependencies (all permissive):
 | Module | License |
 |---|---|
 | `github.com/coder/websocket` | ISC |
+| `github.com/SukramJ/go-ha-catalog` | MIT |
+| `github.com/SukramJ/go-hamqtt` | MIT |
 | `github.com/SukramJ/go-mqtt` | MIT |
 | `golang.org/x/sync` | BSD-3-Clause |
 | `gopkg.in/yaml.v3` | MIT / Apache-2.0 |
