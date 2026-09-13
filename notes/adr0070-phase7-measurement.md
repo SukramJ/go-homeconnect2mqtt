@@ -2144,6 +2144,285 @@ built:
 
 ---
 
+## Step 7 outcome — one retained device document per appliance
+
+This section was written by the step the sequencing table below numbers
+**6**: discovery switches from 687 retained per-entity configs to one
+retained device document per appliance. It is the last step of the phase and
+the only one that can destroy an installed Home Assistant setup, because the
+configs it retracts and the document it publishes cannot coexist and the
+window between them is an appliance with no discovery config at all.
+
+### The measurement
+
+| | |
+| --- | --- |
+| Components in the document | **687** (full), 177 (curated) |
+| Document payload | **472 847 bytes** (`de`, full), 459 067 (`en`), 122 900 (curated `de`) |
+| One retained PUBLISH of it | **472 953 bytes** on the wire |
+| Per-entity configs retracted first | **687**, one per component |
+| Topic | `homeassistant/device/geschirrspuler/config` |
+
+Measured by `TestTheMigrationRetractsEveryPerEntityConfigBeforeTheDocument`,
+which drives a real `Bridge`, a real `hass.Discovery` and the real publish
+plane over the pin catalogue and reads the numbers off the recorded
+transport calls. It is roughly **nine times** go-mtec2mqtt's ~50 KB, which
+is why the packet-size preflight is not a formality here.
+
+### Retraction completeness, and why it is a statement about a connection
+
+`publisher.Runtime.PublishBundle` retracts every superseded per-entity
+config and then publishes the document. It remembers which topics it has
+retracted, so a steady-state boot does not re-send 687 empty payloads
+forever — a memo that is correct **per connection** and wrong per process. A
+QoS 0 publish "succeeds" when the bytes reach a socket; if that socket then
+died, the broker applied none of them.
+
+go-mtec2mqtt shipped a process-lifetime runtime and measured the
+consequence: `retractions re-sent = 0, document published = true, configs
+still retained = 1`. #44 built the structural answer here in advance —
+`haplane.Plane.Reconnect` swaps in a fresh `publisher.Runtime` and closes
+the old one, and `Bridge.PublishOnline` calls it at the head of every
+(re)connect — and this step **verifies** it rather than assuming it:
+
+`TestTheRetractionsAreReSentAfterAReconnect` drives the defect and the fix
+against the same code, as two subtests of one table. Connection 1 gets the
+retractions out and has the document refused; the link comes back; then
+
+- **without** `Plane.Reconnect`, the retry re-sends **0** retractions and
+  publishes the document anyway — mtec's measurement, reproduced here;
+- **with** it, all 687 (3 in the unit fixture) are re-sent, and every one of
+  them lands **before** the document.
+
+That is the pin the prompt asked for: a **reconnect** between the
+retractions and the bundle, not a process restart. The process restart is
+pinned separately by `TestTheCrashWindowHealsOnTheNextBoot`, because the two
+catch different things — mtec had only the second, which is why the first
+survived review.
+
+### The four questions mtec's review left for this bridge
+
+**1. The dedup gate.** Half of it was already right and half of it did
+nothing. `Plane.Reconnect` throws the runtime away, so the gate is OPEN on
+the new connection — but **nothing walked through it**: `onState` publishes
+when an APPLIANCE connects, the birth handler when HOME ASSISTANT restarts,
+and a broker reconnect is neither. A broker that came back without its
+retained store therefore kept the fleet missing until the daemon itself was
+restarted. `Bridge.PublishOnline` now re-drives the publish for every
+appliance, off the hook's goroutine (`mqtt.Lifecycle` runs `OnConnect`
+inline on its reconnect loop).
+
+`publisher.Runtime.Republish` is deliberately **not** the mechanism, for the
+reason mtec reached independently: it re-sends the bytes the runtime cached,
+and a brand-new runtime has cached none — and a cached replay would skip the
+supersede step whose per-connection completeness is the whole point.
+
+It waits for `Run` to finish the one-shot `HASS_DISCOVERY_REFRESH`
+migration, because `OnConnect` fires before `Run` on the first connect and
+the republish would otherwise write the document the refresh is about to
+clear. And the flag is **coalesced**, not skipped: a pass interrupted by a
+drop has published some appliances against a dead connection's runtime, and
+a later pass that gave up because one was in flight would leave exactly
+those unpublished.
+
+**2. The sweep guard.** `publishDiscovery` now tests that the document was
+**published**, twice and independently: `PublishDeviceBundle` returned no
+error, and `publisher.Runtime`'s own `Declared()` names the topic. mtec's
+guard asked whether the document had been BUILT while its log line said
+"published", and a build-succeeds-publish-fails run swept the previous
+release's whole fleet away and put nothing back.
+`TestTheSweepIsSkippedWhenTheDocumentWasNotPublished` refuses the document
+at the stub and asserts **no snapshot window was opened** — read off the
+SUBSCRIBE list, not the live handler map, because the window unsubscribes on
+the way out.
+
+**3. The preflight.** `haplane.Plane.PublishBundle` measures the document
+against the broker's advertised Maximum Packet Size and refuses **before**
+the retraction. It has to be one layer above `PublishBundle`, because
+go-mqtt raises `mqtt.ErrPacketTooLarge` from inside the PUBLISH, with the
+687 retractions already gone.
+
+The limit read is `mqtt.ConnectResult.MaximumPacketSize` — MQTT 5.0's
+property 0x27 off the CONNACK, the broker's **outbound** limit. It is not
+`mqtt.TCPConfig.MaximumPacketSize`, which is the largest packet this CLIENT
+accepts INBOUND and defaults to 1 MiB whatever the broker will take; mtec's
+notes conflated the two.
+
+Unknown is unknown: a nil hook, a connection that has not answered, an MQTT
+3.1.1 link with no property block, and a broker that set no limit all
+publish. `TestAnUnknownBrokerMaximumIsNotASmallOne` drives all three
+spellings, and `TestADocumentTooLargeForTheBrokerRetractsNothing` asserts
+that a refusal writes **nothing at all**.
+
+At 473 KB the document clears Mosquitto (unlimited by default) and EMQX
+(1 MB) and does not clear a hardened `max_packet_size 262144`. That is an
+operator-visible outcome and it is documented as one.
+
+**4. The crash window.** Retractions out, document not, daemon dead: the
+appliance has no discovery config — absent, not unavailable. It heals on the
+next boot precisely because nothing is remembered across one, and
+`TestTheCrashWindowHealsOnTheNextBoot` asserts **both** halves, because a
+boot that trusted the dead process's retraction would publish into a tree
+still holding every per-entity config.
+
+### Tombstones — deferred, and what that costs
+
+**Decided: deferred.** An omitted component is not removed from Home
+Assistant; removal needs the key present carrying a platform and nothing
+else, plus `Bundle.Tombstones` holding the `unique_id` outside the payload
+so the old per-entity config can still be retracted. Under the per-entity
+form the orphan sweep did that job; under a document it does not, and the
+stranded entity reads **available** — its availability list names the bridge
+status topic and the device availability topic, and this daemon goes on
+publishing both.
+
+The trigger surface here is **larger** than mtec's, and that is stated
+rather than glossed: a feature excluded in `mapping.yaml`, `HASS_DISCOVERY`
+switched from `full` to `curated` (510 of 687 components on the pin
+fixture), an appliance replaced by one with a different feature list, and a
+firmware update that changes that list.
+
+It is deferred anyway, for three reasons:
+
+- **The daemon has no memory of the previous document.** The catalogue is
+  compiled in, nothing is persisted, and the sweep runs AFTER the publish so
+  its snapshot holds the document this boot just wrote. The only
+  restart-surviving source is the broker, which means a **new pre-publish
+  read-back window** inserted immediately before the one publish of the
+  release that cannot be undone.
+- **Its failure mode is the wrong one.** A read-back that mis-parses writes
+  tombstones for LIVE components and deletes working entities. The deferral's
+  failure mode is a stale entity an operator can delete. In the step whose
+  whole discipline is "fail in the recoverable direction", that settles it.
+- **This PR already changes that path twice** — the per-connection ordering
+  and the size preflight. A third change to the same three lines, with no
+  way to prove the read-back against a real broker from a unit test, is more
+  risk than the capability is worth in this step.
+
+`TestOmittingAComponentDoesNotRemoveIt` is the record, and it asserts both
+halves: that omission is inert, and that `Bundle.RemoveComponents` produces
+exactly `{"platform":"…"}`, carries no `unique_id`, keeps the identity in
+`Tombstones` and does then render the legacy retraction. The day tombstones
+are implemented, that is the test that already describes them.
+
+**The workaround, with the step mtec's documentation was missing:** Home
+Assistant only offers the delete affordance once the entity is no longer
+being *provided*, so **restart Home Assistant (or reload the MQTT
+integration) first**, then delete the entity from the device page.
+
+### The downgrade
+
+A user who rolls back finds the document retained, and by the same symmetry
+the old release's per-entity configs are refused. One command per appliance,
+documented in **four** places (`changelog.md`, `addon/CHANGELOG.md`,
+`README.md`, `addon/DOCS.md`):
+
+```sh
+mosquitto_pub -h <broker> -u <user> -P <password> \
+  -t 'homeassistant/device/geschirrspuler/config' -r -n
+```
+
+`-u`/`-P` are not optional: `script/run.sh` takes the username and password
+from the Supervisor MQTT service, so every add-on user is on an
+authenticated broker. mtec's add-on copy omitted them, and got the topic
+wrong in three of five places besides, because the node id is
+`slugify(<device name>)` — `Geschirrspüler` becomes `geschirrspuler`, which
+is neither the raw name nor its lower case.
+
+So the topic is not trusted to prose. `TestTheDocumentedDowngradeTopicMatchesTheCode`
+extracts it from all four files, compares every copy against the string
+`Discovery.BundleTopic` actually addresses, requires the copies to agree
+with each other, and requires `-h`/`-u`/`-P` in each. The mutation that
+writes the raw appliance name into one file turns it red.
+
+### F8 revisited — a live defect this step would have made unconditional
+
+`OwnsConfigTopic` sees a topic and the two instances' topics are identical,
+so `IsOwnConfig` is the whole of F8's protection. It read:
+
+```go
+strings.HasPrefix(cfg.UniqueID, "homeconnect_") &&
+    (cfg.StateTopic == "" || strings.HasPrefix(cfg.StateTopic, d.rootTopic+"/"))
+```
+
+**A `button` carries no `state_topic`**, and there are 20 per appliance (6
+of the curated 177). For those the rule collapsed to the bare
+`homeconnect_` prefix, which a sibling instance shares. Driven through this
+repo's own sweep harness with an empty claim set, it cleared three of a
+sibling's buttons. Reachable with no bundle at all — one instance `curated`
+and one `full`, or any `HASS_DISCOVERY_REFRESH`, which runs fleet-wide with
+nothing claimed — and **unconditional at this step**, because an upgraded
+instance publishes no per-entity configs and every one of a sibling's is
+unclaimed at once.
+
+The rule now gathers every MQTT topic the payload names — `state_topic`,
+`command_topic`, `availability_topic` and the `availability` list — requires
+at least one, and requires all of them under this instance's root. Both
+directions are deliberate: a payload naming no topic cannot be proven ours
+and is not claimed; a payload mixing roots is not ours whatever else it
+says. `TestSweepSparesASiblingInstancesConfigs` and
+`TestAStaggeredUpgradeDoesNotDeleteTheSiblingsFleet` now carry `button`
+payloads, and `TestSweepRetractsOurOwnOrphan` carries one of **ours**, so
+the fix cannot pass by refusing everything.
+
+`OwnsConfigTopic`'s `t.Bundle` refusal was flagged by #44 as "not a guard to
+delete on sight" the day a document is published. It was revisited and
+**kept**: the document is now the single retained topic holding a whole
+appliance, and `IsOwnConfig` reads a top-level `unique_id` and `state_topic`
+a document does not have — so a widened predicate would not be narrowed
+again by the payload check that protects a sibling.
+`TestTheSweepNeverOffersTheDocumentItJustPublished` drives the pass with an
+empty claim set, which removes the other lock.
+
+### The pins
+
+**Every SHA-256 literal is untouched and no golden was regenerated.**
+`-update-discovery-golden` and `-update-topics-golden` were never passed;
+`git diff origin/main --stat -- '*testdata*' internal/hass/golden_digest_test.go internal/bridge/topics_digest_test.go`
+is empty. `internal/bridge/testdata/topics.json` does not move either: the
+document's topic is not in it, the subscribe filters do not change, and
+`publish_qos_retain.discovery_config` still describes a retained publish at
+`MQTT_QOS`.
+
+The five per-entity pins are instead **re-used against the new artefact**.
+`TestTheDocumentsComponentsArePinnedPayloads` compares every component of
+every document against the pinned per-entity payload of the same entity, in
+all four configurations — 2 238 rows — under exactly two enumerated
+differences: `device` is hoisted to the document, and `platform` moves out
+of the topic into the entry. `TestTheDocumentCarriesThePinnedDeviceBlock`
+asserts the key the first test deletes. Everything Home Assistant keys a
+registry on is therefore proved equal to bytes written before go-hamqtt
+existed.
+
+### Three more findings from the same review, taken here
+
+- **The breaker-bypass topic was spelled twice at the composition root**
+  (`haplane.Config.StatusTopic` and the `haTransport` argument), and
+  appending `"/x"` to the second survived the whole suite because the test
+  supplied its own constant. #44 caught exactly this as M41 and it returned
+  one line away. `haPlaneTransport` now takes the **plane** and derives the
+  topic from `Plane.StatusTopic()` inside the function the test drives — the
+  derivation is the part that can be wrong, so it has to be inside what is
+  driven.
+- **`availOnline`/`availOffline` could be swapped with the suite green**:
+  the three tests that touched them compared the published byte against the
+  same constants they were testing.
+  `TestTheDeviceAvailabilityPayloadsAreTheOnesEveryConfigDeclares` crosses
+  the two planes instead — the worker's byte against the
+  `payload_available` in the rendered config.
+- **The shutdown comment described a drain that does not exist.**
+  `publisher.Runtime.Close` drains the birth-replay worker, and that worker
+  exists only after `Runtime.WatchBirth`, which this daemon never calls (it
+  watches the birth topic itself). So the hazard the comment named was real
+  and unhandled. `Bridge.StopDiscovery` closes it, before the offline
+  marker; `Close` is kept and its prose corrected.
+
+### Mutation proof
+
+MUTATION_TABLE_PLACEHOLDER
+
+---
+
 ## Sequencing — the rest of phase 7
 
 Ordered so each step de-risks the next, following the shape phases 5 and
