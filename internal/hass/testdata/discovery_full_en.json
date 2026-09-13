@@ -7563,9 +7563,14 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "battery_charging",
+      "device_class": "enum",
       "entity_category": "diagnostic",
       "name": "Battery charging state",
+      "options": [
+        "Auto",
+        "Off",
+        "On"
+      ],
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Status/BatteryChargingState/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_status_batterychargingstate"
     }
@@ -7664,7 +7669,6 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "plug",
       "entity_category": "diagnostic",
       "name": "Charging connection",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Status/ChargingConnection/state",
@@ -23077,7 +23081,6 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Bottle cooler door",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Status/Door/BottleCooler/state",
@@ -23111,7 +23114,6 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Chiller door",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Status/Door/Chiller/state",
@@ -23145,7 +23147,6 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Common chiller door",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Status/Door/ChillerCommon/state",
@@ -23179,7 +23180,6 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Left chiller door",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Status/Door/ChillerLeft/state",
@@ -23213,7 +23213,6 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Right chiller door",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Status/Door/ChillerRight/state",
@@ -23247,7 +23246,6 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Flex compartment door",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Status/Door/FlexCompartment/state",
@@ -23281,7 +23279,6 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Freezer door",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Status/Door/Freezer/state",
@@ -23315,7 +23312,6 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Refrigerator door",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Status/Door/Refrigerator/state",
@@ -23417,7 +23413,6 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Wine compartment door",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Status/Door/WineCompartment/state",

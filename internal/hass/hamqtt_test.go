@@ -298,38 +298,39 @@ func TestHamqttTopicFormIsTheFiveSegmentNodeIDForm(t *testing.T) {
 		"bridges needed — reproduces none of the %d.", matched, len(pinned))
 }
 
-// f13BinarySensorClassesOnSensors is finding F13, discovered by this step
-// and by nothing before it: the shipped mapping.yaml assigns thirteen
-// features a device_class drawn from Home Assistant's BINARY_SENSOR
-// vocabulary, and eleven of them land on the `sensor` platform, where Home
-// Assistant declares no such class and discards the entity whole.
+// f13RefusedOverrides is finding F13, discovered by step 4 and FIXED here:
+// the shipped mapping.yaml assigns thirteen features a device_class drawn
+// from Home Assistant's BINARY_SENSOR vocabulary, and eleven of them land on
+// the `sensor` platform, where Home Assistant declares no such class and
+// discarded the entity whole — silently, during schema validation, with
+// nothing on the wire and nothing in a log.
 //
-// It is not a library artefact and not a fixture artefact. The mechanism is
-// in deviceClassAllowed (payload.go): `case platformSensor: return true`.
-// sensor and number carry Home Assistant's open-ended value classes, so the
-// filter trusts the operator catalogue absolutely there — and the catalogue
-// is generated to mirror the official `home_connect` integration, where
-// these thirteen features ARE binary sensors. Whenever an appliance models
-// one of them as anything but a read-only boolean, this bridge classifies it
-// as a sensor and publishes a class the sensor platform does not accept.
+// The map is now the set of overrides the enrichment step REFUSES, keyed by
+// the entity key the refusal is observed on, with the class that is dropped.
+// The eleven rows are the same eleven; what changed is which side of the
+// assertion they sit on. Each one:
 //
-// A second, quieter consequence rides along: sanitizeForPlatform's enum
-// branch is keyed on device_class == "enum", so an enum sensor whose class
-// the catalogue has overridden falls through to `delete(p, "options")` and
-// loses its options list as well.
+//   - keeps its platform, its config topic, its unique_id and its
+//     default_entity_id — no identity string moves, so no entity is stranded
+//     and no history is lost;
+//   - loses the device_class the sensor platform refuses, EXCEPT
+//     battery_charging, whose entity is an enum sensor: there the heuristic
+//     class the refusal falls back to is `enum`, and the options list that
+//     used to be deleted as collateral (the rider below) comes back with it.
 //
-// What Home Assistant does with it is the part that makes this worth a
-// finding at all: nothing. The config is dropped during schema validation,
-// before the entity is constructed — no error on the wire, no log line
-// naming the cause, and an entity that is indistinguishable from one the
-// bridge never published.
-//
-// NOT FIXED HERE, deliberately. A fix moves bytes in three of the four
-// goldens, and step 4 must regenerate nothing (the sequencing table in
-// notes/adr0070-phase7-measurement.md, "What I would not do"). It is pinned
-// instead, exactly, so the step that fixes it produces a diff a reviewer can
-// read — and so it cannot silently grow.
-var f13BinarySensorClassesOnSensors = map[string]string{
+// The rider. sanitizeForPlatform's enum branch is keyed on device_class ==
+// "enum", so an enum sensor whose class the catalogue overrode fell through
+// to `delete(p, "options")` and lost its options list too. Fixing the
+// override at the point it is applied fixes that half by construction:
+// bsh_common_status_batterychargingstate keeps `enum` and keeps its three
+// options. The OTHER half is deliberately left, and is not a defect —
+// BSH.Common.Status.BatteryLevel is an enum sensor whose catalogue class is
+// `battery`, which the sensor platform DOES declare. Home Assistant's sensor
+// schema permits `options` only alongside device_class `enum`, so keeping
+// both would produce exactly the refused config this finding is about.
+// Dropping `options` is the only legal resolution of an override the operator
+// is entitled to make. TestValidDeviceClassOverrideStillDropsOptions pins it.
+var f13RefusedOverrides = map[string]string{
 	"bsh_common_status_batterychargingstate":           "battery_charging",
 	"bsh_common_status_chargingconnection":             "plug",
 	"refrigeration_common_status_door_bottlecooler":    "door",
@@ -344,15 +345,15 @@ var f13BinarySensorClassesOnSensors = map[string]string{
 }
 
 // TestHamqttPayloadsPassDiscoveryValidate runs every rendered per-entity
-// body through the library's schema validator — a question neither sibling
+// body through the library's schema validator — the question neither sibling
 // bridge had ever asked of its own output, and the one that turned up F13.
 //
-// go-mtec2mqtt's equivalent step passed clean, and that it passed was
-// previously unknown. This one does not: 11 of 687 payloads are refused in
-// each of the three enriched configurations, 0 of 687 in the unenriched one,
-// which is what localises the cause in mapping.yaml rather than in the
-// heuristic. Those eleven are asserted by name and by class; anything else
-// is a failure.
+// Step 4 recorded 11 of 687 refused in each of the three enriched
+// configurations and 0 of 687 in the unenriched one. This step is the reason
+// that number is now ZERO everywhere: 687 of 687 accepted, in all four
+// configurations. Nothing may be refused, and the count is asserted rather
+// than merely the absence of errors, so a configuration that silently stops
+// rendering entities cannot pass this.
 func TestHamqttPayloadsPassDiscoveryValidate(t *testing.T) {
 	for _, tc := range goldenCases {
 		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
@@ -364,15 +365,11 @@ func TestHamqttPayloadsPassDiscoveryValidate(t *testing.T) {
 			if err != nil {
 				t.Fatalf("hamqttComponents: %v", err)
 			}
-			// The unenriched configuration is the control: the heuristic on
-			// its own produces nothing the schemas refuse.
-			want := map[string]string{}
-			if tc.enriched {
-				want = f13BinarySensorClassesOnSensors
+			if want := 687; !tc.curated && len(rows) != want {
+				t.Fatalf("rendered %d components, want %d", len(rows), want)
 			}
 
-			got := map[string]string{}
-			advisory := 0
+			refused, advisory := 0, 0
 			for _, r := range rows {
 				var body map[string]any
 				if err := json.Unmarshal(r.Payload, &body); err != nil {
@@ -392,99 +389,470 @@ func TestHamqttPayloadsPassDiscoveryValidate(t *testing.T) {
 					t.Logf("%s: advisory: %v", r.Topic, err)
 					continue
 				}
-				seg := strings.Split(r.Topic, "/")
-				key := seg[len(seg)-2]
-				dc, _ := body["device_class"].(string)
-				got[key] = dc
-				if _, known := want[key]; !known {
-					t.Errorf("%s is refused by discovery.Validate and is NOT a known F13 row: %v", r.Topic, err)
-				}
+				refused++
+				t.Errorf("%s is refused by discovery.Validate: %v\n"+
+					"F13 is fixed; a refusal here is a NEW defect, and at ADR 0070 step 6 it "+
+					"costs the device every one of its %d entities, not this one.", r.Topic, err, len(rows))
 			}
-			for key, dc := range want {
-				if got[key] != dc {
-					t.Errorf("F13 row %q: expected device_class %q to be refused, got %q — "+
-						"if this was fixed, move the golden and this literal in the same commit", key, dc, got[key])
-				}
+			if refused != 0 {
+				t.Errorf("%d of %d payloads refused, want 0", refused, len(rows))
 			}
-			t.Logf("%d payloads validated: %d refused (all F13), %d advisory", len(rows), len(got), advisory)
+			t.Logf("%d of %d payloads accepted by discovery.Validate (%d advisory)",
+				len(rows)-refused, len(rows), advisory)
 		})
 	}
 }
 
-// TestCatalogueAssignsBinarySensorClassesToThirteenFeatures is F13 measured
-// at its source, independently of the pin fixture: the shipped mapping.yaml,
-// against go-ha-catalog's own per-platform device-class tables.
+// TestEveryRefusedOverrideIsDroppedAndNothingElseMoves is the fix observed at
+// the point it happens, on the finished payloads of the real builder rather
+// than through the library.
 //
-// The pin fixture decides how many of the thirteen land on `sensor` (eleven,
-// for its synthesised wire descriptors); the catalogue decides how many
-// could. A real appliance that models a door status as an enumeration rather
-// than a boolean reaches the same place, so this is the number that bounds
-// the finding rather than the eleven above.
-func TestCatalogueAssignsBinarySensorClassesToThirteenFeatures(t *testing.T) {
-	want := map[string]string{
-		"BSH.Common.Appliance.Connected":                   "connectivity",
-		"BSH.Common.Status.BatteryChargingState":           "battery_charging",
-		"BSH.Common.Status.ChargingConnection":             "plug",
-		"BSH.Common.Status.InteriorIlluminationActive":     "light",
-		"Refrigeration.Common.Status.Door.BottleCooler":    "door",
-		"Refrigeration.Common.Status.Door.Chiller":         "door",
-		"Refrigeration.Common.Status.Door.ChillerCommon":   "door",
-		"Refrigeration.Common.Status.Door.ChillerLeft":     "door",
-		"Refrigeration.Common.Status.Door.ChillerRight":    "door",
-		"Refrigeration.Common.Status.Door.FlexCompartment": "door",
-		"Refrigeration.Common.Status.Door.Freezer":         "door",
-		"Refrigeration.Common.Status.Door.Refrigerator":    "door",
-		"Refrigeration.Common.Status.Door.WineCompartment": "door",
+// For each of the eleven it asserts the three things a reader of the PR body
+// is entitled to check: the refused class is gone, the identity plane
+// (config topic, unique_id, default_entity_id) is UNCHANGED from what the
+// golden pinned, and the one enum row got its options back. It also asserts
+// the converse — that exactly these eleven rows differ between an
+// origin/main-shaped payload and this one — by counting the rows that carry a
+// device_class the sensor platform refuses, which must be zero.
+func TestEveryRefusedOverrideIsDroppedAndNothingElseMoves(t *testing.T) {
+	rows := publishPin(t, "en", goldenDeviceEN, false, true)
+	seen := map[string]bool{}
+	for _, r := range rows {
+		seg := strings.Split(r.Topic, "/")
+		platform, key := seg[1], seg[len(seg)-2]
+		dc, _ := r.Payload["device_class"].(string)
+		if dc != "" && !deviceClassAllowed(platform, dc) {
+			t.Errorf("%s still carries device_class %q, which %s does not declare", r.Topic, dc, platform)
+		}
+		refusedClass, isF13 := f13RefusedOverrides[key]
+		if !isF13 {
+			continue
+		}
+		seen[key] = true
+		if dc == refusedClass {
+			t.Errorf("%s still carries the refused device_class %q", r.Topic, dc)
+		}
+		if platform != platformSensor {
+			t.Errorf("%s moved to platform %q — F13's fix must not move an entity between "+
+				"platforms; unique_id and identifiers have no migration path", r.Topic, platform)
+		}
+		if r.Payload["unique_id"] != "homeconnect_dishwasher_"+key {
+			t.Errorf("%s: unique_id %v moved", r.Topic, r.Payload["unique_id"])
+		}
+		if refusedClass == "battery_charging" {
+			if dc != deviceClassEnum {
+				t.Errorf("%s: device_class %q, want the heuristic's %q — the refusal must fall "+
+					"back to the heuristic, not clear the key", r.Topic, dc, deviceClassEnum)
+			}
+			opts, ok := r.Payload["options"].([]any)
+			if !ok || len(opts) != 3 {
+				t.Errorf("%s: options %v, want the three enum values back (the F13 rider)", r.Topic, r.Payload["options"])
+			}
+		} else if dc != "" {
+			t.Errorf("%s: device_class %q, want none — the heuristic derives none here", r.Topic, dc)
+		}
 	}
+	if len(seen) != len(f13RefusedOverrides) {
+		t.Errorf("observed %d of the %d refused overrides; the fixture no longer reaches them all",
+			len(seen), len(f13RefusedOverrides))
+	}
+}
 
-	classes, err := hacatalog.LoadDeviceClasses()
+// TestValidDeviceClassOverrideStillDropsOptions pins the half of the rider
+// that is NOT a defect, so a later reader does not "fix" it.
+//
+// BSH.Common.Status.BatteryLevel is an enum sensor whose catalogue class is
+// `battery` — a class the sensor platform DOES declare, so the override
+// applies. Home Assistant's sensor schema accepts `options` only alongside
+// device_class `enum`; keeping both would be the very refused config F13 is
+// about. So the options list is dropped and the operator's class wins, and
+// that is the only legal resolution rather than an oversight.
+func TestValidDeviceClassOverrideStillDropsOptions(t *testing.T) {
+	const key = "bsh_common_status_batterylevel"
+	found := false
+	for _, r := range publishPin(t, "en", goldenDeviceEN, false, true) {
+		if !strings.HasSuffix(r.Topic, "/"+key+"/config") {
+			continue
+		}
+		found = true
+		if got := r.Payload["device_class"]; got != "battery" {
+			t.Errorf("%s: device_class %v, want \"battery\" — a VALID override must still apply", r.Topic, got)
+		}
+		if _, has := r.Payload["options"]; has {
+			t.Errorf("%s: carries options alongside device_class \"battery\"; "+
+				"Home Assistant's sensor schema permits options only with device_class \"enum\"", r.Topic)
+		}
+		var body map[string]any
+		if err := json.Unmarshal(mustJSON(t, r.Payload), &body); err != nil {
+			t.Fatal(err)
+		}
+		if err := discovery.ValidateBody(hacatalog.Platform(platformSensor), body); err != nil {
+			var ve *discovery.ValidationError
+			if asValidationError(err, &ve) && ve.Blocking() {
+				t.Errorf("%s: %v", r.Topic, err)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("%s is not in the pin; this test's premise has changed", key)
+	}
+}
+
+func mustJSON(t *testing.T, v any) []byte {
+	t.Helper()
+	b, err := json.Marshal(v)
 	if err != nil {
-		t.Fatalf("LoadDeviceClasses: %v", err)
+		t.Fatal(err)
 	}
-	sensorClasses := map[string]bool{}
-	for _, c := range classes["sensor"] {
-		sensorClasses[c] = true
-	}
-	binaryClasses := map[string]bool{}
-	for _, c := range classes["binary_sensor"] {
-		binaryClasses[c] = true
-	}
+	return b
+}
 
+// catalogueClassesInvalidPerPlatform is F13's FULL extent, measured at the
+// source rather than at the fixture: for every platform this bridge can
+// classify a feature onto, the catalogued (feature, device_class) pairs that
+// Home Assistant's schema for that platform refuses.
+//
+// The fixture is one appliance mix and the next one differs. Which of the
+// thirteen sensor rows a given appliance reaches depends on how it models the
+// element — a read-only boolean becomes a binary_sensor, where the class is
+// legal, and an enumeration or a string becomes a sensor, where it is not —
+// so the fixture's eleven is a sample and these numbers are the bound.
+//
+// Two of the six platforms were never the finding's subject and are listed
+// because they are the reason the structural fix is safe: the old
+// hand-maintained sets for binary_sensor, switch and button were EXACTLY Home
+// Assistant's, so replacing them with go-ha-catalog's tables moves nothing
+// there. The two that moved are sensor (`return true`, i.e. 13 refusals
+// waiting) and number (`dc != "enum"`, i.e. 18).
+var catalogueClassesInvalidPerPlatform = map[string]int{
+	platformSensor:       13,
+	platformNumber:       18,
+	platformBinarySensor: 21,
+	platformSelect:       35,
+	platformSwitch:       35,
+	platformButton:       35,
+}
+
+// f13CatalogueRows is the sensor row of the table above, by feature name.
+// These thirteen are the whole of F13 over the shipped catalogue; the
+// fixture reaches eleven of them.
+var f13CatalogueRows = map[string]string{
+	"BSH.Common.Appliance.Connected":                   "connectivity",
+	"BSH.Common.Status.BatteryChargingState":           "battery_charging",
+	"BSH.Common.Status.ChargingConnection":             "plug",
+	"BSH.Common.Status.InteriorIlluminationActive":     "light",
+	"Refrigeration.Common.Status.Door.BottleCooler":    "door",
+	"Refrigeration.Common.Status.Door.Chiller":         "door",
+	"Refrigeration.Common.Status.Door.ChillerCommon":   "door",
+	"Refrigeration.Common.Status.Door.ChillerLeft":     "door",
+	"Refrigeration.Common.Status.Door.ChillerRight":    "door",
+	"Refrigeration.Common.Status.Door.FlexCompartment": "door",
+	"Refrigeration.Common.Status.Door.Freezer":         "door",
+	"Refrigeration.Common.Status.Door.Refrigerator":    "door",
+	"Refrigeration.Common.Status.Door.WineCompartment": "door",
+}
+
+// TestCatalogueDeviceClassesAgainstEveryPlatform measures F13 at its source,
+// independently of the pin fixture: the shipped mapping.yaml against
+// go-ha-catalog's own per-platform device-class tables, for every platform
+// classify can produce.
+//
+// It is the test that keeps the catalogue honest as it grows. A new
+// mapping.yaml entry with a class the target platform refuses moves one of
+// these counts, and the change has to be argued rather than discovered later
+// against a live Home Assistant.
+func TestCatalogueDeviceClassesAgainstEveryPlatform(t *testing.T) {
 	cat := pinEnricher(t)
-	got := map[string]string{}
 	entries, err := pinEntries()
 	if err != nil {
 		t.Fatalf("pincatalog: %v", err)
 	}
+	catalogued := map[string]string{}
 	for _, e := range entries {
 		if e.Name == "" {
 			continue
 		}
-		dc, ok := cat.DeviceClass(e.Name)
-		if !ok || sensorClasses[dc] {
+		if dc, ok := cat.DeviceClass(e.Name); ok {
+			catalogued[e.Name] = dc
+		}
+	}
+	if len(catalogued) != 35 {
+		t.Errorf("mapping.yaml carries %d device_class entries reachable from the pin, want 35", len(catalogued))
+	}
+
+	// The two F13 literals must agree with the catalogue and with each other.
+	// f13RefusedOverrides is keyed by entity key and f13CatalogueRows by
+	// feature name; without this, a wrong class in either is invisible,
+	// because the eleven rows are checked for the ABSENCE of a class and
+	// absence looks the same whichever class was named.
+	for name, dc := range f13CatalogueRows {
+		if catalogued[name] != dc {
+			t.Errorf("f13CatalogueRows says %s carries %q; mapping.yaml says %q", name, dc, catalogued[name])
+		}
+		if got, reached := f13RefusedOverrides[slugify(name)]; reached && got != dc {
+			t.Errorf("f13RefusedOverrides says %s carries %q, f13CatalogueRows says %q",
+				name, got, dc)
+		}
+	}
+	for key, dc := range f13RefusedOverrides {
+		found := false
+		for name, want := range f13CatalogueRows {
+			if slugify(name) == key {
+				found, _ = true, want
+				break
+			}
+		}
+		if !found {
+			t.Errorf("f13RefusedOverrides row %q (%q) has no feature in f13CatalogueRows", key, dc)
+		}
+	}
+	for name, dc := range f13AlreadyStrippedDownstream {
+		if catalogued[name] != dc {
+			t.Errorf("f13AlreadyStrippedDownstream says %s carries %q; mapping.yaml says %q",
+				name, dc, catalogued[name])
+		}
+	}
+
+	for _, platform := range []string{
+		platformSensor, platformNumber, platformBinarySensor,
+		platformSelect, platformSwitch, platformButton,
+	} {
+		invalid := map[string]string{}
+		for name, dc := range catalogued {
+			if !deviceClassAllowed(platform, dc) {
+				invalid[name] = dc
+			}
+		}
+		if got, want := len(invalid), catalogueClassesInvalidPerPlatform[platform]; got != want {
+			t.Errorf("%s: %d catalogued classes the platform refuses, want %d:\n%v", platform, got, want, invalid)
+		}
+		if platform != platformSensor {
 			continue
 		}
-		got[e.Name] = dc
-		if !binaryClasses[dc] {
-			t.Errorf("%s: device_class %q is neither a sensor nor a binary_sensor class", e.Name, dc)
+		for name, dc := range f13CatalogueRows {
+			if invalid[name] != dc {
+				t.Errorf("sensor: %s: refused class %q, want %q", name, invalid[name], dc)
+			}
+		}
+		for name, dc := range invalid {
+			if _, known := f13CatalogueRows[name]; !known {
+				t.Errorf("sensor: %s carries the refused class %q and is not a known F13 row", name, dc)
+			}
 		}
 	}
-	if len(got) != len(want) {
-		t.Errorf("catalogue features carrying a non-sensor device_class: %d, want %d", len(got), len(want))
-	}
-	for name, dc := range want {
-		if got[name] != dc {
-			t.Errorf("%s: device_class %q, want %q", name, got[name], dc)
+	t.Logf("F13's full extent over the shipped catalogue: %d of %d catalogued device classes "+
+		"are refused on `sensor`, %d on `number`. The fixture reaches %d of the sensor rows; "+
+		"which ones a real appliance reaches depends on how it models the element.",
+		len(f13CatalogueRows), len(catalogued),
+		catalogueClassesInvalidPerPlatform[platformNumber], len(f13RefusedOverrides))
+}
+
+// TestDeviceClassTableLoads asserts the premise deviceClassAllowed rests on:
+// go-ha-catalog's embedded per-platform tables decode, and every platform
+// this bridge classifies onto is present in them.
+//
+// deviceClassAllowed fails CLOSED when the table is missing — every entity
+// loses its device_class rather than carrying one Home Assistant refuses —
+// and that branch must be unreachable in a correct build rather than a
+// behaviour anyone relies on.
+// TestDeviceClassAllowanceFailsClosedWithoutTheTable reaches the branch a
+// correct build cannot: go-ha-catalog's snapshot is embedded, so the decode
+// cannot fail at runtime, and a mutation from `return false` to `return true`
+// there changes no byte and fails no test unless the branch is exercised
+// deliberately.
+//
+// It must fail CLOSED. Publishing no device_class costs every entity an icon
+// and its class semantics and is recoverable by an operator; publishing one
+// the platform refuses is not visible at all, and at ADR 0070 step 6 it costs
+// the whole device.
+func TestDeviceClassAllowanceFailsClosedWithoutTheTable(t *testing.T) {
+	for _, platform := range []string{
+		platformSensor, platformNumber, platformBinarySensor,
+		platformSelect, platformSwitch, platformButton,
+	} {
+		for _, dc := range []string{"temperature", deviceClassEnum, "door", "outlet", "restart", ""} {
+			if deviceClassAllowedIn(nil, platform, dc) {
+				t.Errorf("deviceClassAllowedIn(nil, %q, %q) = true; it must fail closed", platform, dc)
+			}
 		}
 	}
-	for name, dc := range got {
-		if _, known := want[name]; !known {
-			t.Errorf("%s carries the non-sensor device_class %q and is not a known F13 row", name, dc)
+	// And with a table it is the table that decides, so the nil check is not
+	// simply a constant false.
+	tbl := map[string]map[string]bool{platformSensor: {"temperature": true}}
+	if !deviceClassAllowedIn(tbl, platformSensor, "temperature") {
+		t.Error("deviceClassAllowedIn ignores the table it is given")
+	}
+	if deviceClassAllowedIn(tbl, platformSensor, "door") {
+		t.Error("deviceClassAllowedIn allows a class the table it is given does not list")
+	}
+}
+
+func TestDeviceClassTableLoads(t *testing.T) {
+	tbl := deviceClasses()
+	if tbl == nil {
+		t.Fatal("go-ha-catalog's device-class table failed to decode; deviceClassAllowed is failing closed")
+	}
+	want := map[string]int{
+		platformSensor: 62, platformNumber: 58, platformBinarySensor: 28,
+		platformSwitch: 2, platformButton: 3, platformSelect: 0,
+	}
+	for platform, n := range want {
+		if got := len(tbl[platform]); got != n {
+			t.Errorf("%s: %d device classes in the catalogue snapshot, want %d "+
+				"(go-ha-catalog %s tracks Home Assistant %s)",
+				platform, got, n, hacatalog.SnapshotRef, hacatalog.SnapshotVersion)
 		}
 	}
-	t.Logf("F13: %d catalogued features carry a binary_sensor device_class; "+
-		"each is discarded by Home Assistant whenever the appliance models it as anything "+
-		"but a read-only boolean", len(got))
+	if tbl[platformSensor][deviceClassEnum] != true {
+		t.Error("`enum` is not a sensor class in the snapshot; the enum-sensor branch rests on it")
+	}
+	for _, dc := range []string{"door", "plug", "connectivity", "light", "battery_charging"} {
+		if tbl[platformSensor][dc] {
+			t.Errorf("`%s` is now a sensor class; F13's premise has changed", dc)
+		}
+		if !tbl[platformBinarySensor][dc] {
+			t.Errorf("`%s` is no longer a binary_sensor class; F13's premise has changed", dc)
+		}
+	}
+}
+
+// TestTableDrivenAllowanceMatchesTheSetsItReplaced is the safety half of the
+// structural fix. deviceClassAllowed used to hold three hand-maintained class
+// sets plus two judgements about "open" vocabularies; it now reads Home
+// Assistant's own tables. Three of the six platforms must be unaffected by
+// that swap, and the literals below are the sets as origin/main held them,
+// transcribed once so the claim is checked rather than asserted in prose.
+func TestTableDrivenAllowanceMatchesTheSetsItReplaced(t *testing.T) {
+	previous := map[string][]string{
+		platformBinarySensor: {
+			"battery", "battery_charging", "carbon_monoxide", "cold", "connectivity", "door",
+			"garage_door", "gas", "heat", "light", "lock", "moisture", "motion", "moving",
+			"occupancy", "opening", "plug", "power", "presence", "problem", "running", "safety",
+			"smoke", "sound", "tamper", "update", "vibration", "window",
+		},
+		platformSwitch: {"outlet", "switch"},
+		platformButton: {"identify", "restart", "update"},
+	}
+	tbl := deviceClasses()
+	for platform, classes := range previous {
+		if len(tbl[platform]) != len(classes) {
+			t.Errorf("%s: table has %d classes, the set it replaced had %d",
+				platform, len(tbl[platform]), len(classes))
+		}
+		for _, dc := range classes {
+			if !deviceClassAllowed(platform, dc) {
+				t.Errorf("%s: %q was allowed before the swap and is refused now", platform, dc)
+			}
+		}
+	}
+	// select took none before and takes none now.
+	for _, dc := range []string{"door", "enum", "temperature", "power", "outlet"} {
+		if deviceClassAllowed(platformSelect, dc) {
+			t.Errorf("select: %q is allowed; select declares no device class at all", dc)
+		}
+	}
+	// The two that DID move, named so the change is not silent.
+	if deviceClassAllowed(platformSensor, "door") {
+		t.Error("sensor still accepts `door` — F13 is not fixed")
+	}
+	if deviceClassAllowed(platformNumber, "timestamp") {
+		t.Error("number accepts `timestamp`, which it does not declare")
+	}
+	if !deviceClassAllowed(platformSensor, "timestamp") {
+		t.Error("sensor refuses `timestamp`, which it does declare — the swap over-tightened")
+	}
+}
+
+// f13AlreadyStrippedDownstream is the part of the refusal that moves no byte.
+//
+// Both IDos base levels are writable enums, so they classify onto `select`,
+// and `select` declares no device class at all — so sanitizeForPlatform
+// already deleted the catalogue's "volume" at the end of the chain. Refusing
+// the override earlier changes nothing about what is published; what it
+// changes is that the daemon now SAYS so. They are listed because a reader
+// counting log lines against the eleven moved rows would otherwise find two
+// too many and have to work out why.
+var f13AlreadyStrippedDownstream = map[string]string{
+	"LaundryCare.Washer.Setting.IDos1BaseLevel": "volume",
+	"LaundryCare.Washer.Setting.IDos2BaseLevel": "volume",
+}
+
+// TestRefusedOverrideIsLogged asserts the other half of what F13 was about:
+// Home Assistant says nothing when it drops such an entity, so the daemon
+// must. The refusal is the one place both halves of the pair are known.
+//
+// It also fixes the exact refusal set over the shipped catalogue and this
+// fixture — thirteen, of which eleven move a published byte and two were
+// already stripped downstream — so a catalogue edit that adds a fourteenth
+// has to come here and say which.
+func TestRefusedOverrideIsLogged(t *testing.T) {
+	var buf bytes.Buffer
+	d := New(nil, goldenPrefix, goldenRoot, goldenQoS, "en", false,
+		slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	d.SetEnricher(pinEnricher(t))
+	dev := d.deviceBlockFor(goldenDeviceEN, pincatalog.Info)
+	for _, e := range pinEntities(t) {
+		platform, ok := classify(e)
+		if !ok {
+			continue
+		}
+		p := payloadFor(e, platform, goldenDeviceEN, d.topicsFor(goldenDeviceEN, e), dev)
+		d.applyEnrichment(e, p, platform)
+	}
+	out := buf.String()
+
+	// Parsed into (feature -> "platform/device_class") rather than matched as
+	// substrings, so the assertion is over the refusal SET and not over the
+	// handler's formatting.
+	logged := map[string]string{}
+	for _, line := range strings.Split(out, "\n") {
+		if !strings.Contains(line, "hass.device_class_refused") {
+			continue
+		}
+		var feature, platform, dc string
+		for _, field := range strings.Fields(line) {
+			k, v, ok := strings.Cut(field, "=")
+			if !ok {
+				continue
+			}
+			switch k {
+			case "feature":
+				feature = v
+			case "platform":
+				platform = v
+			case "device_class":
+				dc = v
+			}
+		}
+		if feature != "" {
+			logged[feature] = platform + "/" + dc
+		}
+	}
+
+	want := map[string]string{}
+	for feature, dc := range f13CatalogueRows {
+		if _, reached := f13RefusedOverrides[slugify(feature)]; reached {
+			want[feature] = platformSensor + "/" + dc
+		}
+	}
+	for feature, dc := range f13AlreadyStrippedDownstream {
+		want[feature] = platformSelect + "/" + dc
+	}
+	if len(logged) != len(want) {
+		t.Errorf("logged %d refusals, want %d (%d that move a published byte, %d already "+
+			"stripped downstream)\n%s", len(logged), len(want), len(f13RefusedOverrides),
+			len(f13AlreadyStrippedDownstream), out)
+	}
+	for feature, pair := range want {
+		if logged[feature] != pair {
+			t.Errorf("refusal for %s logged as %q, want %q", feature, logged[feature], pair)
+		}
+	}
+	for feature, pair := range logged {
+		if _, known := want[feature]; !known {
+			t.Errorf("%s was refused (%s) and is not a known F13 row", feature, pair)
+		}
+	}
 }
 
 // TestHamqttBundleValidates is the schema question for the form step 6 will
@@ -492,12 +860,12 @@ func TestCatalogueAssignsBinarySensorClassesToThirteenFeatures(t *testing.T) {
 // document this catalogue renders to is one Home Assistant would accept, so
 // step 6 does not discover the answer against a live installation.
 //
-// The bundle carries the same F13 rows and is therefore Blocking() in the
-// three enriched configurations — and a blocking bundle publishes NOTHING,
-// so at step 6 those eleven rows would cost the device all 687 of its
-// entities rather than eleven. That is the cost this experiment moves from
-// step 6 to here. discovery.ValidateIgnoring is not the answer: the class is
-// not a key Home Assistant is known to drop, it is a value it refuses.
+// Step 4 found it Blocking() in the three enriched configurations, carrying
+// the eleven F13 rows — and a blocking bundle publishes NOTHING, so those
+// eleven would have cost the device all 687 of its entities rather than
+// eleven. That is the whole reason F13 had to be fixed before step 6, and
+// this is the assertion that says it was: the bundle now validates
+// NON-BLOCKING in every configuration.
 func TestHamqttBundleValidates(t *testing.T) {
 	for _, tc := range goldenCases {
 		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
@@ -517,29 +885,21 @@ func TestHamqttBundleValidates(t *testing.T) {
 			}
 
 			err = discovery.Validate(b)
-			var ve *discovery.ValidationError
-			switch {
-			case err == nil:
-				if tc.enriched {
-					t.Error("the bundle now validates clean — F13 is fixed; move the goldens, " +
-						"the F13 literals and this branch in the same commit")
-				}
-			case !asValidationError(err, &ve):
-				t.Errorf("bundle: %v", err)
-			case !ve.Blocking():
-				t.Logf("bundle advisory: %v", err)
-			case !tc.enriched:
-				t.Errorf("the unenriched bundle is refused, which F13 does not explain: %v", err)
-			default:
-				if len(ve.Issues) != len(f13BinarySensorClassesOnSensors) {
-					t.Errorf("bundle has %d blocking issues, want the %d F13 rows:\n%v",
-						len(ve.Issues), len(f13BinarySensorClassesOnSensors), err)
-				}
-				t.Logf("bundle blocked by the %d F13 rows alone — at step 6 that costs the "+
-					"device all %d components, not %d entities",
-					len(ve.Issues), len(b.Components), len(ve.Issues))
+			if err == nil {
+				t.Logf("bundle %q validates clean: %d components publishable as one document",
+					b.NodeID, len(b.Components))
+				return
 			}
-			t.Logf("bundle %q: %d components", b.NodeID, len(b.Components))
+			var ve *discovery.ValidationError
+			if !asValidationError(err, &ve) {
+				t.Fatalf("bundle: %v", err)
+			}
+			if ve.Blocking() {
+				t.Errorf("the bundle is BLOCKING, which publishes nothing at all — at step 6 "+
+					"that costs the device all %d of its components:\n%v", len(b.Components), err)
+				return
+			}
+			t.Logf("bundle advisory (non-blocking, %d components): %v", len(b.Components), err)
 		})
 	}
 }

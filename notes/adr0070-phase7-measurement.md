@@ -3,7 +3,9 @@
 - Status: measurement (step 0), plus the step 1+2 outcome and the F1/F10
   decisions — see [Step 2 outcome](#step-2-outcome--what-was-fixed-what-was-decided-what-stays)
   — plus the step 4 byte-equality result and F13, see
-  [Step 4 outcome](#step-4-outcome--the-byte-equality-experiment)
+  [Step 4 outcome](#step-4-outcome--the-byte-equality-experiment) — plus the
+  step 5 (F13) outcome, see
+  [Step 5 outcome](#step-5-outcome--f13-fixed-687-of-687-accepted)
 - Date: 2026-09-13
 - Subject: [ADR 0070](https://github.com/SukramJ/openccu-loom/blob/main/docs/adr/0070-shared-ha-discovery-model-module.md)
   and its rollout table, row *"7 | `go-homeconnect2mqtt` (716) | Proves the
@@ -1173,8 +1175,12 @@ visible. The config is dropped during schema validation, before the entity
 is constructed — no error on the wire, no log line naming the cause, and an
 entity indistinguishable from one the bridge never published.
 
-**Not fixed here.** A fix moves bytes in three of the four goldens, and step
-4 must regenerate nothing. It is pinned exactly instead — by entity key and
+**FIXED — see [Step 5 outcome](#step-5-outcome--f13-fixed-687-of-687-accepted).**
+The rest of this section is the finding as step 4 recorded it and is left
+as written.
+
+**Not fixed here (at step 4).** A fix moves bytes in three of the four
+goldens, and step 4 must regenerate nothing. It is pinned exactly instead — by entity key and
 class in `TestHamqttPayloadsPassDiscoveryValidate`, and by feature name and
 class in `TestCatalogueAssignsBinarySensorClassesToThirteenFeatures` — so
 the step that fixes it produces a diff a reviewer can read, and so it cannot
@@ -1294,6 +1300,276 @@ component set. Still decided-nothing, as #41 left it.
 
 ---
 
+## Step 5 outcome — F13 fixed, 687 of 687 accepted
+
+This section was written by the step that fixes F13. The measurement, the
+step-2 outcome and the step-4 outcome above are unchanged; F13's own
+section keeps the wording step 4 gave it and is marked fixed at its head.
+
+F13 is out of sequence on purpose. The table below ordered it "step 7
+(operator-visible) or a step of its own"; it is a step of its own, taken
+BEFORE the bundle steps, because it is the one finding in this phase whose
+cost changes character at step 6. Today it drops eleven entities per
+appliance; in a bundle, which is validated as one document and publishes
+nothing at all when `discovery.Validate` reports it `Blocking()`, the same
+eleven rows cost the device all 687.
+
+### What was decided, and what it costs a user
+
+Three answers were on the table.
+
+- **Move the affected features to `binary_sensor`**, matching the official
+  `home_connect` integration. **Rejected**, on two independent grounds.
+  It is the expensive one — a platform change moves the entity's
+  `unique_id`-to-domain binding, Home Assistant creates a new entity and
+  strands the old one, and `unique_id` and `identifiers` have no migration
+  path. But it is also the *wrong* one here, which matters more: these
+  eleven land on `sensor` precisely BECAUSE the appliance does not model
+  them as read-only booleans. Nine doors and a charging connection arrive
+  as strings and the battery-charging state as an enumeration. A
+  `binary_sensor` needs a two-valued `payload_on`/`payload_off` mapping
+  this bridge does not have and cannot derive, and forcing one would throw
+  away a tri-state door reading ("Open"/"Closed"/"Ajar") to gain an icon.
+  The platform is not the defect; the class is.
+- **Drop the offending `device_class`, keep the platform.** **Taken**, as
+  the effect.
+- **Stop `deviceClassAllowed` trusting the catalogue absolutely.**
+  **Taken**, as the mechanism. It is the structural half and it belongs in
+  the change whichever of the first two is chosen: without it, the next
+  `mapping.yaml` edit reintroduces the same class of defect, and this
+  catalogue is generated.
+
+Concretely, two changes:
+
+1. **`deviceClassAllowed` reads go-ha-catalog's per-platform tables.** It
+   said `case platformSensor: return true` and `case platformNumber: return
+   dc != deviceClassEnum`. Neither platform has an open vocabulary:
+   `sensor` declares 62 classes, `number` 58, `binary_sensor` 28, `switch`
+   2, `button` 3 and `select` none, and the two largest are not supersets
+   of the smallest. The three hand-maintained sets it replaces were exactly
+   Home Assistant's, so the swap moves nothing on `binary_sensor`,
+   `switch`, `select` or `button`; only `sensor` and `number` change, and
+   `TestTableDrivenAllowanceMatchesTheSetsItReplaced` is what proves the
+   first claim rather than asserting it in prose. A failed table decode
+   fails **closed** — no entity carries a class at all — because publishing
+   none is recoverable by an operator and publishing a refused one is not
+   visible at all.
+2. **The enrichment step refuses an override the platform does not
+   declare, and logs it.** The refusal leaves the HEURISTIC class in place
+   rather than clearing the key — the same contract an absent catalogue
+   entry has. Home Assistant says nothing when it drops such an entity,
+   which is the whole reason F13 survived in a shipped catalogue;
+   `hass.device_class_refused` names the feature, the platform and the
+   class.
+
+**The rider, and which half was fixed.** `sanitizeForPlatform`'s enum
+branch is keyed on `device_class == "enum"`, so an enum sensor whose class
+the catalogue overrode fell through to `delete(p, "options")` and lost its
+options list too. Falling back to the heuristic fixes that half by
+construction: `BSH.Common.Status.BatteryChargingState` keeps `enum` and
+keeps its three options. The other half is **pinned as correct, not
+fixed**: `BSH.Common.Status.BatteryLevel` is an enum sensor whose catalogue
+class is `battery`, which the sensor platform DOES declare, so the override
+applies — and Home Assistant's sensor schema permits `options` only
+alongside device_class `enum`, so keeping both would produce exactly the
+refused config this finding is about. Dropping `options` is the only legal
+resolution of an override the operator is entitled to make.
+`TestValidDeviceClassOverrideStillDropsOptions` says so, so a later reader
+does not "fix" it.
+
+### What an existing user sees
+
+**Eleven entities per refrigeration-capable appliance change; none is
+created, destroyed, renamed or re-keyed; no history is lost; nothing must
+be done by hand.** Enumerated, because this project's precedent is that
+identity moves are listed rather than summarised — and the point of the
+list is that *nothing on it is an identity move*:
+
+| Entity key (`sensor.<device>_…`) | Before | After |
+| --- | --- | --- |
+| `bsh_common_status_batterychargingstate` | `device_class: battery_charging`, no `options` | `device_class: enum`, `options: [Auto, Off, On]` |
+| `bsh_common_status_chargingconnection` | `device_class: plug` | no `device_class` |
+| `refrigeration_common_status_door_bottlecooler` | `device_class: door` | no `device_class` |
+| `refrigeration_common_status_door_chiller` | `device_class: door` | no `device_class` |
+| `refrigeration_common_status_door_chillercommon` | `device_class: door` | no `device_class` |
+| `refrigeration_common_status_door_chillerleft` | `device_class: door` | no `device_class` |
+| `refrigeration_common_status_door_chillerright` | `device_class: door` | no `device_class` |
+| `refrigeration_common_status_door_flexcompartment` | `device_class: door` | no `device_class` |
+| `refrigeration_common_status_door_freezer` | `device_class: door` | no `device_class` |
+| `refrigeration_common_status_door_refrigerator` | `device_class: door` | no `device_class` |
+| `refrigeration_common_status_door_winecompartment` | `device_class: door` | no `device_class` |
+
+For each row the config topic, the `unique_id`, the `default_entity_id`,
+the `device.identifiers` and the platform are **unchanged**, so Home
+Assistant updates the existing entity in place: same entity id, same
+recorder history, same dashboard cards, same automations.
+
+The practical change is smaller than the table looks, because **these
+eleven entities did not exist for the user before.** Home Assistant was
+discarding each config during schema validation, so what an installed base
+actually sees is eleven entities *appearing* where nothing was — as
+disabled-by-default diagnostics in the full set, which is where the
+catalogue puts them. The ten that lose a class lose an icon and its
+semantics with it; the eleventh gains a proper enum sensor with a
+localized options list. On a dishwasher, which is the pin fixture's
+appliance, every one of the nine refrigeration doors is a feature the real
+appliance does not have at all.
+
+Two further refusals are logged and move **no** published byte:
+`LaundryCare.Washer.Setting.IDos1BaseLevel` and `…IDos2BaseLevel` carry
+`volume` and classify onto `select`, which declares no device class, so
+`sanitizeForPlatform` already deleted it at the end of the chain. They are
+pinned as `f13AlreadyStrippedDownstream` so a reader counting thirteen log
+lines against eleven moved rows does not have to work out why.
+
+### F13's full extent over the catalogue, not the fixture
+
+The fixture is one appliance mix and the next one differs, so the bound is
+measured at the source: every catalogued `device_class` against
+go-ha-catalog's table for every platform `classify` can produce.
+`TestCatalogueDeviceClassesAgainstEveryPlatform` pins all six counts.
+
+**35 features in the shipped `mapping.yaml` carry a `device_class`.** Of
+those, the number the target platform refuses is:
+
+| If the appliance models it as… | Platform | Catalogued classes refused |
+| --- | --- | ---: |
+| a read-only string / enumeration / number | `sensor` | **13** |
+| a writable number | `number` | 18 |
+| a read-only boolean | `binary_sensor` | 21 |
+| a writable enumeration | `select` | 35 |
+| a writable boolean | `switch` | 35 |
+| a command | `button` | 35 |
+
+The thirteen `sensor` rows — F13 proper, pinned by feature name in
+`f13CatalogueRows`:
+
+| Feature | `device_class` |
+| --- | --- |
+| `BSH.Common.Appliance.Connected` | `connectivity` |
+| `BSH.Common.Status.BatteryChargingState` | `battery_charging` |
+| `BSH.Common.Status.ChargingConnection` | `plug` |
+| `BSH.Common.Status.InteriorIlluminationActive` | `light` |
+| `Refrigeration.Common.Status.Door.BottleCooler` | `door` |
+| `Refrigeration.Common.Status.Door.Chiller` | `door` |
+| `Refrigeration.Common.Status.Door.ChillerCommon` | `door` |
+| `Refrigeration.Common.Status.Door.ChillerLeft` | `door` |
+| `Refrigeration.Common.Status.Door.ChillerRight` | `door` |
+| `Refrigeration.Common.Status.Door.FlexCompartment` | `door` |
+| `Refrigeration.Common.Status.Door.Freezer` | `door` |
+| `Refrigeration.Common.Status.Door.Refrigerator` | `door` |
+| `Refrigeration.Common.Status.Door.WineCompartment` | `door` |
+
+The fixture reaches eleven of them: `BSH.Common.Appliance.Connected` and
+`BSH.Common.Status.InteriorIlluminationActive` are modelled as a read-only
+boolean and land on `binary_sensor`, where `connectivity` and `light` are
+legal and always were. **13 is the bound, 11 is what this fixture
+measures** — and an appliance that reports a door status as an enumeration
+reaches the same place, which is why the catalogue-level pin exists
+alongside the fixture-level one.
+
+The `number` row adds one feature the sensor row does not:
+`BSH.Common.Option.RemainingProgramTime` carries `timestamp`, which
+`sensor` declares and `number` does not. Nothing in the pin reaches it —
+the old `dc != "enum"` test let it through and would have published it —
+so it is a defect the structural fix closes before anyone met it.
+
+### What moved, and which literal says so
+
+Diffed as builder **output** — `Discovery.PublishDevice` run in a worktree
+at `origin/main` against the same builder run on this branch, into two
+files compared row by row — not as fixture files:
+
+| File | Rows changed | Rows |
+| --- | ---: | ---: |
+| `discovery_full_en.json` | **11** | 687 |
+| `discovery_full_de.json` | **11** | 687 |
+| `discovery_curated_de.json` | **11** | 177 |
+| `discovery_plain_en.json` (unenriched control) | **0** | 687 |
+| `identity_en.json` | **0** | 687 |
+| `internal/bridge/testdata/topics.json` | **0** | — |
+
+The same eleven rows in all three enriched files, and the same eleven
+`discovery.Validate` refused. Ten lose one key; one changes a key's value
+and gains `options`. No topic, `unique_id`, `default_entity_id` or platform
+moves anywhere, which is why the identity pin and the topic pin are
+untouched.
+
+**Three of the six SHA-256 literals move**, each with the reason written
+next to it in `golden_digest_test.go`; the other three are asserted
+unchanged and a mutation reverting either kind fails.
+
+### The re-proof
+
+| Assertion | Step 4 | Now |
+| --- | --- | --- |
+| `discovery.ValidateBody`, `discovery_full_en` | 676 of 687 | **687 of 687** |
+| `discovery.ValidateBody`, `discovery_full_de` | 676 of 687 | **687 of 687** |
+| `discovery.ValidateBody`, `discovery_curated_de` | 166 of 177 | **177 of 177** |
+| `discovery.ValidateBody`, `discovery_plain_en` | 687 of 687 | **687 of 687** |
+| `discovery.Validate(bundle)`, enriched | `Blocking()`, 11 issues | **clean** |
+| `discovery.Validate(bundle)`, unenriched | clean | **clean** |
+
+`TestHamqttPayloadsPassDiscoveryValidate` and `TestHamqttBundleValidates`
+are the same two tests step 4 wrote; they now assert the fixed expectation
+instead of pinning the refusal, which is the precedent
+`go-mtec2mqtt`'s step-3 pin set when the library changed its mind — the
+pin is updated to the new truth, not deleted and not left contradicting
+reality.
+
+**Byte-equality between the two rendering paths still holds, 2 238 of
+2 238.** Both paths took the same change (`applyEnrichment` and
+`enrichDescription`), and the goldens they are both compared against were
+regenerated from the map path alone, so the go-hamqtt path agreeing with
+them is an independent check rather than a tautology.
+
+### Mutation proof
+
+Nineteen mutations, applied one at a time to `payload.go`, `discovery.go`,
+`hamqtt.go` and the three test files, each run against the whole
+`internal/hass` and `internal/bridge` suite and reverted. The first pass
+left two survivors; **neither was equivalent**, so neither was named and
+left — both were closed and the pass re-run. **Nineteen of nineteen
+caught.**
+
+| # | Mutation | Caught by |
+| --- | --- | --- |
+| M1 | `deviceClassAllowed` trusts `sensor` again (the original defect) | validate + bundle + goldens + refusal log |
+| M2 | `deviceClassAllowed` trusts `number` again | the per-platform catalogue counts |
+| M4 | `select` accepts any class | goldens + the replaced-sets test |
+| M5 | `applyEnrichment` applies a refused override anyway | validate + bundle + goldens |
+| M6 | the refusal CLEARS the key instead of keeping the heuristic | goldens (the enum row) + the rider tests |
+| M7 | the refusal is not logged | the refusal-log test |
+| M8 | `enrichDescription` applies a refused override anyway | validate + bundle + byte-equality |
+| M9 | `sanitizeForPlatform` stops filtering `device_class` | validate + bundle + button inertness |
+| M10 | it keeps `options` on a non-enum sensor | validate + bundle + the valid-override pin |
+| M11 | the refused-override set loses one row | the fixture-level F13 test |
+| M12 | the `sensor` catalogue count is off by one | the per-platform counts |
+| M13 | the `number` catalogue count is off by one | the per-platform counts |
+| M14 | the go-ha-catalog snapshot size for `sensor` is off by one | the table-loads test |
+| M15 | a moved golden digest is reverted to `origin/main`'s | the digest pin |
+| M16 | an UNMOVED golden digest is changed | the digest pin |
+| M17 | a refused-override row is given the wrong class | the literal cross-check (added to kill it) |
+| M18 | `deviceClassAllowedIn` fails OPEN when the table is missing | the fail-closed test (added to kill it) |
+| M19 | a catalogue row is given the wrong class | the literal cross-check |
+| M20 | the already-stripped set names the wrong class | the literal cross-check |
+
+The two that survived the first pass, and what was done about them:
+
+- **The fail-closed branch was unreachable.** go-ha-catalog's snapshot is
+  embedded, so `LoadDeviceClasses` cannot fail at runtime and flipping
+  `return false` to `return true` there changed no byte and failed no test.
+  The lookup is now `deviceClassAllowedIn(table, platform, dc)` and
+  `TestDeviceClassAllowanceFailsClosedWithoutTheTable` exercises the branch
+  directly.
+- **`f13RefusedOverrides`' VALUES were never read.** The eleven rows are
+  checked for the ABSENCE of a class, and absence looks the same whichever
+  class was named, so `"plug"` → `"door"` passed. They are now
+  cross-checked against `f13CatalogueRows` and against `mapping.yaml`
+  itself.
+
+---
+
 ## Sequencing — the rest of phase 7
 
 Ordered so each step de-risks the next, following the shape phases 5 and
@@ -1306,6 +1582,7 @@ Ordered so each step de-risks the next, following the shape phases 5 and
 | 2 | **Fix the defects, one commit per finding, goldens regenerated with the diff reviewed.** F3 (one state-topic builder) and F4 (`/set` check before the goroutine) first — neither changes a byte on the wire. Then F6, F5, F11, F7. | The byte-equality proof in step 4 must compare against *corrected* bytes, not against bugs. |
 | 3 | **Decide the two questions that are not implementation.** (a) F10: consumer-supplied `discovery.Context` keeping `slugify`, or accept re-registration for non-ASCII device names. (b) F1/availability: keep device-only and stay byte-equal, or take the library's `{LevelBridge, LevelDevice}` default and change all 687 payloads. Written down, not discovered. | Both are irreversible for an installed base. Phase 6 hit (a) at step 3 and paid for it. |
 | 4 | **DONE (see [Step 4 outcome](#step-4-outcome--the-byte-equality-experiment)).** **Render through go-hamqtt, publishing nothing.** Add `internal/hass/hamqtt.go` building a `discovery.Bundle` from the same entities, behind no config flag, and a test that compares its per-component output against `testdata/discovery_*.json` — **against the files, not against the builder it replaces**. Neither pin regenerated. | This is where a `Layout`, `Context` or `Slot` mismatch surfaces, at zero risk. |
+| **4.5** | **DONE (see [Step 5 outcome](#step-5-outcome--f13-fixed-687-of-687-accepted)).** **Fix F13** — `deviceClassAllowed` reads go-ha-catalog's per-platform tables instead of trusting the catalogue on `sensor`/`number`, and enrichment refuses (and logs) an override the platform does not declare. Three goldens and three digests move, 11 rows each, no identity string. | F13 must be fixed before step 6: a bundle is validated as one document and a blocking one publishes nothing, so eleven silently-dropped entities become 687 lost ones. |
 | 5 | Adopt the library on the **state and command** planes (`publisher.StatePublisher`, `publisher.CommandRouter`, `publisher.AvailabilityPublisher`), discovery still per-entity from the old path. | The state plane has no registry keys to orphan; it is the cheap half. |
 | 6 | **Switch discovery to the device bundle.** `publisher.PublishBundle` + `SupersededTopics(prefix, bundle)` with the **default** `LegacyTopicWithNodeID` form (§2.3), retracting all 687 per-entity configs before the bundle lands. Verify against a live Home Assistant that no `Received a conflicting MQTT discovery message` warning appears. | The one step that cannot be proved by a unit test. Everything above exists to make it a small diff. |
 | 7 | Apply the step-3 decisions, changelog + `addon/CHANGELOG.md`, version bump across the five spots `CLAUDE.md` names. | Operator-visible last. |
@@ -1320,6 +1597,11 @@ Ordered so each step de-risks the next, following the shape phases 5 and
   one whose diff is 687 rows is not.
 - **Do not shrink the pins.** The 500 sensors nobody looks at are
   exactly where an identity regression hides.
+- **Do not move one of the thirteen to `binary_sensor` to "match the
+  integration".** It strands the entity (`unique_id` and `identifiers`
+  have no migration path) *and* it is wrong: these land on `sensor`
+  because the appliance does not model them as booleans, and a
+  `binary_sensor` needs a two-valued mapping this bridge cannot derive.
 - **Do not regenerate a golden to make a step pass.** Every regeneration
   in steps 2 and 7 must be accompanied by a reviewed diff; steps 1, 4, 5
   and 6 must regenerate nothing.

@@ -271,8 +271,9 @@ func (d *Discovery) describe(e *homeconnect.Entity, platform string) *model.Desc
 	return desc
 }
 
-// enrichDescription is applyEnrichment against a Description instead of a map.
-func (d *Discovery) enrichDescription(e *homeconnect.Entity, desc *model.Description) {
+// enrichDescription is applyEnrichment against a Description instead of a map,
+// including its refusal of a device_class the platform does not declare (F13).
+func (d *Discovery) enrichDescription(e *homeconnect.Entity, desc *model.Description, platform string) {
 	if d.enrich == nil || e.Name() == "" {
 		return
 	}
@@ -281,7 +282,11 @@ func (d *Discovery) enrichDescription(e *homeconnect.Entity, desc *model.Descrip
 		desc.Name = model.L(name)
 	}
 	if dc, ok := d.enrich.DeviceClass(f); ok {
-		desc.DeviceClass = model.DeviceClass(dc)
+		if deviceClassAllowed(platform, dc) {
+			desc.DeviceClass = model.DeviceClass(dc)
+		} else {
+			d.logRefusedDeviceClass(f, platform, dc)
+		}
 	}
 	if unit, ok := d.enrich.Unit(f); ok {
 		desc.Unit = model.Unit(unit)
@@ -369,7 +374,7 @@ func (d *Discovery) hamqttModel(device string, info profile.DeviceInfo, entities
 			continue
 		}
 		desc := d.describe(e, platform)
-		d.enrichDescription(e, desc)
+		d.enrichDescription(e, desc, platform)
 		d.localizeDescriptionOptions(desc)
 		sanitizeDescriptionForPlatform(desc, platform)
 		if d.curated && desc.Enabled != nil && !*desc.Enabled {

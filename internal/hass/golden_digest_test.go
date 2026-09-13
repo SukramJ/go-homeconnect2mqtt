@@ -47,11 +47,33 @@ var goldenDigests = map[string]string{
 	// reorders on 91 rows of the full set and 19 of the curated one. The
 	// two English files are byte-identical across that change, and no key
 	// other than "options" moves in any row.
-	"discovery_full_en.json":    "07ccb6722c98fde08fd0cdec8869957e4587c560b9b614b09a1f375ee460b880",
-	"discovery_full_de.json":    "7e2193d4ae54d0841b6c0b57f0c01cb2a43dbceabd81d080859ff066757d8dac",
-	"discovery_curated_de.json": "cf6f43d1a291be5948bb5746edb22a5f626dfb8d680a88283164ef31139fcca6",
-	"discovery_plain_en.json":   "9120a86322c7b308df91ef82fd4b96ee6e6f99f3d5add77eb431de074f963c78",
-	"identity_en.json":          "a725b3b2f3072047d8f2f95bdc7b078ae0f34aadb3b3e74c6cf46d72a9e7eb93",
+	//
+	// Moved a fourth time by F13, in the three ENRICHED files only, on
+	// exactly 11 rows each — the same 11 rows in all three, and the same 11
+	// that discovery.Validate refused. Diffed as OUTPUT (the builder run at
+	// origin/main against the builder run here), not as files:
+	//
+	//   - 9 x Refrigeration.Common.Status.Door.* and
+	//     BSH.Common.Status.ChargingConnection lose a "device_class" the
+	//     `sensor` platform does not declare ("door", "plug"). One key
+	//     removed per row, nothing else.
+	//   - BSH.Common.Status.BatteryChargingState is an ENUM sensor:
+	//     "device_class" goes from "battery_charging" to the heuristic's
+	//     "enum" and the "options" list the old code deleted as collateral
+	//     comes back (3 values, localized per file).
+	//
+	// No topic, no unique_id, no default_entity_id and no platform moves, so
+	// identity_en.json is UNCHANGED — as is discovery_plain_en.json, the
+	// unenriched control, which never carried a catalogue class at all.
+	// internal/bridge/testdata/topics.json is likewise untouched: F13 lives
+	// entirely inside a discovery payload.
+	"discovery_full_en.json":    "248d2d26994693d8c8489bb70e8f693713188056607c3722a9fb4d3fb7a27dc2",
+	"discovery_full_de.json":    "ad39e602a9df3e9451131699aff882ca041c083627b176709f620e305b570785",
+	"discovery_curated_de.json": "f1bcd7c4e4b3f29bf4e43905f6244de7adcf67e8c75696da8956b803c9056fc3",
+	// UNCHANGED by F13 — the unenriched control.
+	"discovery_plain_en.json": "9120a86322c7b308df91ef82fd4b96ee6e6f99f3d5add77eb431de074f963c78",
+	// UNCHANGED by F13 — no identity string moves.
+	"identity_en.json": "a725b3b2f3072047d8f2f95bdc7b078ae0f34aadb3b3e74c6cf46d72a9e7eb93",
 }
 
 // TestGoldenFilesMatchTheirPinnedDigests fails when a golden file was

@@ -6,6 +6,26 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 ## [Unreleased]
 
 ### Fixed
+- **Eleven entities per appliance were being discarded by Home Assistant
+  without a word.** `mapping.yaml` mirrors the official `home_connect`
+  integration, where thirteen features are *binary* sensors, so it gives them
+  a `device_class` from the binary-sensor vocabulary — `door`, `plug`,
+  `connectivity`, `light`, `battery_charging`. Whenever an appliance reports
+  one of them as anything but a plain on/off value (nine refrigeration doors
+  and the charging connection arrive as text), this daemon publishes it as a
+  `sensor`, and the `sensor` platform declares none of those classes. Home
+  Assistant dropped each config during schema validation: no error, no log
+  line, no entity, while the other 676 appeared normally. The daemon now
+  checks every `device_class` against Home Assistant's own per-platform
+  vocabulary before publishing it, and logs
+  (`hass.device_class_refused`) any catalogue override it has to drop.
+  **What you will see:** eleven entities appear where nothing was, as
+  disabled-by-default diagnostics; ten of them without an icon or device
+  class, and *Battery charging state* as a proper enumeration sensor with a
+  translated options list. No entity id, unique id or platform changes, so no
+  history is lost and there is nothing to do by hand. On an appliance with no
+  refrigeration compartments — a dishwasher, an oven — nine of the eleven are
+  features the appliance does not have and never appear at all.
 - **Entities now go unavailable when the daemon dies.** The Last Will wrote
   `<MQTT_TOPIC>/status` and no discovery payload referenced it, so on a
   crash, SIGKILL or an unclean broker loss every entity stayed *available*,
