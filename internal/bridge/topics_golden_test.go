@@ -212,6 +212,22 @@ func (s *subRecorder) Subscribe(_ context.Context, filter string, qos mqtt.QoS, 
 
 func (s *subRecorder) Unsubscribe(context.Context, string) error { return nil }
 
+// planeFor builds the REAL go-hamqtt publish plane over the recorder, at
+// a chosen MQTT_QOS and MQTT_RETAIN. It is the same construction
+// cmd/homeconnect2mqtt performs, so every assertion made against it is an
+// assertion about the shipped composition root.
+func planeFor(t *testing.T, rec *subRecorder, qos int, retain bool) *haplane.Plane {
+	t.Helper()
+	return haplane.New(hagomqtt.Transport(rec), haplane.Config{
+		Prefix:      pinPrefix,
+		StatusTopic: layout.Bridge(pinRoot),
+		Layout:      hass.NewLayout(pinRoot),
+		QoS:         haplane.QoS(qos),
+		Retain:      retain,
+		Logger:      slog.New(slog.DiscardHandler),
+	})
+}
+
 // pinBridge wires a REAL Bridge and a REAL hass.Discovery over the pin
 // catalogue and the shipped defaults, with the publish/subscribe calls
 // recorded rather than sent.
@@ -249,14 +265,7 @@ func pinBridgeQoS(t *testing.T, qos int) (*Bridge, *Device, *hass.Discovery, *su
 	// rather than the constant that fed them. That is what lets the F9
 	// pin survive a whole plane moving: a step that re-routes these calls
 	// through another library still has to hand the transport a 0.
-	plane := haplane.New(hagomqtt.Transport(rec), haplane.Config{
-		Prefix:      pinPrefix,
-		StatusTopic: layout.Bridge(pinRoot),
-		Layout:      hass.NewLayout(pinRoot),
-		QoS:         haplane.QoS(qos),
-		Retain:      cfg.RetainEnabled(),
-		Logger:      logger,
-	})
+	plane := planeFor(t, rec, qos, cfg.RetainEnabled())
 	// HASS_DISCOVERY defaults to "curated"; the pin uses the full set so
 	// the topic tree is the widest one this daemon can produce.
 	disc := hass.New(plane, pinPrefix, pinRoot, cfg.Language, false, logger)
