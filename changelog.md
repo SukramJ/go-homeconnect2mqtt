@@ -5,6 +5,27 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+### Changed
+- Bump [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt)
+  v1.3.0 -> v1.5.1. Two minors, both relevant. v1.4.0 adds
+  `mqtt.SplitClient`, which makes this daemon's hand-rolled `mqttSession`
+  redundant (not yet removed). v1.5.1 fixes a double-dispatch defect: through
+  v1.5.0 a delivery carrying no subscription identifier was matched by topic
+  against stamped subscriptions too, so a consumer with a broad subscription
+  overlapping its own command tree could run a handler twice per published
+  message. This bridge subscribes to the whole device sub-tree
+  (`<root>/<device>/#`), which makes it the most exposed of the sister
+  projects; its remaining filters do not overlap it, so no doubled write has
+  been observed. No source changes were needed.
+
+### Added
+- Golden-file pins for everything published to Home Assistant: all 687
+  discovery payloads per appliance (in both languages, both `HASS_DISCOVERY`
+  modes, with and without `mapping.yaml`) together with their topic, QoS and
+  retain flag, the identity plane on its own, and the complete state /
+  command / availability / subscription tree. Test-only; nothing on the wire
+  changes. See `notes/adr0070-phase7-measurement.md`.
+
 ### Removed
 - Stop publishing `object_id` in HA discovery payloads (entity configs in
   `internal/hass/payload.go` and the program-control buttons in

@@ -1,0 +1,4041 @@
+[
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/bsh_common_appliance_connected/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_appliance_connected",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "connectivity",
+      "entity_category": "diagnostic",
+      "name": "Connected",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Appliance/Connected/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_appliance_connected"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/bsh_common_event_alarmclockelapsed/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_event_alarmclockelapsed",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Wecker abgelaufen",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Event/AlarmClockElapsed/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_event_alarmclockelapsed"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/bsh_common_event_programaborted/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_event_programaborted",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Programm abgebrochen",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Event/ProgramAborted/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_event_programaborted"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/bsh_common_event_programfinished/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_event_programfinished",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Programm beendet",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Event/ProgramFinished/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_event_programfinished"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/bsh_common_status_interiorilluminationactive/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_status_interiorilluminationactive",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "light",
+      "entity_category": "diagnostic",
+      "name": "Innenbeleuchtung",
+      "payload_off": "false",
+      "payload_on": "true",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/InteriorIlluminationActive/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_status_interiorilluminationactive"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/bsh_common_status_localcontrolactive/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_status_localcontrolactive",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Lokale Steuerung",
+      "payload_off": "false",
+      "payload_on": "true",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/LocalControlActive/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_status_localcontrolactive"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/bsh_common_status_remotecontrolactive/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_status_remotecontrolactive",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Fernsteuerung",
+      "payload_off": "false",
+      "payload_on": "true",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/RemoteControlActive/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_status_remotecontrolactive"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/bsh_common_status_remotecontrolstartallowed/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_bsh_common_status_remotecontrolstartallowed",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Fernstart",
+      "payload_off": "false",
+      "payload_on": "true",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/RemoteControlStartAllowed/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_status_remotecontrolstartallowed"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_cleaningrobot_event_dockingstationnotfound/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_cleaningrobot_event_dockingstationnotfound",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Ladestation nicht gefunden",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Event/DockingStationNotFound/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_event_dockingstationnotfound"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_cleaningrobot_event_emptydustboxandcleanfilter/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_cleaningrobot_event_emptydustboxandcleanfilter",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Staubbehälter leeren und Filter reinigen",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Event/EmptyDustBoxAndCleanFilter/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_event_emptydustboxandcleanfilter"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_cleaningrobot_event_robotisstuck/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_cleaningrobot_event_robotisstuck",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Roboter steckt fest",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Event/RobotIsStuck/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_event_robotisstuck"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_beancontainerempty/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_beancontainerempty",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Bohnenbehälter leer",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/BeanContainerEmpty/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_beancontainerempty"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_calcncleanin10cups/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_calcncleanin10cups",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Calc'N'Clean in 10 Tassen",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/CalcNCleanIn10Cups/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_calcncleanin10cups"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_calcncleanin15cups/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_calcncleanin15cups",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Calc'N'Clean in 15 Tassen",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/CalcNCleanIn15Cups/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_calcncleanin15cups"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_calcncleanin20cups/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_calcncleanin20cups",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Calc'N'Clean in 20 Tassen",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/CalcNCleanIn20Cups/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_calcncleanin20cups"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_calcncleanin5cups/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_calcncleanin5cups",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Calc'N'Clean in 5 Tassen",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/CalcNCleanIn5Cups/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_calcncleanin5cups"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_descalingin10cups/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_descalingin10cups",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Entkalken in 10 Tassen",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DescalingIn10Cups/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_descalingin10cups"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_descalingin15cups/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_descalingin15cups",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Entkalken in 15 Tassen",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DescalingIn15Cups/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_descalingin15cups"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_descalingin20cups/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_descalingin20cups",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Entkalken in 20 Tassen",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DescalingIn20Cups/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_descalingin20cups"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_descalingin5cups/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_descalingin5cups",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Entkalken in 5 Tassen",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DescalingIn5Cups/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_descalingin5cups"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_devicecalcncleanblockage/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_devicecalcncleanblockage",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Calc'N'Clean-Blockierung",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DeviceCalcNCleanBlockage/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_devicecalcncleanblockage"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_devicecalcncleanoverdue/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_devicecalcncleanoverdue",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Calc'N'Clean überfällig",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DeviceCalcNCleanOverdue/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_devicecalcncleanoverdue"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_devicecleaningoverdue/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_devicecleaningoverdue",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Reinigung überfällig",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DeviceCleaningOverdue/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_devicecleaningoverdue"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_devicedescalingblockage/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_devicedescalingblockage",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Entkalkungsblockierung",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DeviceDescalingBlockage/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_devicedescalingblockage"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_devicedescalingoverdue/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_devicedescalingoverdue",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Entkalkung überfällig",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DeviceDescalingOverdue/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_devicedescalingoverdue"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_deviceshouldbecalcncleaned/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_deviceshouldbecalcncleaned",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Calc'N'Clean erforderlich",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DeviceShouldBeCalcNCleaned/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_deviceshouldbecalcncleaned"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_deviceshouldbecleaned/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_deviceshouldbecleaned",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Reinigung erforderlich",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DeviceShouldBeCleaned/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_deviceshouldbecleaned"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_deviceshouldbedescaled/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_deviceshouldbedescaled",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Entkalkung erforderlich",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DeviceShouldBeDescaled/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_deviceshouldbedescaled"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_driptrayfull/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_driptrayfull",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Tropfschale voll",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/DripTrayFull/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_driptrayfull"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_keepmilktankcool/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_keepmilktankcool",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Milchbehälter kühl halten",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/KeepMilkTankCool/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_keepmilktankcool"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/consumerproducts_coffeemaker_event_watertankempty/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_consumerproducts_coffeemaker_event_watertankempty",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Wassertank leer",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Event/WaterTankEmpty/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_event_watertankempty"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/cooking_common_event_hood_greasefiltermaxsaturationnearlyreached/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_cooking_common_event_hood_greasefiltermaxsaturationnearlyreached",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Fettfiltersättigung fast erreicht",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Event/Hood/GreaseFilterMaxSaturationNearlyReached/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_common_event_hood_greasefiltermaxsaturationnearlyreached"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/cooking_common_event_hood_greasefiltermaxsaturationreached/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_cooking_common_event_hood_greasefiltermaxsaturationreached",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Fettfiltersättigung erreicht",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Event/Hood/GreaseFilterMaxSaturationReached/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_common_event_hood_greasefiltermaxsaturationreached"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/cooking_oven_event_preheatfinished/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_cooking_oven_event_preheatfinished",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Vorheizen beendet",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Event/PreheatFinished/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_oven_event_preheatfinished"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/cooking_oven_event_regularpreheatfinished/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_cooking_oven_event_regularpreheatfinished",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Reguläres Vorheizen beendet",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Event/RegularPreheatFinished/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_oven_event_regularpreheatfinished"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/dishcare_dishwasher_event_rinseaidnearlyempty/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_dishcare_dishwasher_event_rinseaidnearlyempty",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Klarspüler fast leer",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Event/RinseAidNearlyEmpty/state",
+      "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_event_rinseaidnearlyempty"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/dishcare_dishwasher_event_saltnearlyempty/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_dishcare_dishwasher_event_saltnearlyempty",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Salz fast leer",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Event/SaltNearlyEmpty/state",
+      "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_event_saltnearlyempty"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/laundrycare_dryer_event_dryingprocessfinished/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_laundrycare_dryer_event_dryingprocessfinished",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Trocknen beendet",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Dryer/Event/DryingProcessFinished/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_dryer_event_dryingprocessfinished"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/laundrycare_washer_event_idos1filllevelpoor/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_laundrycare_washer_event_idos1filllevelpoor",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Niedriger Füllstand von i-Dos 1",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Event/IDos1FillLevelPoor/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_event_idos1filllevelpoor"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/laundrycare_washer_event_idos2filllevelpoor/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_laundrycare_washer_event_idos2filllevelpoor",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Niedriger Füllstand von i-Dos 2",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Event/IDos2FillLevelPoor/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_event_idos2filllevelpoor"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/refrigeration_fridgefreezer_event_dooralarmfreezer/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_refrigeration_fridgefreezer_event_dooralarmfreezer",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Türalarm Gefrierschrank",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Event/DoorAlarmFreezer/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_fridgefreezer_event_dooralarmfreezer"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/refrigeration_fridgefreezer_event_dooralarmrefrigerator/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_refrigeration_fridgefreezer_event_dooralarmrefrigerator",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Türalarm Kühlschrank",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Event/DoorAlarmRefrigerator/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_fridgefreezer_event_dooralarmrefrigerator"
+    }
+  },
+  {
+    "topic": "homeassistant/binary_sensor/geschirrspuler/refrigeration_fridgefreezer_event_temperaturealarmfreezer/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "binary_sensor.geschirrspuler_refrigeration_fridgefreezer_event_temperaturealarmfreezer",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Temperaturalarm Gefrierschrank",
+      "payload_off": "Off",
+      "payload_on": "Present",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Event/TemperatureAlarmFreezer/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_fridgefreezer_event_temperaturealarmfreezer"
+    }
+  },
+  {
+    "topic": "homeassistant/button/geschirrspuler/bsh_common_command_opendoor/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Command/OpenDoor/set",
+      "default_entity_id": "button.geschirrspuler_bsh_common_command_opendoor",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Tür öffnen",
+      "payload_press": "true",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_command_opendoor"
+    }
+  },
+  {
+    "topic": "homeassistant/button/geschirrspuler/bsh_common_command_partlyopendoor/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Command/PartlyOpenDoor/set",
+      "default_entity_id": "button.geschirrspuler_bsh_common_command_partlyopendoor",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Tür teilweise öffnen",
+      "payload_press": "true",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_command_partlyopendoor"
+    }
+  },
+  {
+    "topic": "homeassistant/button/geschirrspuler/bsh_common_command_pauseprogram/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Command/PauseProgram/set",
+      "default_entity_id": "button.geschirrspuler_bsh_common_command_pauseprogram",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Programm pausieren",
+      "payload_press": "true",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_command_pauseprogram"
+    }
+  },
+  {
+    "topic": "homeassistant/button/geschirrspuler/bsh_common_command_resumeprogram/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Command/ResumeProgram/set",
+      "default_entity_id": "button.geschirrspuler_bsh_common_command_resumeprogram",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Programm fortsetzen",
+      "payload_press": "true",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_command_resumeprogram"
+    }
+  },
+  {
+    "topic": "homeassistant/button/geschirrspuler/start_program/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/_control/start_program/set",
+      "default_entity_id": "button.geschirrspuler_start_program",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Programm starten",
+      "payload_press": "PRESS",
+      "unique_id": "homeconnect_geschirrspuler_start_program"
+    }
+  },
+  {
+    "topic": "homeassistant/button/geschirrspuler/stop_program/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/_control/stop_program/set",
+      "default_entity_id": "button.geschirrspuler_stop_program",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Programm stoppen",
+      "payload_press": "PRESS",
+      "unique_id": "homeconnect_geschirrspuler_stop_program"
+    }
+  },
+  {
+    "topic": "homeassistant/number/geschirrspuler/bsh_common_setting_alarmclock/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/AlarmClock/set",
+      "default_entity_id": "number.geschirrspuler_bsh_common_setting_alarmclock",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "duration",
+      "entity_category": "config",
+      "max": 100,
+      "min": 0,
+      "name": "Wecker",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/AlarmClock/state",
+      "step": 1,
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_alarmclock",
+      "unit_of_measurement": "s"
+    }
+  },
+  {
+    "topic": "homeassistant/number/geschirrspuler/cooking_oven_option_setpointtemperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/SetpointTemperature/set",
+      "default_entity_id": "number.geschirrspuler_cooking_oven_option_setpointtemperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "temperature",
+      "entity_category": "config",
+      "max": 100,
+      "min": 0,
+      "name": "Solltemperatur",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/SetpointTemperature/state",
+      "step": 1,
+      "unique_id": "homeconnect_geschirrspuler_cooking_oven_option_setpointtemperature",
+      "unit_of_measurement": "°C"
+    }
+  },
+  {
+    "topic": "homeassistant/number/geschirrspuler/refrigeration_common_setting_bottlecooler_setpointtemperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/BottleCooler/SetpointTemperature/set",
+      "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_bottlecooler_setpointtemperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "temperature",
+      "entity_category": "config",
+      "max": 100,
+      "min": 0,
+      "name": "Flaschenkühler-Temperatur",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/BottleCooler/SetpointTemperature/state",
+      "step": 1,
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_bottlecooler_setpointtemperature",
+      "unit_of_measurement": "°C"
+    }
+  },
+  {
+    "topic": "homeassistant/number/geschirrspuler/refrigeration_common_setting_chillercommon_setpointtemperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/ChillerCommon/SetpointTemperature/set",
+      "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_chillercommon_setpointtemperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "temperature",
+      "entity_category": "config",
+      "max": 100,
+      "min": 0,
+      "name": "Chiller-Temperatur",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/ChillerCommon/SetpointTemperature/state",
+      "step": 1,
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_chillercommon_setpointtemperature",
+      "unit_of_measurement": "°C"
+    }
+  },
+  {
+    "topic": "homeassistant/number/geschirrspuler/refrigeration_common_setting_chillerleft_setpointtemperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/ChillerLeft/SetpointTemperature/set",
+      "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_chillerleft_setpointtemperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "temperature",
+      "entity_category": "config",
+      "max": 100,
+      "min": 0,
+      "name": "Chiller-Temperatur links",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/ChillerLeft/SetpointTemperature/state",
+      "step": 1,
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_chillerleft_setpointtemperature",
+      "unit_of_measurement": "°C"
+    }
+  },
+  {
+    "topic": "homeassistant/number/geschirrspuler/refrigeration_common_setting_chillerright_setpointtemperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/ChillerRight/SetpointTemperature/set",
+      "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_chillerright_setpointtemperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "temperature",
+      "entity_category": "config",
+      "max": 100,
+      "min": 0,
+      "name": "Chiller-Temperatur rechts",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/ChillerRight/SetpointTemperature/state",
+      "step": 1,
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_chillerright_setpointtemperature",
+      "unit_of_measurement": "°C"
+    }
+  },
+  {
+    "topic": "homeassistant/number/geschirrspuler/refrigeration_common_setting_winecompartment2_setpointtemperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/WineCompartment2/SetpointTemperature/set",
+      "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_winecompartment2_setpointtemperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "temperature",
+      "entity_category": "config",
+      "max": 100,
+      "min": 0,
+      "name": "Weinfach 2 Temperatur",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/WineCompartment2/SetpointTemperature/state",
+      "step": 1,
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_winecompartment2_setpointtemperature",
+      "unit_of_measurement": "°C"
+    }
+  },
+  {
+    "topic": "homeassistant/number/geschirrspuler/refrigeration_common_setting_winecompartment3_setpointtemperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/WineCompartment3/SetpointTemperature/set",
+      "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_winecompartment3_setpointtemperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "temperature",
+      "entity_category": "config",
+      "max": 100,
+      "min": 0,
+      "name": "Weinfach 3 Temperatur",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/WineCompartment3/SetpointTemperature/state",
+      "step": 1,
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_winecompartment3_setpointtemperature",
+      "unit_of_measurement": "°C"
+    }
+  },
+  {
+    "topic": "homeassistant/number/geschirrspuler/refrigeration_common_setting_winecompartment_setpointtemperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/WineCompartment/SetpointTemperature/set",
+      "default_entity_id": "number.geschirrspuler_refrigeration_common_setting_winecompartment_setpointtemperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "temperature",
+      "entity_category": "config",
+      "max": 100,
+      "min": 0,
+      "name": "Weinfach-Temperatur",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/WineCompartment/SetpointTemperature/state",
+      "step": 1,
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_winecompartment_setpointtemperature",
+      "unit_of_measurement": "°C"
+    }
+  },
+  {
+    "topic": "homeassistant/number/geschirrspuler/refrigeration_fridgefreezer_setting_setpointtemperaturefreezer/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Setting/SetpointTemperatureFreezer/set",
+      "default_entity_id": "number.geschirrspuler_refrigeration_fridgefreezer_setting_setpointtemperaturefreezer",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "temperature",
+      "entity_category": "config",
+      "max": 100,
+      "min": 0,
+      "name": "Gefrierschrank-Temperatur",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Setting/SetpointTemperatureFreezer/state",
+      "step": 1,
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_fridgefreezer_setting_setpointtemperaturefreezer",
+      "unit_of_measurement": "°C"
+    }
+  },
+  {
+    "topic": "homeassistant/number/geschirrspuler/refrigeration_fridgefreezer_setting_setpointtemperaturerefrigerator/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Setting/SetpointTemperatureRefrigerator/set",
+      "default_entity_id": "number.geschirrspuler_refrigeration_fridgefreezer_setting_setpointtemperaturerefrigerator",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "temperature",
+      "entity_category": "config",
+      "max": 100,
+      "min": 0,
+      "name": "Kühlschrank-Temperatur",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Setting/SetpointTemperatureRefrigerator/state",
+      "step": 1,
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_fridgefreezer_setting_setpointtemperaturerefrigerator",
+      "unit_of_measurement": "°C"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/bsh_common_root_selectedprogram/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgram/set",
+      "default_entity_id": "select.geschirrspuler_bsh_common_root_selectedprogram",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Ausgewähltes Programm",
+      "options": [
+        "Dishcare.Dishwasher.Program.Auto2",
+        "Dishcare.Dishwasher.Program.Eco50",
+        "Dishcare.Dishwasher.Program.Quick45"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgram/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_root_selectedprogram"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/bsh_common_root_selectedprogramnoprograms/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgramNoPrograms/set",
+      "default_entity_id": "select.geschirrspuler_bsh_common_root_selectedprogramnoprograms",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Selected Program No Programs",
+      "options": [],
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgramNoPrograms/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_root_selectedprogramnoprograms"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/bsh_common_setting_powerstate/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/PowerState/set",
+      "default_entity_id": "select.geschirrspuler_bsh_common_setting_powerstate",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Einschalter",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/PowerState/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_powerstate"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/consumerproducts_cleaningrobot_option_cleaningmode/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Option/CleaningMode/set",
+      "default_entity_id": "select.geschirrspuler_consumerproducts_cleaningrobot_option_cleaningmode",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Reinigungsmodus",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Option/CleaningMode/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_option_cleaningmode"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/cooking_common_option_hood_intensivelevel/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/IntensiveLevel/set",
+      "default_entity_id": "select.geschirrspuler_cooking_common_option_hood_intensivelevel",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Intensivstufe",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/IntensiveLevel/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_common_option_hood_intensivelevel"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/cooking_common_option_hood_ventinglevel/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/VentingLevel/set",
+      "default_entity_id": "select.geschirrspuler_cooking_common_option_hood_ventinglevel",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Lüfterstufe",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/VentingLevel/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_common_option_hood_ventinglevel"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/cooking_hob_option_fryingsensorlevel/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/FryingSensorLevel/set",
+      "default_entity_id": "select.geschirrspuler_cooking_hob_option_fryingsensorlevel",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Bratsensor-Stufe",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/FryingSensorLevel/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_option_fryingsensorlevel"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/cooking_hob_option_powerlevel/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/PowerLevel/set",
+      "default_entity_id": "select.geschirrspuler_cooking_hob_option_powerlevel",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Leistungsstufe",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/PowerLevel/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_option_powerlevel"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/cooking_hob_setting_buzzerbeeplevel/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/BuzzerBeepLevel/set",
+      "default_entity_id": "select.geschirrspuler_cooking_hob_setting_buzzerbeeplevel",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Signaltonlautstärke",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/BuzzerBeepLevel/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_buzzerbeeplevel"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/cooking_oven_option_warminglevel/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/WarmingLevel/set",
+      "default_entity_id": "select.geschirrspuler_cooking_oven_option_warminglevel",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Wärmestufe",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/WarmingLevel/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_oven_option_warminglevel"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/cooking_oven_setting_sabbathmode/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Setting/SabbathMode/set",
+      "default_entity_id": "select.geschirrspuler_cooking_oven_setting_sabbathmode",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Sabbatmodus",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Setting/SabbathMode/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_oven_setting_sabbathmode"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/laundrycare_common_option_silentmode/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/SilentMode/set",
+      "default_entity_id": "select.geschirrspuler_laundrycare_common_option_silentmode",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Leise-Modus",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/SilentMode/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_common_option_silentmode"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/laundrycare_washer_setting_idos1baselevel/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/IDos1BaseLevel/set",
+      "default_entity_id": "select.geschirrspuler_laundrycare_washer_setting_idos1baselevel",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "i-Dos 1 Grunddosierung",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/IDos1BaseLevel/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_setting_idos1baselevel"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/laundrycare_washer_setting_idos2baselevel/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/IDos2BaseLevel/set",
+      "default_entity_id": "select.geschirrspuler_laundrycare_washer_setting_idos2baselevel",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "i-Dos 2 Grunddosierung",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/IDos2BaseLevel/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_setting_idos2baselevel"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/refrigeration_common_setting_ecomode/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/EcoMode/set",
+      "default_entity_id": "select.geschirrspuler_refrigeration_common_setting_ecomode",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Eco-Modus",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/EcoMode/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_ecomode"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/refrigeration_common_setting_freshmode/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/FreshMode/set",
+      "default_entity_id": "select.geschirrspuler_refrigeration_common_setting_freshmode",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Frische-Modus",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/FreshMode/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_freshmode"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/refrigeration_common_setting_sabbathmode/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/SabbathMode/set",
+      "default_entity_id": "select.geschirrspuler_refrigeration_common_setting_sabbathmode",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Sabbat-Modus",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/SabbathMode/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_sabbathmode"
+    }
+  },
+  {
+    "topic": "homeassistant/select/geschirrspuler/refrigeration_common_setting_vacationmode/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/VacationMode/set",
+      "default_entity_id": "select.geschirrspuler_refrigeration_common_setting_vacationmode",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Urlaubsmodus",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/VacationMode/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_vacationmode"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_option_duration/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_option_duration",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Dauer",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/Duration/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_option_duration"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_option_finishinrelative/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_option_finishinrelative",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Beenden in relativ",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/FinishInRelative/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_option_finishinrelative"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_option_programprogress/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_option_programprogress",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Programm-Fortschritt",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/ProgramProgress/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_option_programprogress"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_option_remainingprogramtime/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_option_remainingprogramtime",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "timestamp",
+      "name": "Programm-Endzeit",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/RemainingProgramTime/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_option_remainingprogramtime"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_option_startinrelative/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_option_startinrelative",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Start in relativ",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/StartInRelative/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_option_startinrelative"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_root_activeprogram/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_root_activeprogram",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "enum",
+      "name": "Aktives Programm",
+      "options": [
+        "Dishcare.Dishwasher.Program.Auto2",
+        "Dishcare.Dishwasher.Program.Eco50",
+        "Dishcare.Dishwasher.Program.Quick45"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/ActiveProgram/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_root_activeprogram"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_root_selectedprogramreadonly/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_root_selectedprogramreadonly",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "enum",
+      "name": "Selected Program Read Only",
+      "options": [
+        "Dishcare.Dishwasher.Program.Auto2",
+        "Dishcare.Dishwasher.Program.Eco50",
+        "Dishcare.Dishwasher.Program.Quick45"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgramReadOnly/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_root_selectedprogramreadonly"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_setting_ambientlightcolor/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_setting_ambientlightcolor",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Umgebungslichtfarbe",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/AmbientLightColor/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_ambientlightcolor"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_status_batterychargingstate/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_status_batterychargingstate",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "battery_charging",
+      "entity_category": "diagnostic",
+      "name": "Batterieladezustand",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/BatteryChargingState/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_status_batterychargingstate"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_status_batterylevel/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_status_batterylevel",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "battery",
+      "name": "Battery Level",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/BatteryLevel/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_status_batterylevel"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_status_chargingconnection/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_status_chargingconnection",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "plug",
+      "entity_category": "diagnostic",
+      "name": "Ladeverbindung",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/ChargingConnection/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_status_chargingconnection"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_status_doorstate/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_status_doorstate",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "enum",
+      "name": "Tür",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/DoorState/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_status_doorstate"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_status_operationstate/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_status_operationstate",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "enum",
+      "name": "Betriebszustand",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/OperationState/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_status_operationstate"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_status_video_camerastate/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_status_video_camerastate",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "enum",
+      "entity_category": "diagnostic",
+      "name": "Kamerastatus",
+      "options": [
+        "Auto",
+        "Aus",
+        "Ein"
+      ],
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/Video/CameraState/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_status_video_camerastate"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_cleaningrobot_option_referencemapid/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_option_referencemapid",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Referenzkarten-ID",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Option/ReferenceMapId/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_option_referencemapid"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_cleaningrobot_option_suctionpower/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_option_suctionpower",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Saugkraft",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Option/SuctionPower/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_option_suctionpower"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_cleaningrobot_setting_currentmap/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_setting_currentmap",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Aktuelle Karte",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Setting/CurrentMap/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_setting_currentmap"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_cleaningrobot_status_dustboxinserted/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_status_dustboxinserted",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Staubbehälter",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Status/DustBoxInserted/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_status_dustboxinserted"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_cleaningrobot_status_lastselectedmap/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_status_lastselectedmap",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Zuletzt ausgewählte Karte",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Status/LastSelectedMap/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_status_lastselectedmap"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_cleaningrobot_status_lifted/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_status_lifted",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Angehoben",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Status/Lifted/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_status_lifted"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_cleaningrobot_status_lost/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_cleaningrobot_status_lost",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Verloren",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Status/Lost/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_status_lost"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_option_beanamount/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_beanamount",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Kaffeestärke",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/BeanAmount/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_beanamount"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_option_beancontainerselection/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_beancontainerselection",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Bohnenbehälter",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/BeanContainerSelection/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_beancontainerselection"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_option_coffeemilkratio/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_coffeemilkratio",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Kaffee-Milch-Verhältnis",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/CoffeeMilkRatio/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_coffeemilkratio"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_option_coffeetemperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_coffeetemperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Kaffeetemperatur",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/CoffeeTemperature/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_coffeetemperature"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_option_fillquantity/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_fillquantity",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "volume",
+      "entity_category": "config",
+      "name": "Füllmenge",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/FillQuantity/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_fillquantity"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_option_flowrate/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_flowrate",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Durchflussmenge",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/FlowRate/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_flowrate"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_option_hotwatertemperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_hotwatertemperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Warmwassertemperatur",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/HotWaterTemperature/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_hotwatertemperature"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_option_multiplebeverages/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_option_multiplebeverages",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Mehrere Getränke",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/MultipleBeverages/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_multiplebeverages"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_setting_cupwarmer/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_setting_cupwarmer",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Tassenwärmer",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Setting/CupWarmer/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_setting_cupwarmer"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_status_beveragecountercoffee/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecountercoffee",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Kaffees",
+      "state_class": "total_increasing",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Status/BeverageCounterCoffee/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_status_beveragecountercoffee"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_status_beveragecountercoffeeandmilk/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecountercoffeeandmilk",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Tassen Kaffee mit Milch",
+      "state_class": "total_increasing",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Status/BeverageCounterCoffeeAndMilk/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_status_beveragecountercoffeeandmilk"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_status_beveragecounterfrothymilk/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterfrothymilk",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Tassen Milchschaum",
+      "state_class": "total_increasing",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Status/BeverageCounterFrothyMilk/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterfrothymilk"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_status_beveragecounterhotmilk/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterhotmilk",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Tassen warme Milch",
+      "state_class": "total_increasing",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Status/BeverageCounterHotMilk/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterhotmilk"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_status_beveragecounterhotwater/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterhotwater",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "volume",
+      "entity_category": "diagnostic",
+      "name": "Warmwasser",
+      "state_class": "total_increasing",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Status/BeverageCounterHotWater/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterhotwater"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_status_beveragecounterhotwatercups/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterhotwatercups",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Tassen Warmwasser",
+      "state_class": "total_increasing",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Status/BeverageCounterHotWaterCups/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterhotwatercups"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_status_beveragecountermilk/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecountermilk",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Tassen Milch",
+      "state_class": "total_increasing",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Status/BeverageCounterMilk/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_status_beveragecountermilk"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_status_beveragecounterpowdercoffee/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterpowdercoffee",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Pulverkaffees",
+      "state_class": "total_increasing",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Status/BeverageCounterPowderCoffee/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterpowdercoffee"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/consumerproducts_coffeemaker_status_beveragecounterristrettoespresso/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterristrettoespresso",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "diagnostic",
+      "name": "Tassen Ristretto Espresso",
+      "state_class": "total_increasing",
+      "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Status/BeverageCounterRistrettoEspresso/state",
+      "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_status_beveragecounterristrettoespresso"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_common_setting_lighting/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_common_setting_lighting",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Funktionslicht",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Setting/Lighting/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_common_setting_lighting"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_common_setting_signalvolume/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_common_setting_signalvolume",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Signallautstärke",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Setting/SignalVolume/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_common_setting_signalvolume"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hob_option_joinzone/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hob_option_joinzone",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Zonen verbinden",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/JoinZone/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_option_joinzone"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hob_option_zoneselector/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hob_option_zoneselector",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Zonenauswahl",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/ZoneSelector/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_option_zoneselector"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hob_setting_automatictimer/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_automatictimer",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Automatischer Timer",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/AutomaticTimer/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_automatictimer"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hob_setting_automaticzoneselection/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_automaticzoneselection",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Automatische Zonenauswahl",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/AutomaticZoneSelection/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_automaticzoneselection"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hob_setting_energyconsumptionindication/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_energyconsumptionindication",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Energieverbrauchsanzeige",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/EnergyConsumptionIndication/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_energyconsumptionindication"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hob_setting_hoodafterrun/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_hoodafterrun",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Dunstabzug-Nachlauf",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/HoodAfterRun/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_hoodafterrun"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hob_setting_hoodautomaticlightoff/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_hoodautomaticlightoff",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Dunstabzug automatisches Licht aus",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/HoodAutomaticLightOff/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_hoodautomaticlightoff"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hob_setting_hoodautomaticlighton/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_hoodautomaticlighton",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Dunstabzug automatisches Licht ein",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/HoodAutomaticLightOn/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_hoodautomaticlighton"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hob_setting_hoodautomaticstart/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_hoodautomaticstart",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Dunstabzug Automatikstart",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/HoodAutomaticStart/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_hoodautomaticstart"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hob_setting_powermanagement/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_powermanagement",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Leistungsmanagement",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/PowerManagement/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_powermanagement"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hob_setting_timerselection/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hob_setting_timerselection",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Timerauswahl",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/TimerSelection/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_timerselection"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hood_setting_colortemperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hood_setting_colortemperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Funktionslicht-Farbtemperatur",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hood/Setting/ColorTemperature/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hood_setting_colortemperature"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_hood_setting_colortemperaturepercent/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_hood_setting_colortemperaturepercent",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Funktionslicht-Farbtemperatur in Prozent",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hood/Setting/ColorTemperaturePercent/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hood_setting_colortemperaturepercent"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_oven_option_fastpreheat/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_oven_option_fastpreheat",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Schnelles Vorheizen",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/FastPreHeat/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_oven_option_fastpreheat"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/cooking_oven_status_currentcavitytemperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_cooking_oven_status_currentcavitytemperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "temperature",
+      "entity_category": "diagnostic",
+      "name": "Aktuelle Garraumtemperatur",
+      "state_class": "measurement",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Status/CurrentCavityTemperature/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_oven_status_currentcavitytemperature",
+      "unit_of_measurement": "°C"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/dishcare_dishwasher_option_brilliancedry/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_brilliancedry",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Brillanz-Trocknung",
+      "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/BrillianceDry/state",
+      "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_brilliancedry"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/dishcare_dishwasher_option_ecodry/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_ecodry",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Eco-Trocknung",
+      "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/EcoDry/state",
+      "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_ecodry"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/dishcare_dishwasher_option_extradry/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_extradry",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Extra-Trocknung",
+      "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/ExtraDry/state",
+      "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_extradry"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/dishcare_dishwasher_option_halfload/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_halfload",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Halbe Beladung",
+      "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/HalfLoad/state",
+      "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_halfload"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/dishcare_dishwasher_option_hygieneplus/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_hygieneplus",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Hygiene +",
+      "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/HygienePlus/state",
+      "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_hygieneplus"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/dishcare_dishwasher_option_intensivzone/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_intensivzone",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Intensivzone",
+      "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/IntensivZone/state",
+      "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_intensivzone"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/dishcare_dishwasher_option_silenceondemand/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_silenceondemand",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Stille auf Abruf",
+      "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/SilenceOnDemand/state",
+      "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_silenceondemand"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/dishcare_dishwasher_option_variospeedplus/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_variospeedplus",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Vario-Speed +",
+      "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/VarioSpeedPlus/state",
+      "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_variospeedplus"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/dishcare_dishwasher_option_zeolitedry/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_dishcare_dishwasher_option_zeolitedry",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Zeolith-Trocknung",
+      "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/ZeoliteDry/state",
+      "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_zeolitedry"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_common_option_varioperfect/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_common_option_varioperfect",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "VarioPerfect",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/VarioPerfect/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_common_option_varioperfect"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_dryer_option_dryingtarget/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_dryer_option_dryingtarget",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Trockenziel",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Dryer/Option/DryingTarget/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_dryer_option_dryingtarget"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_washer_option_intensiveplus/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_intensiveplus",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Intensiv +",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/IntensivePlus/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_intensiveplus"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_washer_option_lessironing/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_lessironing",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Weniger Bügeln",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/LessIroning/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_lessironing"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_washer_option_miniload/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_miniload",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Mini-Beladung",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/MiniLoad/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_miniload"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_washer_option_prewash/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_prewash",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Vorwäsche",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/Prewash/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_prewash"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_washer_option_rinsehold/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_rinsehold",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Spülstopp",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/RinseHold/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_rinsehold"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_washer_option_rinseplus/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_rinseplus",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Extra-Spülen",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/RinsePlus/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_rinseplus"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_washer_option_soak/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_soak",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Einweichen",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/Soak/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_soak"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_washer_option_spinspeed/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_spinspeed",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Schleuderdrehzahl",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/SpinSpeed/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_spinspeed"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_washer_option_stains/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_stains",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Fleckenautomatik",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/Stains/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_stains"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_washer_option_temperature/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_temperature",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Temperatur",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/Temperature/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_temperature"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/laundrycare_washer_option_waterplus/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_laundrycare_washer_option_waterplus",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Wasser +",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/WaterPlus/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_waterplus"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_setting_door_assistantfreezer/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_setting_door_assistantfreezer",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Türassistent Gefrierschrank",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Door/AssistantFreezer/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_door_assistantfreezer"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_setting_door_assistantfridge/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_setting_door_assistantfridge",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Türassistent Kühlschrank",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Door/AssistantFridge/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_door_assistantfridge"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_setting_light_external_power/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_setting_light_external_power",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Außenbeleuchtung",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Light/External/Power/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_light_external_power"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_setting_light_internal_power/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_setting_light_internal_power",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Innenbeleuchtung",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Light/Internal/Power/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_light_internal_power"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_status_door_bottlecooler/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_bottlecooler",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "door",
+      "entity_category": "diagnostic",
+      "name": "Flaschenkühler-Tür",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/BottleCooler/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_status_door_bottlecooler"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_status_door_chiller/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_chiller",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "door",
+      "entity_category": "diagnostic",
+      "name": "Chiller-Tür",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/Chiller/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_status_door_chiller"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_status_door_chillercommon/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_chillercommon",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "door",
+      "entity_category": "diagnostic",
+      "name": "Gemeinsame Chiller-Tür",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/ChillerCommon/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_status_door_chillercommon"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_status_door_chillerleft/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_chillerleft",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "door",
+      "entity_category": "diagnostic",
+      "name": "Chiller-Tür links",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/ChillerLeft/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_status_door_chillerleft"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_status_door_chillerright/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_chillerright",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "door",
+      "entity_category": "diagnostic",
+      "name": "Chiller-Tür rechts",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/ChillerRight/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_status_door_chillerright"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_status_door_flexcompartment/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_flexcompartment",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "door",
+      "entity_category": "diagnostic",
+      "name": "Flex-Fach-Tür",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/FlexCompartment/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_status_door_flexcompartment"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_status_door_freezer/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_freezer",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "door",
+      "entity_category": "diagnostic",
+      "name": "Gefrierschranktür",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/Freezer/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_status_door_freezer"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_status_door_refrigerator/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_refrigerator",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "door",
+      "entity_category": "diagnostic",
+      "name": "Kühlschranktür",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/Refrigerator/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_status_door_refrigerator"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_common_status_door_winecompartment/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_common_status_door_winecompartment",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "device_class": "door",
+      "entity_category": "diagnostic",
+      "name": "Weinfach-Tür",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/WineCompartment/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_status_door_winecompartment"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_fridgefreezer_setting_supermodefreezer/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_fridgefreezer_setting_supermodefreezer",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Super-Modus Gefrierschrank",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Setting/SuperModeFreezer/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_fridgefreezer_setting_supermodefreezer"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/refrigeration_fridgefreezer_setting_supermoderefrigerator/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "default_entity_id": "sensor.geschirrspuler_refrigeration_fridgefreezer_setting_supermoderefrigerator",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Super-Modus Kühlschrank",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Setting/SuperModeRefrigerator/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_fridgefreezer_setting_supermoderefrigerator"
+    }
+  },
+  {
+    "topic": "homeassistant/switch/geschirrspuler/bsh_common_setting_ambientlightenabled/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/AmbientLightEnabled/set",
+      "default_entity_id": "switch.geschirrspuler_bsh_common_setting_ambientlightenabled",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Umgebungslicht",
+      "payload_off": "false",
+      "payload_on": "true",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/AmbientLightEnabled/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_ambientlightenabled"
+    }
+  },
+  {
+    "topic": "homeassistant/switch/geschirrspuler/bsh_common_setting_childlock/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/ChildLock/set",
+      "default_entity_id": "switch.geschirrspuler_bsh_common_setting_childlock",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Kindersicherung",
+      "payload_off": "false",
+      "payload_on": "true",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/ChildLock/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_childlock"
+    }
+  },
+  {
+    "topic": "homeassistant/switch/geschirrspuler/cooking_hob_setting_automatickeylock/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/AutomaticKeyLock/set",
+      "default_entity_id": "switch.geschirrspuler_cooking_hob_setting_automatickeylock",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Automatische Tastensperre",
+      "payload_off": "false",
+      "payload_on": "true",
+      "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/AutomaticKeyLock/state",
+      "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_automatickeylock"
+    }
+  },
+  {
+    "topic": "homeassistant/switch/geschirrspuler/laundrycare_washer_option_idos1active/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/IDos1Active/set",
+      "default_entity_id": "switch.geschirrspuler_laundrycare_washer_option_idos1active",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "i-Dos 1 aktiv",
+      "payload_off": "false",
+      "payload_on": "true",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/IDos1Active/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_idos1active"
+    }
+  },
+  {
+    "topic": "homeassistant/switch/geschirrspuler/laundrycare_washer_option_idos2active/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/IDos2Active/set",
+      "default_entity_id": "switch.geschirrspuler_laundrycare_washer_option_idos2active",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "i-Dos 2 aktiv",
+      "payload_off": "false",
+      "payload_on": "true",
+      "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/IDos2Active/state",
+      "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_idos2active"
+    }
+  },
+  {
+    "topic": "homeassistant/switch/geschirrspuler/refrigeration_common_setting_dispenser_enabled/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability_topic": "homeconnect/Geschirrspüler/availability",
+      "command_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Dispenser/Enabled/set",
+      "default_entity_id": "switch.geschirrspuler_refrigeration_common_setting_dispenser_enabled",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "entity_category": "config",
+      "name": "Dispenser",
+      "payload_off": "false",
+      "payload_on": "true",
+      "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Dispenser/Enabled/state",
+      "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_dispenser_enabled"
+    }
+  }
+]
