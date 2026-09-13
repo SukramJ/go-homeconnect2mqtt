@@ -57,12 +57,43 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
   remove one: **restart Home Assistant (or reload the MQTT integration)
   first** — the delete option only appears once the entity is no longer being
   provided — then open the device page and delete the entity there.
+  **What that costs, measured:** the cheapest trigger is a single option, and
+  it is not a rarity — switching `HASS_DISCOVERY` from `full` to `curated`
+  drops **510 of 687 components** per appliance. None of them disappears.
+  Each keeps its retained registry entry, keeps *both* availability sources
+  this daemon publishes (`<root>/status` and `<root>/<appliance>/connected`,
+  both `online`) and keeps receiving live state, because `HASS_DISCOVERY` is
+  applied only where discovery is rendered and never on the state plane — so
+  in Home Assistant they are indistinguishable from entities that are still
+  offered, and an operator who set `curated` to reduce clutter sees no change
+  whatsoever. The daemon now says so on start, once per appliance:
+  `WARN hass.curated_components_omitted device=… omitted=510 published=177`,
+  naming the manual removal above. Removing them automatically needs
+  tombstones (a component key carrying a platform and nothing else), which
+  changes the document's bytes and is therefore its own change, not a rider
+  on this one.
 - The daemon now re-publishes discovery on every broker (re)connect, not only
   when an appliance reconnects or Home Assistant restarts. A broker that came
   back without its retained store previously left every entity missing until
   the daemon itself was restarted.
 
 ### Fixed
+- **Home Assistant's retained birth message made every boot do the discovery
+  migration twice, with a window in which the appliance had no config at
+  all.** Home Assistant publishes `homeassistant/status` retained, so the
+  broker replays `online` the instant this daemon subscribes it — which it
+  does *before* the one-shot `HASS_DISCOVERY_REFRESH` migration runs. The
+  birth handler then published every appliance's document into exactly the
+  window the refresh was about to clear: 687 retractions and a ~460 KB
+  document written, the refresh retracting that document, Home Assistant
+  removing the device and every entity on it, and a second pass three
+  seconds later putting them back. The end state was correct, so nothing
+  failed visibly; the cost was a whole extra migration per appliance per
+  boot, two fleet-wide sweeps running at once, and a stretch of time with no
+  discovery config that a shutdown or a dropped link inside it made
+  permanent. The birth handler and the (re)connect hook are now the same
+  single pass, which waits for the migration, runs one appliance sweep at a
+  time and stops when the daemon does.
 - **A second instance of this daemon on the same broker could have its button
   entities deleted by the first.** Two instances with different `MQTT_TOPIC`
   roots, the same `HASS_BASE_TOPIC` and an appliance name in common publish

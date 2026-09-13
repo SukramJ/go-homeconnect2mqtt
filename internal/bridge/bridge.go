@@ -204,10 +204,22 @@ func (b *Bridge) PublishOnline(ctx context.Context) {
 	go b.republishDiscovery(ctx)
 }
 
-// republishDiscovery re-publishes every appliance's device document on a
-// new broker connection.
+// republishDiscovery re-publishes every appliance's device document.
 //
-// This is the other half of the dedup-gate question, and it is the half
+// It is the ONE asynchronous fleet-wide discovery pass this daemon has:
+// the (re)connect hook above and the Home Assistant birth handler (see
+// [Bridge.subscribeBirth]) both call it, rather than each looping over the
+// devices itself. That is not tidiness. The gate below — waiting for
+// `started`, so the one-shot HASS_DISCOVERY_REFRESH migration cannot be
+// raced — is an invariant of the DAEMON, not of one caller, and the birth
+// handler used to walk past it: Home Assistant's status topic is retained,
+// so the broker replays `online` inline on the SUBSCRIBE that Run performs
+// before the refresh runs. The mutex additionally serialises the two
+// callers against each other, so one pass's document write can no longer
+// land between the other's retraction and the runtime bookkeeping behind
+// it.
+//
+// This is also the other half of the dedup-gate question, and it is the half
 // that is easy to answer wrongly by doing nothing. Plane.Reconnect throws
 // the discovery runtime away, so the gate that would suppress a repeat
 // publish is OPEN on the new connection — but an open gate that nothing
@@ -254,10 +266,13 @@ func (b *Bridge) republishDiscovery(ctx context.Context) {
 //
 // Call it before the final retained "offline" marker. That marker is the
 // only availability signal a graceful shutdown produces at all — a clean
-// DISCONNECT suppresses the Last Will — and two things here publish
-// discovery asynchronously and outlive the call that started them: the Home
+// DISCONNECT suppresses the Last Will — and two things here START a
+// discovery pass that outlives the call that started it: the Home
 // Assistant birth handler, which reacts to a message that can arrive at any
-// moment, and the (re)connect republish. Either landing after the offline
+// moment, and the (re)connect hook. Both run [Bridge.republishDiscovery],
+// which reads the flag this sets before it waits on anything, so a pass
+// requested during shutdown returns instead of parking on a gate that may
+// never open. Either landing after the offline
 // marker writes "online"-era configs to a broker this daemon has already
 // told Home Assistant it left, and a retained config is not a transient
 // mistake.

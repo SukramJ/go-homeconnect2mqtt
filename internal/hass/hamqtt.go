@@ -5,6 +5,7 @@ package hass
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	hacatalog "github.com/SukramJ/go-ha-catalog"
@@ -375,9 +376,14 @@ func sanitizeDescriptionForPlatform(desc *model.Description, platform string) {
 // hamqttModel builds the device and the entity set PublishDevice would
 // publish for it, in the same order, under the same exclusion, curation and
 // classification rules.
-func (d *Discovery) hamqttModel(device string, info profile.DeviceInfo, entities []*homeconnect.Entity) (*model.Device, []model.Entity) {
+//
+// The third return is how many entities the CURATED filter dropped, and it
+// exists because that number is the cost of an add-on option nobody is
+// told the price of. See [Discovery.warnCuratedOmissions].
+func (d *Discovery) hamqttModel(device string, info profile.DeviceInfo, entities []*homeconnect.Entity) (*model.Device, []model.Entity, int) {
 	dev := hamqttDevice(device, info)
 	out := make([]model.Entity, 0, len(entities)+2)
+	curated := 0
 	for _, e := range entities {
 		if d.enrich != nil && e.Name() != "" && d.enrich.Excluded(e.Name()) {
 			continue
@@ -391,6 +397,7 @@ func (d *Discovery) hamqttModel(device string, info profile.DeviceInfo, entities
 		d.localizeDescriptionOptions(desc)
 		sanitizeDescriptionForPlatform(desc, platform)
 		if d.curated && desc.Enabled != nil && !*desc.Enabled {
+			curated++
 			continue
 		}
 		slot := hamqttSlot(dev, device, strings.Split(layout.FeaturePath(e.Name(), e.UID()), "/")...)
@@ -401,7 +408,54 @@ func (d *Discovery) hamqttModel(device string, info profile.DeviceInfo, entities
 			Binds:          hamqttBindings(e, platform, slot),
 		})
 	}
-	return dev, append(out, d.hamqttProgramControls(device, dev, entities)...)
+	return dev, append(out, d.hamqttProgramControls(device, dev, entities)...), curated
+}
+
+// warnCuratedOmissions says out loud what HASS_DISCOVERY: curated costs on
+// an installation that has already published the full set.
+//
+// A device document does not remove a component by leaving it out, so
+// flipping full -> curated does not shrink anything in Home Assistant: the
+// 510 components (of 687, measured on the pin catalogue) the curated filter
+// drops keep their retained per-entity registry entries, keep BOTH
+// availability sources — the bridge status topic and the device
+// availability topic, both of which this daemon goes on publishing — and
+// keep RECEIVING LIVE STATE, because `curated` is read only in this package
+// and the state plane never sees it. In Home Assistant they are
+// indistinguishable from real entities. The operator who set the option to
+// reduce clutter sees no change at all, which is the worst possible
+// outcome for an option: it appears to do nothing, so it gets set again.
+//
+// The tombstone path that would actually remove them is still deferred (see
+// TestOmittingAComponentDoesNotRemoveIt and the changelog), so this is the
+// honest interim: quantify it, name it per appliance, and point at the
+// documented manual remedy. Once per device per process — it is a statement
+// about a configuration, not about a publish, and every (re)connect
+// republishes.
+func (d *Discovery) warnCuratedOmissions(device string, omitted, kept int) {
+	if omitted == 0 {
+		return
+	}
+	d.curatedMu.Lock()
+	warned := d.curatedWarned[device]
+	if d.curatedWarned == nil {
+		d.curatedWarned = map[string]bool{}
+	}
+	d.curatedWarned[device] = true
+	d.curatedMu.Unlock()
+	if warned {
+		return
+	}
+	d.logger.Warn("hass.curated_components_omitted",
+		slog.String("device", device),
+		slog.Int("omitted", omitted),
+		slog.Int("published", kept),
+		slog.String("consequence",
+			"HASS_DISCOVERY: curated omits these components from the device document, and a "+
+				"document does not delete a component by omitting it: any entity Home Assistant "+
+				"already registered for them stays, stays available and keeps receiving state. "+
+				"Remove them by hand — restart Home Assistant (or reload the MQTT integration) "+
+				"first, then delete them on the device page (see addon/DOCS.md)"))
 }
 
 // hamqttBindings is payloadFor's topic decision expressed as bindings: a
@@ -484,7 +538,7 @@ type hamqttRow struct {
 // and the whole point of step 4 is to find out whether the library agrees
 // with it rather than to assume so.
 func (d *Discovery) hamqttComponents(device string, info profile.DeviceInfo, entities []*homeconnect.Entity) ([]hamqttRow, error) {
-	dev, ents := d.hamqttModel(device, info, entities)
+	dev, ents, _ := d.hamqttModel(device, info, entities)
 	ctx := d.hamqttContext()
 	nodeID := ctx.NodeID(dev)
 	rows := make([]hamqttRow, 0, len(ents))
@@ -520,7 +574,8 @@ func (d *Discovery) hamqttComponents(device string, info profile.DeviceInfo, ent
 // TestTheDocumentsComponentsAreThePinnedPayloads is what asserts that
 // rather than stating it.
 func (d *Discovery) BundleFor(device string, info profile.DeviceInfo, entities []*homeconnect.Entity) (*discovery.Bundle, error) {
-	dev, ents := d.hamqttModel(device, info, entities)
+	dev, ents, omitted := d.hamqttModel(device, info, entities)
+	d.warnCuratedOmissions(device, omitted, len(ents))
 	b, err := discovery.Render(d.hamqttContext(), dev, ents, discovery.Origin{Name: hamqttOriginName})
 	if err != nil {
 		return nil, fmt.Errorf("render bundle: %w", err)

@@ -164,25 +164,48 @@ func shouldDispatch(d *Device, topic string, retained bool) bool {
 
 // subscribeBirth watches the Home Assistant status topic and re-publishes
 // discovery for every device when HA comes back online (docs/04 §6.3).
+//
+// The re-publish goes through [Bridge.republishDiscovery] rather than
+// looping over the devices here, and that is the fix for a race this
+// handler drove rather than merely risked.
+//
+// Home Assistant publishes homeassistant/status RETAINED, and this handler
+// deliberately keeps retained deliveries (an HA that came up before this
+// daemon did announced itself once, and the replay is the only copy this
+// daemon will ever see). So the broker replays `online` INLINE on the
+// SUBSCRIBE below — which Run performs in subscribeCommands, BEFORE
+// refreshDiscoveryOnce and before `started` closes. A handler that
+// published the fleet directly therefore published every appliance's
+// document into precisely the window HASS_DISCOVERY_REFRESH was about to
+// clear: the refresh retracted the document it had just written, Home
+// Assistant removed the device and all 687 entities, and the settle delay
+// plus a republish put them back. The end state was correct and the cost
+// was a whole extra migration per boot per appliance, a second concurrent
+// fleet-wide snapshot window, and a window with no config at all that a
+// shutdown or a link drop inside it makes permanent.
+//
+// republishDiscovery is the one path that waits on `started`, coalesces
+// against the (re)connect pass and honours StopDiscovery, so routing this
+// handler through it makes the gate the invariant #45 stated rather than
+// the invariant one of the two asynchronous publishers happened to keep.
+// It also serialises the two passes against each other, which closes the
+// interleaving in which one pass's document write lands before the
+// refresh's retraction while its runtime bookkeeping lands after — the
+// broker holding a retraction the runtime claims as a document, and the
+// sweep then clearing the per-entity leftovers too.
 func (b *Bridge) subscribeBirth(ctx context.Context) error {
 	if b.hass == nil {
 		return nil
 	}
 	_, err := b.mqtt.Subscribe(ctx, b.hass.BirthTopic(), b.qos, func(msg *mqtt.Message) {
-		// HA publishes homeassistant/status retained, so a retained replay
-		// on (re)subscribe must still trigger a discovery re-publish here
-		// (unlike subscribeCommands, this handler does not drop retained).
-		if strings.EqualFold(strings.TrimSpace(string(msg.Payload)), "online") {
-			// publishDiscovery does per-device MQTT publishes; run the loop
-			// off the read-loop goroutine so it can't stall PUBACK/PINGRESP
-			// processing (the adapter calls this handler synchronously
-			// inline). See [mqtt.MessageHandler].
-			go func() {
-				for _, d := range b.devices {
-					b.publishDiscovery(ctx, d)
-				}
-			}()
+		if !strings.EqualFold(strings.TrimSpace(string(msg.Payload)), "online") {
+			return
 		}
+		// Off the read-loop goroutine: the pass does per-device MQTT
+		// publishes and the adapter calls this handler synchronously
+		// inline, so a pass run here would stall PUBACK/PINGRESP
+		// processing. See [mqtt.MessageHandler].
+		go b.republishDiscovery(ctx)
 	})
 	return err
 }

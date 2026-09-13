@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 
 	"github.com/SukramJ/go-hamqtt/discovery"
 	"github.com/SukramJ/go-hamqtt/publisher"
@@ -70,6 +71,13 @@ type Discovery struct {
 	curated   bool   // publish only the enabled-by-default (primary) set
 	logger    *slog.Logger
 	enrich    Enricher
+
+	// curatedWarned keeps the curated-omission warning to one line per
+	// appliance per process: the condition is a configuration, and the
+	// document is re-published on every broker (re)connect and every Home
+	// Assistant restart. See Discovery.warnCuratedOmissions.
+	curatedMu     sync.Mutex
+	curatedWarned map[string]bool
 }
 
 // SetEnricher installs an optional enrichment source.

@@ -4,6 +4,7 @@
 package haplane
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 	hacatalog "github.com/SukramJ/go-ha-catalog"
 	"github.com/SukramJ/go-hamqtt/discovery"
 	"github.com/SukramJ/go-hamqtt/publisher"
+	"github.com/SukramJ/go-mqtt/protocol"
 )
 
 // The device-document pins.
@@ -437,5 +439,88 @@ func TestANilDocumentIsRefusedRatherThanPublished(t *testing.T) {
 	}
 	if calls := tr.take(); len(calls) != 0 {
 		t.Errorf("a nil document wrote %v", calls)
+	}
+}
+
+// TestPublishOverheadCoversARealPublishOnTheWire is the pin publishOverhead
+// did not have, and it is a DERIVATION rather than a second literal.
+//
+// publishOverhead is the entire margin between "the preflight says it
+// fits" and go-mqtt's mqtt.ErrPacketTooLarge — which is raised inside the
+// PUBLISH, with all 687 retractions already on the wire and the appliance
+// left with no discovery config at all. It is therefore the one number in
+// this release that must never be reduced, and nothing read it: setting it
+// to 0 left all thirteen packages green. `TestTheRefusalBoundaryIsThePacketSizeItMeasures`
+// asserted only that PacketSize(topic, n) > n, which the len(topic) term
+// satisfies on its own — an unnamed masking pair of exactly the shape the
+// notes record as M6/M7, filed as a clean catch.
+//
+// The floor is taken from go-mqtt's own encoder: a real retained QoS 1
+// MQTT 5.0 PUBLISH of the same topic and payload, encoded and measured.
+// That is the packet the broker's Maximum Packet Size is compared against
+// (MQTT 5.0 §3.1.2.24: the total packet, fixed header included), so the
+// arithmetic the refusal performs has to be at least as large as it. A
+// second hand-written constant here would only be a copy able to drift the
+// same way the first one did.
+func TestPublishOverheadCoversARealPublishOnTheWire(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name    string
+		topic   string
+		payload int
+	}{
+		{"the device document", docTopic(), 472847},
+		{"a per-entity config", publisher.EntityConfigTopic(testPrefix, "sensor", testNode, "bsh_common_status_doorstate"), 512},
+		{"a retraction", docTopic(), 0},
+		{"an empty topic and an empty payload", "", 0},
+		{"a payload just over the two-byte varint boundary", docTopic(), 16384},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			var buf bytes.Buffer
+			pkt := &protocol.PublishPacket{
+				Version: protocol.V50,
+				Topic:   tc.topic,
+				Payload: make([]byte, tc.payload),
+				// The most expensive shape this daemon can send: QoS 1
+				// carries a packet identifier the preflight must cover,
+				// and MQTT 5.0 carries a property block QoS 0 on a 3.1.1
+				// link does not.
+				QoS:        1,
+				Retain:     true,
+				PacketID:   1,
+				Properties: &protocol.Properties{},
+			}
+			if err := pkt.Encode(&buf); err != nil {
+				t.Fatalf("encode: %v", err)
+			}
+			onTheWire := uint64(buf.Len())
+			measured := PacketSize(tc.topic, tc.payload)
+			if measured < onTheWire {
+				t.Errorf("PacketSize(%q, %d) = %d, but the PUBLISH go-mqtt encodes is %d bytes: "+
+					"the preflight would pass a document the broker refuses, and the refusal "+
+					"arrives with every per-entity config already retracted",
+					tc.topic, tc.payload, measured, onTheWire)
+			}
+		})
+	}
+}
+
+// TestPacketSizeCountsTheTopicAndTheOverheadSeparately splits M4.
+//
+// "PacketSize forgets the topic AND the overhead" was recorded as one
+// caught mutation, and it was two: either term alone still leaves the
+// result larger than the payload, which is all the boundary test asked.
+// Each term is now asserted by the difference only it can explain — the
+// topic by growing the topic, the overhead by the floor above.
+func TestPacketSizeCountsTheTopicAndTheOverheadSeparately(t *testing.T) {
+	t.Parallel()
+	short, long := "a", "aa"
+	if grew := PacketSize(long, 100) - PacketSize(short, 100); grew != uint64(len(long)-len(short)) {
+		t.Errorf("one more byte of topic changed the measured packet by %d, want 1: "+
+			"the topic is not counted, and a device document's topic is ~40 bytes of it", grew)
+	}
+	if grew := PacketSize("t", 101) - PacketSize("t", 100); grew != 1 {
+		t.Errorf("one more byte of payload changed the measured packet by %d, want 1", grew)
 	}
 }
