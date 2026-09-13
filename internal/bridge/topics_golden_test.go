@@ -174,6 +174,23 @@ type subRecorder struct {
 	// PUBLISHED. A refused publish is recorded nowhere: the broker did not
 	// take it.
 	fail string
+	// gate, when set, is asked AT PUBLISH TIME whether the daemon's
+	// one-shot HASS_DISCOVERY_REFRESH gate has been released, and the
+	// answer is recorded on the call.
+	//
+	// Asked here rather than compared afterwards, because "was this
+	// published before the gate opened?" cannot be answered by reading
+	// the call list once the gate has opened: a test that snapshots the
+	// list when the gate releases races every legitimate publish that
+	// follows it, and both outcomes of that race look like a pass.
+	gate func() bool
+	// onPublish, when set, is called AFTER the call is recorded and with
+	// the lock released, so a test can hold a publish inside the transport
+	// and measure how many of them are in there at once. Overlap is a
+	// property of the caller that no after-the-fact list can show: two
+	// passes that each published once look identical whether they ran
+	// together or one after the other.
+	onPublish func(topic string)
 }
 
 // setFail makes the stub refuse one topic. Empty clears the refusal.
@@ -235,16 +252,32 @@ type pubCall struct {
 	// nothing else, and a recorder that kept every payload would make
 	// them compare 687 discovery bodies to count one deletion.
 	retraction bool
+	// preGate records that subRecorder.gate said the one-shot refresh had
+	// not yet released when this call was made. See the gate field.
+	preGate bool
 }
 
 func (s *subRecorder) Publish(_ context.Context, topic string, payload []byte, qos mqtt.QoS, retain bool, _ ...mqtt.PublishOption) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if s.fail != "" && topic == s.fail {
+		s.mu.Unlock()
 		return errors.New("subRecorder: refused " + topic)
 	}
-	s.pubs = append(s.pubs, pubCall{topic, append([]byte(nil), payload...), qos, retain, len(payload) == 0 && retain})
+	pre := s.gate != nil && !s.gate()
+	s.pubs = append(s.pubs, pubCall{topic, append([]byte(nil), payload...), qos, retain, len(payload) == 0 && retain, pre})
+	hook := s.onPublish
+	s.mu.Unlock()
+	if hook != nil {
+		hook(topic)
+	}
 	return nil
+}
+
+// setOnPublish installs the in-transport hook. See subRecorder.onPublish.
+func (s *subRecorder) setOnPublish(f func(topic string)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.onPublish = f
 }
 
 func (s *subRecorder) Subscribe(_ context.Context, filter string, qos mqtt.QoS, h mqtt.MessageHandler, opts ...mqtt.SubscribeOption) (mqtt.SubscribeResult, error) {

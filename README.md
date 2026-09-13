@@ -110,6 +110,18 @@ mosquitto_pub -h <broker> -u <user> -P <password>   -t 'homeassistant/device/ges
 `-u`/`-P` are required on an authenticated broker, which is what the Home
 Assistant add-on always uses.
 
+**A document does not delete a component by leaving it out.** Narrowing what
+is published — excluding a feature in `mapping.yaml`, or switching
+`HASS_DISCOVERY` from `full` to `curated` (510 of 687 components per
+appliance) — removes nothing in Home Assistant: those entities keep their
+retained registry entry, keep *both* availability sources this daemon
+publishes, and keep receiving live state, because `HASS_DISCOVERY` is applied
+where discovery is rendered and never on the state topics. The daemon warns
+once per appliance on start (`hass.curated_components_omitted`, with the
+count). Removing them is manual: restart Home Assistant (or reload the MQTT
+integration) first — the delete option appears only once an entity is no
+longer offered — then delete them from the device page.
+
 ## Building
 
 ```sh

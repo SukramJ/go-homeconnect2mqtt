@@ -1997,13 +1997,13 @@ which is the standard #43 set:
 | M13 | the deferred transport silently succeeds before it is wired | TestTransportRefusesUseBeforeItIsWired |
 | M14 | the will is spelled again at the composition root | TestWillIsCopiedFromTheRuntimeNotSpelledAgain |
 | M15 | the will loses its retain flag | TestWillIsTheAvailabilitySourceEveryEntityReads |
-| M16 | the sweep retracts on the topic namespace alone (ReportOnly off) | TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished, TestReportOnlySweepOverTheRealFleet, TestSweepRetractsOurOwnOrphan (+1) |
-| M17 | Inspect drops the payload ownership check (F8's protection) | TestAStaggeredUpgradeDoesNotDeleteTheSiblingsFleet, TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished, TestReportOnlySweepOverTheRealFleet (+1) |
+| M16 | the sweep retracts on the topic namespace alone (ReportOnly off) | TestRefreshDiscoveryOnceIsFleetWide, TestReportOnlySweepOverTheRealFleet, TestSweepRetractsOurOwnOrphan (+1) |
+| M17 | Inspect drops the payload ownership check (F8's protection) | TestAStaggeredUpgradeDoesNotDeleteTheSiblingsFleet, TestRefreshDiscoveryOnceIsFleetWide, TestReportOnlySweepOverTheRealFleet (+1) |
 | M18 | the per-device reconcile judges the whole fleet | TestSweepDoesNotRetractASecondAppliancesConfigs |
 | M19 | orphanTopics forgets what this batch minted | TestSweepSparesAConfigWhoseOwnPublishFailed |
 | M20 | orphanTopics forgets what this process declared | TestSweepSparesADeclaredConfigOutsideThisBatch |
-| M21 | the refresh is device-scoped instead of fleet-wide | TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished |
-| M22 | the retraction becomes a no-op publish | TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished, TestSweepRetractsOurOwnOrphan |
+| M21 | the refresh is device-scoped instead of fleet-wide | TestRefreshDiscoveryOnceIsFleetWide |
+| M22 | the retraction becomes a no-op publish | TestRefreshDiscoveryOnceIsFleetWide, TestSweepRetractsOurOwnOrphan |
 | M23 | Owns accepts a platform this daemon never emits | TestOwnsConfigTopic, TestReportOnlySweepOverTheRealFleet |
 | M24 | Owns accepts any node id | TestOwnsConfigTopic, TestReportOnlySweepOverTheRealFleet, TestSweepDoesNotRetractASecondAppliancesConfigs |
 | M25 | Owns accepts the device-document form | **equivalent — see below** |
@@ -2472,11 +2472,11 @@ looks exactly like a sweep that correctly did not run.
 | M1 | `Plane.Reconnect` keeps the old runtime | TestTheRetractionsAreReSentAfterAReconnect, TestPublishOnlineRepublishesEveryAppliancesDocument, TestReconnectOpensTheDedupGateAndRebuildsTheDiscoveryRuntime (+1) |
 | M2 | the preflight's verdict is ignored | TestADocumentTooLargeForTheBrokerRetractsNothing, TestTheRefusalBoundaryIsThePacketSizeItMeasures |
 | M3 | an unknown limit is read as zero bytes | TestAnUnknownBrokerMaximumIsNotASmallOne |
-| M4 | `PacketSize` forgets the topic and the overhead | TestTheRefusalBoundaryIsThePacketSizeItMeasures |
+| M4 | `PacketSize` forgets the topic and the overhead | TestTheRefusalBoundaryIsThePacketSizeItMeasures — **an unnamed masking pair; see [the review round](#adversarial-review-of-454647--five-findings-and-what-they-cost). Split into M4a/M4b/M4c and pinned by derivation.** |
 | M5 | the refusal boundary is doubled | TestADocumentTooLargeForTheBrokerRetractsNothing, TestTheRefusalBoundaryIsThePacketSizeItMeasures |
 | M9 | a blocking document is published | TestABlockingDocumentIsWithheld |
 | M10 | `IsOwnConfig` falls back to the bare namespace with no state topic (**the defect itself**) | TestAStaggeredUpgradeDoesNotDeleteTheSiblingsFleet, TestSweepSparesASiblingInstancesConfigs, TestIsOwnConfig |
-| M15 | `HASS_DISCOVERY_REFRESH` no longer clears the device documents | TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished |
+| M15 | `HASS_DISCOVERY_REFRESH` no longer clears the device documents | TestRefreshDiscoveryOnceIsFleetWide |
 | M16 | a reconnect does not republish discovery | TestPublishOnlineRepublishesEveryAppliancesDocument, TestTheReconnectRepublishWaitsForTheOneShotRefresh |
 | M18 | `StopDiscovery` does nothing | TestStopDiscoveryClosesTheShutdownWindow |
 | M19 | the device availability payloads are swapped | TestTheDeviceAvailabilityPayloadsAreTheOnesEveryConfigDeclares |
@@ -2484,15 +2484,250 @@ looks exactly like a sweep that correctly did not run.
 | M21 | the breaker bypass addresses a topic nothing writes | TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker |
 | M23 | the retraction form becomes the node-id-less one | TestThePlaneStatesTheDefaultLegacyTopicForm, TestTheMigrationRetractsEveryPerEntityConfigBeforeTheDocument, TestTheCrashWindowHealsOnTheNextBoot (+1) |
 | M24 | the document carries no origin block | TestHamqttBundleValidates |
-| M25 | `BundleTopic` uses the raw device name | TestAnEmptyDocumentIsWithheld, TestPublishOnlineRepublishesEveryAppliancesDocument, TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished (+1) |
+| M25 | `BundleTopic` uses the raw device name | TestAnEmptyDocumentIsWithheld, TestPublishOnlineRepublishesEveryAppliancesDocument, TestRefreshDiscoveryOnceIsFleetWide (+1) |
 | M26 | `orphanTopics` forgets what the process declared | TestSweepSparesADeclaredConfigOutsideThisBatch |
-| M27 | the republish no longer coalesces | TestTheReconnectRepublishDoesNotOverlapItself |
+| M27 | the republish no longer coalesces | TestTheReconnectRepublishDoesNotOverlapItself — **caught 2 of 12 on re-run; see [the review round](#adversarial-review-of-454647--five-findings-and-what-they-cost). The pin now measures overlap inside the transport and catches it 12/12.** |
 | M28 | the documented downgrade topic uses the raw appliance name | TestTheDocumentedDowngradeTopicMatchesTheCode |
 | M31 | a nil document reaches the library | TestANilDocumentIsRefusedRatherThanPublished |
 
 M10 is the one to read twice: it is finding F-A written as a mutation, and
 it is caught by two tests that DRIVE the sweep and one that questions the
 predicate — in that order of value.
+
+
+---
+
+## Adversarial review of #45/#46/#47 — five findings, and what they cost
+
+Reviewed at `ad80482`. The review found one driven race, two unnamed
+masking pairs, a pin that caught its own mutation two times in twelve, and
+an understated deferral. All five are closed in one PR. **No golden was
+regenerated and no SHA-256 literal moved**; `git diff origin/main --stat --
+'*testdata*' '*digest_test.go'` is empty.
+
+The lesson the review itself names, and the one this round was run under:
+**a mutation run once can pass once by luck.** Every mutation below was run
+5–12 times, and two of the fixes had to be rewritten because their first
+version caught the mutation only sometimes — or, worse, caught nothing
+while looking like it did.
+
+### F2 — the birth handler was subscribed before the gate it had to respect
+
+#45 added `started`, closed once the one-shot `HASS_DISCOVERY_REFRESH`
+migration has finished, and stated the invariant: the first connect's
+republish cannot publish a device document into the window the refresh is
+about to clear. `republishDiscovery` waited on it. The **other**
+asynchronous discovery publisher — the one `StopDiscovery`'s own comment
+names as the second of two — did not.
+
+It is not a race that needs bad luck. Home Assistant publishes
+`homeassistant/status` **retained** and the handler deliberately keeps
+retained deliveries, so the broker replays `online` inline on the SUBSCRIBE
+that `Run` performs in `subscribeCommands` — *before* `refreshDiscoveryOnce`
+and before `started` closes. With the flag on, the boot became: birth
+replay writes 687 retractions and the ~473 KB document → Home Assistant
+creates 687 entities → the refresh **retracts the document** → Home
+Assistant removes the device and all 687 → 3 s settle → the republish
+re-creates them. The end state is correct, which is why nothing failed. The
+cost is a whole extra migration per appliance per boot, two concurrent
+fleet-wide snapshot windows, and a materially wider window in which the
+appliance has **no** discovery config — made permanent by a shutdown or a
+dropped link inside it.
+
+The narrow interleaving the reviewer constructed but did not drive is
+closed by the same fix rather than argued about: `Runtime.Publish` writes
+the transport and *then* takes `r.mu` to record `declared`, so a birth
+pass's document write landing before the refresh's retract while its
+`declared` update lands after leaves the broker holding a retraction the
+runtime claims as a document — `PublishBundle` then dedups, writes nothing,
+returns `(false, nil)`, `documentIsDeclared` is true, and the sweep clears
+the per-entity leftovers too. Fleet absent, with
+`hass.bundle_published written=false` as the only evidence. Both callers now
+run the one pass, and `republishMu` serialises them, so that interleaving
+has no two writers to build itself out of.
+
+**The test drives `Run`, in `Run`'s order, and reads the verdict at publish
+time.** `subRecorder` asks a gate closure on every PUBLISH and records the
+answer on the call, because the question "was this published before the
+gate opened?" cannot be answered by reading the call list afterwards: a
+snapshot taken when the gate opens races every legitimate publish that
+follows it, and both outcomes of that race look like a pass.
+
+Two things had to be got right for the pin to fail reliably, and the first
+version got neither:
+
+- **Attribution.** Everything written before the gate is compared against
+  the migration's own output. The test seeds a retained tree holding no
+  discovery config, so the refresh's entire output is one retraction per
+  device document; anything else in that window came from the birth replay.
+- **Fixture size.** Over the 687-entity catalogue an un-gated birth pass
+  spends longer *rendering* its document than the whole migration takes, so
+  its writes land after the gate by accident and the defect hides behind
+  its own cost — the mutation survived 8 of 8 runs. With a two-entity
+  appliance the un-gated pass is writing within microseconds of the
+  SUBSCRIBE, which is where the defect actually lives.
+
+| # | Mutation | Runs | Result |
+| --- | --- | ---: | --- |
+| M32 | the birth handler loops over `b.devices` itself again (the defect) | 10 | caught 10/10 by `TestTheBirthReplayCannotPublishIntoTheRefreshWindow` |
+| M32 | as above, both F2 pins running | 10 | caught 10/10 |
+
+`TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished` named
+the "only before anything is published" half in its title and never drove
+`Run` — it called `refreshDiscoveryOnce` in isolation. That half was prose
+nobody measured, and the code contradicted it. The test is renamed
+`TestRefreshDiscoveryOnceIsFleetWide`, and the half it was claiming now
+lives in a test that drives `Run`.
+
+### F1 — `publishOverhead` was the whole safety margin and nothing read it
+
+`const publishOverhead = 64` is the entire margin between "the preflight
+says it fits" and go-mqtt's `mqtt.ErrPacketTooLarge`, which is raised inside
+`writeFrame` **after `supersede` has put all 687 retractions on the wire**.
+Setting it to `0` left all thirteen packages green;
+`git grep publishOverhead -- '*_test.go'` returned nothing.
+`TestTheRefusalBoundaryIsThePacketSizeItMeasures` asserted only
+`PacketSize(topic, n) > n`, which the `len(topic)` term satisfies alone — so
+**M4 ("PacketSize forgets the topic *and* the overhead") was an unnamed
+masking pair of the same shape as M6/M7, recorded as a clean catch.**
+
+It was also **spelled twice**: `haplanePacketSize(topic, payloadLen) =
+payloadLen + len(topic) + 64` in `internal/bridge/bundle_test.go`, declared
+in its own doc comment as a deliberate copy, feeding the `472 953 on the
+wire` figure in the notes and the PR body. That copy is *why* the constant
+was unpinned: the only other place the number appeared could not disagree
+with it. Third instance of this shape in the programme, so it is fixed **by
+derivation, not by a second literal**:
+
+- `TestPublishOverheadCoversARealPublishOnTheWire` encodes a real retained
+  QoS 1 MQTT 5.0 PUBLISH with **go-mqtt's own encoder** and requires
+  `PacketSize` to be at least as large, over five shapes including the
+  measured document and the varint boundary.
+- `TestPacketSizeCountsTheTopicAndTheOverheadSeparately` splits M4 into its
+  two terms, each asserted by the difference only it can explain.
+- The test-local copy is deleted; the measured figure now comes from
+  `haplane.PacketSize` and is unchanged at **472 953**.
+
+| # | Mutation | Runs | Result |
+| --- | --- | ---: | --- |
+| M4a | `publishOverhead` = 0 | 5 | caught 5/5 |
+| M4b | `publishOverhead` = 8 (below the real ~10-byte cost) | 5 | caught 5/5 |
+| M4c | `PacketSize` drops the `len(topic)` term | 5 | caught 5/5 |
+
+### F3 — the coalescing pin caught its own mutation 2 times in 12
+
+`M27` was recorded as caught. Re-run twelve times, deleting the
+`republishPending`/`republishMu` block survived **10 of 12**: the assertion
+was `len(discoveryWindows) > 2` after four concurrent passes over a
+one-appliance fixture, and two other mechanisms suppress that concurrency
+already — `b.reconciling`'s per-device gate and `PublishBundle`'s dedup — so
+the pin was inert ~83 % of the time.
+
+**The coalescing itself is correct**; the reviewer attacked the flag/lock
+ordering for lost wake-ups and could not break it. What was fixed is the
+pin, and the fix is to measure the property directly: **overlap lives in
+the transport**, so each publish of the device document is now held inside
+the stub and the test counts how many are in there at once. Two passes that
+ran together are two publishes inside it; two that ran in sequence are
+never more than one. The 687-entity fixture had to go for the same reason
+as in F2 — four passes each spend a second rendering before they write, so
+they arrive a second apart and the first one's declaration deduplicates the
+rest.
+
+| # | Mutation | Runs | Result |
+| --- | --- | ---: | --- |
+| M27 | the republish no longer coalesces — old pin, old fixture | 12 | **survived 10/12** |
+| M27 | the same mutation, overlap measured in the transport, 687-entity fixture | 12 | caught 8/12 |
+| M27 | the same mutation, overlap measured in the transport, two-entity fixture | 12 | **caught 12/12** |
+
+### F4 — the tombstone deferral, quantified and acted on
+
+The trigger is not firmware. Entities come from a local JSON description
+file, so replacing the file or the appliance moves it — and the cheap
+trigger is one add-on option: `HASS_DISCOVERY` is `full | curated`, pinned
+at 687 and 177, so **flipping `full` → `curated` leaves 510 phantom
+components per appliance**.
+
+They are not inert. `curated` is read only inside `internal/hass`; the state
+plane never sees it. So each of the 510 keeps its retained per-entity
+config, keeps **both** availability sources (`<root>/status` and
+`<root>/<device>/connected`, both `online`) **and keeps receiving live
+state** — indistinguishable in Home Assistant from a real entity. The
+operator who set `curated` to reduce clutter sees **no change at all**,
+which is the worst outcome an option can have: it appears to do nothing, so
+it is set again.
+
+**Decision: document it and warn at boot; do not implement tombstones in
+this PR.** The middle option of the three the review names, and the
+reasoning is the constraint plus the failure direction:
+
+1. **The best option moves bytes this PR may not move.** Tombstoning the
+   omitted components means writing 510 extra keys into the curated
+   document — a different payload, so the curated golden and its digest
+   move. This PR is a review fix run under "no golden may be regenerated
+   and no SHA-256 literal may move". A change that rewrites the document
+   Home Assistant reads deserves its own PR with the golden diff reviewed
+   line by line, not a rider on a race fix.
+2. **The warning needs nothing the deferral lacked.** #45 deferred
+   tombstones because there is no memory of the previous document and the
+   only restart-surviving source is the broker — a read-back whose
+   mis-parse writes tombstones for *live* components. The curated omission
+   needs none of that: both sets are computed locally from the same
+   entities in the same pass, so the number is exact, costs no wire traffic
+   and cannot delete anything.
+3. **It is the half that was actually missing.** "An omitted component is
+   not removed" understates the cost; a count per appliance, in the log and
+   in the option's own documentation, is the part an operator can act on.
+
+So `hamqttModel` counts what the curated filter dropped and
+`warnCuratedOmissions` says it once per appliance per process —
+`WARN hass.curated_components_omitted device=… omitted=510 published=177`,
+naming the manual removal — and the option's own documentation in
+`addon/DOCS.md`, `README.md` and both changelogs now says what flipping it
+costs. `addon/DOCS.md`'s manual remedy was already accurate, including the
+restart step go-mtec2mqtt's documentation missed; it is kept and the price
+is stated next to it.
+
+The test derives the number rather than writing it down: it renders the
+full and the curated document from the same entities, subtracts, and
+requires the warning to carry exactly that. On the pin catalogue it is
+**510 of 687**.
+
+| # | Mutation | Runs | Result |
+| --- | --- | ---: | --- |
+| M33 | the omission count is computed and never reported | 6 | caught 6/6 (whole `internal/hass` suite) |
+| M34 | the once-per-appliance guard is dropped (a warning per republish) | 6 | caught 6/6 |
+| M35 | `omitted` and `published` are swapped in the warning | 6 | caught 6/6 |
+
+### F5 — the two smaller ones
+
+**The third unnamed masking pair.** Removing `|| b.discoveryStopped.Load()`
+from `republishDiscovery` survived the suite, masked by the same check in
+`publishDiscovery`. It is genuinely equivalent for what is *published* — and
+not equivalent at all for what is *waited on*, which is the part nobody had
+named: `republishDiscovery` reads the flag **before** it waits on `started`,
+and `publishDiscovery` can only read it after. A shutdown that arrives
+before `Run` has finished the one-shot migration therefore leaves the pass
+parked on a gate that will never open, holding the birth handler's
+goroutine and, behind `republishMu`, every later pass, for the life of the
+process. `TestAStoppedDiscoveryRepublishDoesNotParkOnTheStartGate` asserts
+that the call **returns**, which is the one thing the inner check cannot
+provide.
+
+**A whole-file `strings.Contains`.** The `-h `/`-u `/`-P ` check in
+`TestTheDocumentedDowngradeTopicMatchesTheCode` ran over the entire file
+rather than the `mosquitto_pub` line, so any unrelated `-u ` elsewhere in a
+document would mask a credential going missing from the command an operator
+pastes. It now extracts each `mosquitto_pub` invocation, folding shell
+line-continuations, and checks the flags inside it. The masking was
+confirmed, not assumed: the same mutation run against the pre-fix test
+survived.
+
+| # | Mutation | Runs | Result |
+| --- | --- | ---: | --- |
+| M36 | `\|\| b.discoveryStopped.Load()` removed from `republishDiscovery` | 8 | caught 8/8 |
+| M37 | `addon/DOCS.md` loses `-u`/`-P` from the command, gains an unrelated `-u ` in prose | 6 | caught 6/6 |
+| M37 | the same mutation against the pre-fix whole-file check | 1 | **survived** (the masking, confirmed) |
 
 
 ---

@@ -37,6 +37,18 @@ var ErrDocumentTooLarge = errors.New("haplane: device document exceeds the broke
 // magnitude, and generous is the correct direction — being wrong here
 // withholds a migration that would have fitted, which is loud and
 // recoverable, rather than starting one that cannot finish.
+//
+// It is also the entire margin between "the preflight says it fits" and
+// go-mqtt's mqtt.ErrPacketTooLarge, which is raised from inside the
+// PUBLISH with every per-entity config already retracted — so this is the
+// one number in this release that must never be REDUCED. Nothing read it
+// until TestPublishOverheadCoversARealPublishOnTheWire, which encodes a
+// real retained QoS 1 MQTT 5.0 PUBLISH with go-mqtt's own encoder and
+// requires [PacketSize] to be at least that large. A floor DERIVED from
+// the encoder, not a second copy of this constant: the second copy that
+// did exist (a test-local `payloadLen + len(topic) + 64`, which also fed
+// the measured "on the wire" figure) is precisely why the first one could
+// not be caught being wrong.
 const publishOverhead = 64
 
 // Config parameterises a [Plane]. Every field is required; there is no

@@ -385,12 +385,22 @@ func TestSweepWindowIsTheOnlyDiscoverySubscription(t *testing.T) {
 	}
 }
 
-// TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished
-// pins HASS_DISCOVERY_REFRESH's scope. It is the one pass whose scope IS
-// the fleet, and it is safe precisely because it runs before any worker
-// has published: nothing is claimed, so "owned and unclaimed" is "owned",
-// which is what the flag means to clear.
-func TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished(t *testing.T) {
+// TestRefreshDiscoveryOnceIsFleetWide pins HASS_DISCOVERY_REFRESH's scope:
+// it is the one pass whose scope IS the fleet.
+//
+// The name used to carry a second claim — "and only before anything is
+// published" — that this test never measured: it calls refreshDiscoveryOnce
+// in isolation and never drives Run, so the ordering the claim is about was
+// prose rather than an assertion, and the code contradicted it (the retained
+// Home Assistant birth message drove a full publish into this very window;
+// see TestTheBirthReplayCannotPublishIntoTheRefreshWindow, which drives Run
+// and is where that half now lives).
+//
+// What makes the fleet-wide scope safe is still worth stating, because it is
+// why the two halves belong together: nothing has been claimed when this
+// runs, so "owned and unclaimed" is "owned", which is precisely what the
+// flag means to clear. That is only true while nothing else has published.
+func TestRefreshDiscoveryOnceIsFleetWide(t *testing.T) {
 	shortWindow(t)
 	prevSettle := refreshSettleDelay.Get()
 	refreshSettleDelay.Set(time.Millisecond)

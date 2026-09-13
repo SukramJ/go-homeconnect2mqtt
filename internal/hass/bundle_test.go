@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -265,6 +266,31 @@ var documentedDowngradeTopic = regexp.MustCompile(`-t '([^']*/device/[^']*/confi
 // between the raw name, its lower case and its slug visible.
 const downgradeDocDevice = "Geschirrspüler"
 
+// mosquittoPubCommands is every mosquitto_pub invocation in raw, one entry
+// per command, with shell line-continuations folded back into one line.
+//
+// The folding is the point: the documented command is wrapped across two
+// lines in all four files, so "the line containing mosquitto_pub" holds the
+// host and the credentials while the topic lives on the next one. A check
+// that read only the first line would be as blind to a missing `-t` as a
+// whole-file check is to a missing `-u`.
+func mosquittoPubCommands(raw string) []string {
+	var out []string
+	lines := strings.Split(raw, "\n")
+	for i := 0; i < len(lines); i++ {
+		if !strings.Contains(lines[i], "mosquitto_pub") {
+			continue
+		}
+		cmd := strings.TrimSpace(lines[i])
+		for strings.HasSuffix(strings.TrimSpace(lines[i]), "\\") && i+1 < len(lines) {
+			i++
+			cmd = strings.TrimSuffix(strings.TrimSpace(cmd), "\\") + " " + strings.TrimSpace(lines[i])
+		}
+		out = append(out, cmd)
+	}
+	return out
+}
+
 // TestTheDocumentedDowngradeTopicMatchesTheCode is the pin for a string
 // that leaves this repository and is executed by a human.
 //
@@ -307,9 +333,26 @@ func TestTheDocumentedDowngradeTopicMatchesTheCode(t *testing.T) {
 		// The add-on's broker is authenticated: script/run.sh takes the
 		// username and password from the Supervisor MQTT service. A command
 		// without credentials fails for every add-on user.
-		for _, flag := range []string{"-h ", "-u ", "-P "} {
-			if !strings.Contains(string(raw), "mosquitto_pub") || !strings.Contains(string(raw), flag) {
-				t.Errorf("%s documents mosquitto_pub without %q — the add-on's broker is authenticated", name, flag)
+		//
+		// Read out of the COMMAND, not out of the file. The previous
+		// version asked whether the file contained "mosquitto_pub" and
+		// whether it contained "-u " — two questions about one document
+		// that are not the same question about one command line. Any
+		// unrelated `-u ` anywhere in the same file (another example, a
+		// prose mention, a second broker command) would have answered the
+		// second one, and the credential could then go missing from the
+		// command an operator actually pastes.
+		cmds := mosquittoPubCommands(string(raw))
+		if len(cmds) == 0 {
+			t.Errorf("%s documents the retraction topic but no mosquitto_pub command to apply it with", name)
+			continue
+		}
+		for _, cmd := range cmds {
+			for _, flag := range []string{"-h ", "-u ", "-P "} {
+				if !strings.Contains(cmd, flag) {
+					t.Errorf("%s documents `%s` without %q — the add-on's broker is authenticated",
+						name, cmd, flag)
+				}
 			}
 		}
 	}
@@ -483,4 +526,86 @@ func TestOmittingAComponentDoesNotRemoveIt(t *testing.T) {
 			removed.Tombstones[key].UniqueID, was.UniqueID)
 	}
 	_ = hacatalog.Platform("")
+}
+
+// TestCuratedOmissionsAreCountedAndSaidOutLoud quantifies the deferral,
+// which is the half the deferral was missing.
+//
+// "An omitted component is not removed" understates what HASS_DISCOVERY:
+// curated costs on an installation that has already published the full
+// set. The trigger is not firmware and not a rare replacement: it is one
+// add-on option, and flipping it leaves every component the curated filter
+// drops behind in Home Assistant — with its retained registry entry, with
+// BOTH availability sources still published `online`, and still receiving
+// live state, because `curated` is read only in this package and the state
+// plane never sees it. They are indistinguishable from real entities, so
+// the operator who set the option to reduce clutter sees no change at all.
+//
+// The number is DERIVED from the two documents rather than written down:
+// what the warning says must be exactly what the curated render dropped,
+// which is what makes it a measurement instead of a claim. On the pin
+// catalogue it is 510 of 687.
+func TestCuratedOmissionsAreCountedAndSaidOutLoud(t *testing.T) {
+	// The shipped catalogue on both sides: `enabled_by_default` is an
+	// enrichment, so a Discovery without the enricher curates against a
+	// different set than the daemon does and the number would be a
+	// different number than the one an operator pays.
+	fullD := New(nil, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
+	fullD.SetEnricher(pinEnricher(t))
+	full, err := fullD.BundleFor(goldenDeviceEN, pincatalog.Info, pinEntities(t))
+	if err != nil {
+		t.Fatalf("BundleFor(full): %v", err)
+	}
+
+	var buf bytes.Buffer
+	curated := New(nil, goldenPrefix, goldenRoot, "en", true,
+		slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	curated.SetEnricher(pinEnricher(t))
+	got, err := curated.BundleFor(goldenDeviceEN, pincatalog.Info, pinEntities(t))
+	if err != nil {
+		t.Fatalf("BundleFor(curated): %v", err)
+	}
+
+	dropped := len(full.Components) - len(got.Components)
+	if dropped <= 0 {
+		t.Fatalf("curated rendered %d components against full's %d — the fixture no longer "+
+			"exercises the option this warning is about", len(got.Components), len(full.Components))
+	}
+	t.Logf("curated drops %d of %d components on the pin catalogue", dropped, len(full.Components))
+
+	line := buf.String()
+	if !strings.Contains(line, "hass.curated_components_omitted") {
+		t.Fatalf("a curated render dropped %d components and said nothing: %q", dropped, line)
+	}
+	if want := fmt.Sprintf("omitted=%d", dropped); !strings.Contains(line, want) {
+		t.Errorf("the warning does not carry %s — it reads %q", want, line)
+	}
+	if want := fmt.Sprintf("published=%d", len(got.Components)); !strings.Contains(line, want) {
+		t.Errorf("the warning does not carry %s — it reads %q", want, line)
+	}
+
+	// Once per appliance per process: the condition is a configuration, and
+	// the document is re-rendered on every (re)connect and every Home
+	// Assistant restart. A warning that repeats per republish is a warning
+	// an operator filters out.
+	before := strings.Count(buf.String(), "hass.curated_components_omitted")
+	if _, err := curated.BundleFor(goldenDeviceEN, pincatalog.Info, pinEntities(t)); err != nil {
+		t.Fatalf("BundleFor(curated, again): %v", err)
+	}
+	if after := strings.Count(buf.String(), "hass.curated_components_omitted"); after != before {
+		t.Errorf("the warning was repeated on a re-render: %d lines, want %d", after, before)
+	}
+
+	// And the full set says nothing: the warning is about the option, not
+	// about every boot.
+	var quiet bytes.Buffer
+	quietD := New(nil, goldenPrefix, goldenRoot, "en", false,
+		slog.New(slog.NewTextHandler(&quiet, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	quietD.SetEnricher(pinEnricher(t))
+	if _, err := quietD.BundleFor(goldenDeviceEN, pincatalog.Info, pinEntities(t)); err != nil {
+		t.Fatalf("BundleFor(full, again): %v", err)
+	}
+	if strings.Contains(quiet.String(), "hass.curated_components_omitted") {
+		t.Errorf("HASS_DISCOVERY: full warned about omissions it did not make: %q", quiet.String())
+	}
 }

@@ -4,13 +4,20 @@
 package bridge
 
 import (
+	"context"
 	"encoding/json"
+	"log/slog"
 	"slices"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/SukramJ/go-hamqtt/publisher"
+
+	"github.com/SukramJ/go-mqtt"
+
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
@@ -123,7 +130,7 @@ func TestTheMigrationRetractsEveryPerEntityConfigBeforeTheDocument(t *testing.T)
 	t.Logf("migration: %d components, %d per-entity configs retracted first, "+
 		"document %s is %d bytes (%d on the wire)",
 		len(bundle.Components), len(superseded), doc, len(payload),
-		haplanePacketSize(doc, len(payload)))
+		haplane.PacketSize(doc, len(payload)))
 	if len(superseded) != len(bundle.Components) {
 		t.Errorf("%d components supersede %d topics — every component's per-entity config "+
 			"must be named, or the ones that are not left behind refuse their own entity",
@@ -370,16 +377,83 @@ func TestBothSweepGuardsMustFailTogether(t *testing.T) {
 // d0 is dev.app.Info(), named so the call above reads as one line.
 func d0(d *Device) profile.DeviceInfo { return d.app.Info() }
 
+// overlapWatch counts how many publishes to one topic are inside the
+// transport at the same time.
+//
+// It holds each of them for a beat, which is the only way to see the
+// property: overlap is a fact about WHEN two passes ran, and a recorded
+// call list cannot distinguish two passes that ran together from two that
+// ran one after the other. Both leave two calls.
+type overlapWatch struct {
+	topic string
+	hold  time.Duration
+
+	mu       sync.Mutex
+	inside   int
+	deepest  int
+	arrivals int
+}
+
+func (w *overlapWatch) hook(topic string) {
+	if topic != w.topic {
+		return
+	}
+	w.mu.Lock()
+	w.inside++
+	w.arrivals++
+	if w.inside > w.deepest {
+		w.deepest = w.inside
+	}
+	w.mu.Unlock()
+	time.Sleep(w.hold)
+	w.mu.Lock()
+	w.inside--
+	w.mu.Unlock()
+}
+
+func (w *overlapWatch) read() (deepest, arrivals int) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.deepest, w.arrivals
+}
+
 // TestTheReconnectRepublishDoesNotOverlapItself. A flapping link fires
 // OnConnect repeatedly, and every pass costs a snapshot window and a
 // ~460 KB document per appliance. Two concurrent passes buy nothing: the
 // second is deduplicated against the first anyway, having first paid for
 // the window.
+//
+// What is asserted is OVERLAP, and the previous version of this test did
+// not assert it. It counted snapshot windows after four concurrent passes
+// and allowed two — but two other mechanisms suppress a second window
+// already (b.reconciling gates a re-entrant sweep per device, and
+// publisher.Runtime deduplicates an identical document), so deleting the
+// coalescing block from republishDiscovery survived 10 runs in 12. A pin
+// that catches its own mutation two times in twelve is a pin that reports
+// luck.
+//
+// The transport is the place where overlap is visible: each publish of the
+// device document is held inside the stub, and two passes that run
+// together are then two publishes inside it at once. The coalescing makes
+// that impossible — republishMu serialises the at-most-two passes — so the
+// number is exactly one, every time, and it is one for a reason no other
+// guard supplies.
 func TestTheReconnectRepublishDoesNotOverlapItself(t *testing.T) {
 	shortWindow(t)
-	b, _, _, rec := pinBridge(t)
+	// The two-entity appliance again, and for the same reason as the birth
+	// pin: over the 687-entity catalogue each pass spends about a second
+	// rendering its document before it writes anything, so four passes
+	// started together arrive at the transport a second apart and the
+	// first one's declaration deduplicates the rest. Un-coalesced overlap
+	// was then invisible in four runs in twelve. What is under test is the
+	// coalescing, not the render.
+	b, dev, rec := birthRaceBridge(t)
 	defer drainReconciles(t, b)
 	b.startOne.Do(func() { close(b.started) })
+
+	w := &overlapWatch{topic: bundleTopicFor(b, dev.name), hold: 100 * time.Millisecond}
+	rec.setOnPublish(w.hook)
+	t.Cleanup(func() { rec.setOnPublish(nil) })
 
 	var wg sync.WaitGroup
 	for range 4 {
@@ -391,21 +465,22 @@ func TestTheReconnectRepublishDoesNotOverlapItself(t *testing.T) {
 	}
 	wg.Wait()
 
-	// At most two: whoever takes the pending flag runs the fleet, and a
-	// request that arrives after it was taken is honoured by exactly one
-	// further pass. Four passes would mean the coalescing does nothing.
-	windows := rec.discoveryWindows(pinPrefix)
-	if len(windows) > 2 {
+	deepest, arrivals := w.read()
+	if arrivals == 0 {
+		t.Fatal("no pass published the device document — the measurement is of nothing")
+	}
+	if deepest > 1 {
+		t.Errorf("%d of %d device-document publishes were inside the transport at once: "+
+			"the republish passes overlapped, and each overlap is a second snapshot window "+
+			"and a second ~460 KB document against the same connection", deepest, arrivals)
+	}
+
+	// And the coalescing's OTHER half: a request made while a pass is
+	// running is honoured by exactly one further pass, never by four.
+	if windows := rec.discoveryWindows(pinPrefix); len(windows) > 2 {
 		t.Errorf("four concurrent republishes opened %d snapshot windows: %v", len(windows), windows)
 	}
 }
-
-// haplanePacketSize mirrors haplane.PacketSize for the log line above. It
-// is a test-local copy on purpose: importing the package here only to
-// format a number would put internal/bridge's pins in the position of
-// depending on an arithmetic they do not assert. The arithmetic itself is
-// pinned where it is used, in internal/haplane.
-func haplanePacketSize(topic string, payloadLen int) int { return payloadLen + len(topic) + 64 }
 
 // TestTheDeviceAvailabilityPayloadsAreTheOnesEveryConfigDeclares closes a
 // loop that nothing was closing.
@@ -527,5 +602,281 @@ func TestTheMigrationBudgetIsNotOnePublishesBudget(t *testing.T) {
 		t.Errorf("bundlePublishTimeout = %v against publishTimeout = %v: the migration is "+
 			"hundreds of round trips, not one, and cutting it off halfway leaves the "+
 			"appliance with no discovery config at all", bundlePublishTimeout, publishTimeout)
+	}
+}
+
+// setGate installs the gate the recorder asks at publish time. See
+// subRecorder.gate.
+func (s *subRecorder) setGate(f func() bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.gate = f
+}
+
+// gateOf is the "has Run released the one-shot refresh gate?" question, as
+// a closure the recorder can ask on any goroutine.
+func gateOf(b *Bridge) func() bool {
+	return func() bool {
+		select {
+		case <-b.started:
+			return true
+		default:
+			return false
+		}
+	}
+}
+
+// preGateWrites is everything written before the one-shot
+// HASS_DISCOVERY_REFRESH migration finished, except the migration's own
+// work.
+//
+// The exception is exactly the refresh's retraction list and nothing else,
+// which is what makes the rest attributable. refreshDiscoveryOnce clears
+// what the snapshot window found plus the device documents it names
+// explicitly; the test seeds a retained tree holding no discovery config
+// at all, so the migration's entire output is a retraction of each
+// appliance's document topic. Anything else written in that window came
+// from the birth replay — its 687 per-entity retractions first, its
+// ~473 KB document after them — and every one of those writes is into the
+// window the refresh is about to clear.
+func preGateWrites(rec *subRecorder, refreshOwns []string) []string {
+	rec.mu.Lock()
+	defer rec.mu.Unlock()
+	var out []string
+	for _, p := range rec.pubs {
+		if !p.preGate {
+			continue
+		}
+		if p.retraction && slices.Contains(refreshOwns, p.topic) {
+			continue // the migration clearing a document it named itself
+		}
+		out = append(out, p.topic)
+	}
+	return out
+}
+
+// birthRaceBridge is pinBridge's wiring over a two-entity appliance: the
+// real Bridge, the real hass.Discovery and the real publish plane, with a
+// description small enough that a discovery pass is instantaneous. See the
+// note in TestTheBirthReplayCannotPublishIntoTheRefreshWindow.
+func birthRaceBridge(t *testing.T) (*Bridge, *Device, *subRecorder) {
+	t.Helper()
+	cfg := testCfg()
+	cfg.MQTTTopic = pinRoot
+	cfg.HASSEnable = true
+	cfg.HASSBaseTopic = pinPrefix
+
+	rec := &subRecorder{}
+	logger := slog.New(slog.DiscardHandler)
+	plane := planeFor(t, rec, cfg.MQTTQoS, cfg.RetainEnabled())
+	b, err := New(Deps{
+		Config: cfg,
+		MQTT:   rec,
+		Plane:  plane,
+		Logger: logger,
+		HASS:   hass.New(plane, pinPrefix, pinRoot, cfg.Language, false, logger),
+		Devices: []DeviceSpec{{
+			Config: profile.DeviceConfig{
+				// 127.0.0.1:80 refuses fast, so Run's workers cycle
+				// through the offline path instead of hanging on a dial
+				// to an address nothing answers.
+				Name: pinDevice, Host: "127.0.0.1",
+				ConnectionType: profile.ConnectionAES, PSK64: b64(32), IV64: b64(16),
+			},
+			Description: smallDescription(t),
+		}},
+	})
+	if err != nil {
+		t.Fatalf("bridge.New: %v", err)
+	}
+	return b, b.devices[0], rec
+}
+
+// TestTheBirthReplayCannotPublishIntoTheRefreshWindow drives Run, in Run's
+// own order, because that order is the defect.
+//
+// #45 gave this daemon one gate — `started`, closed once the one-shot
+// HASS_DISCOVERY_REFRESH migration has finished — and stated the invariant
+// it buys: the first connect's republish cannot publish a device document
+// into the window the refresh is about to clear. The (re)connect republish
+// waited on it. The OTHER asynchronous discovery publisher, the one
+// StopDiscovery's own comment names as the second of two, did not.
+//
+// And it is not a race that needs bad luck, it is a race with a driver.
+// Home Assistant publishes homeassistant/status RETAINED, this handler
+// deliberately keeps retained deliveries, and Run subscribes it inside
+// subscribeCommands — BEFORE refreshDiscoveryOnce. So the broker replays
+// `online` the instant the subscription exists and the birth pass runs
+// against a fleet the refresh is about to delete: 687 retractions and a
+// ~473 KB document written, the refresh then retracting that document,
+// Home Assistant removing the device and every entity on it, and a
+// republish three seconds later putting them back. The end state is
+// correct, which is why nothing failed; the cost is a whole extra
+// migration per boot per appliance, a second concurrent fleet-wide
+// snapshot window, and a stretch of time in which the appliance has no
+// discovery config at all — made permanent by a shutdown or a link drop
+// inside it.
+//
+// The assertion is read at PUBLISH time (subRecorder.gate), not off the
+// call list afterwards: once the gate opens every publish is legitimate,
+// so a test that snapshots the list when it opens is racing the passes it
+// is trying to judge.
+func TestTheBirthReplayCannotPublishIntoTheRefreshWindow(t *testing.T) {
+	shortWindow(t)
+	prevSettle := refreshSettleDelay.Get()
+	refreshSettleDelay.Set(200 * time.Millisecond)
+	t.Cleanup(func() { refreshSettleDelay.Set(prevSettle) })
+
+	// A SMALL appliance on purpose, unlike every other pin in this file.
+	// What is being timed is the gate, not the render: over the 687-entity
+	// pin catalogue an un-gated birth pass spends longer building its
+	// document than the whole one-shot migration takes, so its writes land
+	// after the gate opened by accident and the defect hides behind its own
+	// cost. With a two-entity appliance the un-gated pass is writing within
+	// microseconds of the SUBSCRIBE that replayed the birth message, which
+	// is where the defect actually lives — the gate, not the arithmetic.
+	b, dev, rec := birthRaceBridge(t)
+	b.cfg.HASSDiscoveryRefresh = true
+	rec.setGate(gateOf(b))
+	// Home Assistant announced itself before this daemon started, and the
+	// announcement is retained: the broker replays it on subscribe.
+	seedRetained(rec, map[string]string{b.hass.BirthTopic(): "online"})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- b.Run(ctx) }()
+
+	waitUntil(t, "Run to finish the one-shot refresh", gateOf(b))
+	doc := bundleTopicFor(b, dev.name)
+	waitUntil(t, "the birth pass to publish the device document", func() bool {
+		return slices.Contains(rec.publishedTopics(), doc)
+	})
+
+	if early := preGateWrites(rec, []string{doc}); len(early) != 0 {
+		t.Errorf("%d discovery writes went out before HASS_DISCOVERY_REFRESH had finished, "+
+			"the first of them %q — the birth replay walked past the gate, and every one of "+
+			"those writes is into the window the refresh is about to clear",
+			len(early), early[0])
+	}
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		// The appliance workers dial an address nothing answers; a slow
+		// unwind is not what this test is about.
+	}
+	drainReconciles(t, b)
+}
+
+// TestTheBirthHandlerAndTheReconnectHookShareOnePass. The two
+// asynchronous discovery publishers are one function, and that is the
+// property the gate in the test above depends on: an invariant stated on
+// republishDiscovery is an invariant of the daemon only while nothing else
+// publishes the fleet.
+//
+// A birth handler that looped over b.devices itself would satisfy the gate
+// pin on every boot where HASS_DISCOVERY_REFRESH is off — which is every
+// boot but one — so what is measured here is the other half: a birth
+// delivery and a (re)connect that arrive together must not run two passes
+// over the same appliance at the same time. Measured inside the transport,
+// because that is the only place overlap exists; the per-device sweep gate
+// and the runtime's dedup both hide it from a call list.
+func TestTheBirthHandlerAndTheReconnectHookShareOnePass(t *testing.T) {
+	shortWindow(t)
+	b, dev, rec := birthRaceBridge(t)
+	defer drainReconciles(t, b)
+	b.startOne.Do(func() { close(b.started) })
+
+	if err := b.subscribeBirth(t.Context()); err != nil {
+		t.Fatalf("subscribeBirth: %v", err)
+	}
+	rec.mu.Lock()
+	h := rec.handlers[b.hass.BirthTopic()]
+	rec.mu.Unlock()
+	if h == nil {
+		t.Fatal("the birth topic was not subscribed")
+	}
+
+	w := &overlapWatch{topic: bundleTopicFor(b, dev.name), hold: 100 * time.Millisecond}
+	rec.setOnPublish(w.hook)
+	t.Cleanup(func() { rec.setOnPublish(nil) })
+
+	var wg sync.WaitGroup
+	for range 3 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			h(&mqtt.Message{Topic: b.hass.BirthTopic(), Payload: []byte("online"), Retain: true})
+		}()
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		b.republishDiscovery(t.Context())
+	}()
+	wg.Wait()
+	waitUntil(t, "the birth passes to publish the device document", func() bool {
+		_, arrivals := w.read()
+		return arrivals > 0
+	})
+	drainReconciles(t, b)
+
+	if deepest, arrivals := w.read(); deepest > 1 {
+		t.Errorf("%d of %d device-document publishes were inside the transport at once — "+
+			"the birth handler is not going through the one coalesced pass", deepest, arrivals)
+	}
+	// The sweep's own filter only: this test subscribes the birth topic
+	// itself, and that subscription lives under the discovery prefix too.
+	sweeps := 0
+	for _, f := range rec.discoveryWindows(pinPrefix) {
+		if f == pinPrefix+"/#" {
+			sweeps++
+		}
+	}
+	if sweeps > 2 {
+		t.Errorf("three birth deliveries and a reconnect opened %d snapshot windows", sweeps)
+	}
+}
+
+// TestAStoppedDiscoveryRepublishDoesNotParkOnTheStartGate names what the
+// second discoveryStopped check is for, because "defence in depth" is not
+// an assertion.
+//
+// publishDiscovery tests the same flag, so removing it from
+// republishDiscovery alone changes no published byte and survived the
+// suite — a third unnamed masking pair of the M6/M7 shape. The two are NOT
+// equivalent, though, and the difference is ORDER: republishDiscovery
+// reads the flag BEFORE it waits on `started`, and publishDiscovery can
+// only read it after. A shutdown that arrives before Run has finished the
+// one-shot refresh — a boot interrupted by a Ctrl-C, a supervisor stopping
+// the add-on during its first migration — leaves the pass parked on a gate
+// that will never open, holding the birth handler's goroutine and, behind
+// republishMu, every later pass, for as long as the process lives.
+//
+// So the assertion is that the call RETURNS, which is the only thing the
+// inner check cannot provide.
+func TestAStoppedDiscoveryRepublishDoesNotParkOnTheStartGate(t *testing.T) {
+	shortWindow(t)
+	b, _, rec := birthRaceBridge(t)
+	// `started` is deliberately NOT closed: this is a shutdown during the
+	// one-shot migration, which is the window the flag has to be read in.
+	b.StopDiscovery()
+
+	returned := make(chan struct{})
+	go func() {
+		defer close(returned)
+		b.republishDiscovery(context.Background())
+	}()
+	select {
+	case <-returned:
+	case <-time.After(2 * time.Second):
+		t.Fatal("republishDiscovery is still waiting for the one-shot refresh after StopDiscovery: " +
+			"the shutdown window is closed after the gate instead of before it, so the pass parks " +
+			"forever and takes the birth handler's goroutine and every later pass with it")
+	}
+	if got := rec.publishedTopics(); len(got) != 0 {
+		t.Errorf("a stopped daemon published %v", got)
 	}
 }
