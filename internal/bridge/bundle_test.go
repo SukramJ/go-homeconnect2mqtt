@@ -13,6 +13,7 @@ import (
 	"github.com/SukramJ/go-hamqtt/publisher"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
 
 // The device-document migration's pins at the bridge level.
@@ -289,18 +290,74 @@ func TestTheReconnectRepublishWaitsForTheOneShotRefresh(t *testing.T) {
 	defer drainReconciles(t, b)
 	doc := bundleTopicFor(b, dev.name)
 
-	// started is still open: Run has not reached the end of the refresh.
-	b.PublishOnline(t.Context())
-	time.Sleep(50 * time.Millisecond)
+	// The pass is driven directly and its RETURN is what is observed, not
+	// the absence of a publish after a sleep. That distinction is the
+	// finding: the first version of this test waited 50 ms and then
+	// asserted the document was absent, which passed whether the gate held
+	// or not — the migration it was watching for takes longer than the
+	// sleep, so removing the gate entirely left the test green. A
+	// negative asserted by waiting is a negative asserted by nothing.
+	returned := make(chan struct{})
+	go func() {
+		defer close(returned)
+		b.republishDiscovery(t.Context())
+	}()
+
+	select {
+	case <-returned:
+		t.Fatal("the republish ran to completion before HASS_DISCOVERY_REFRESH had finished — " +
+			"it would write the device document the refresh is about to clear")
+	case <-time.After(100 * time.Millisecond):
+	}
 	if slices.Contains(rec.publishedTopics(), doc) {
 		t.Fatalf("%s was published before HASS_DISCOVERY_REFRESH had run", doc)
 	}
 
 	b.startOne.Do(func() { close(b.started) })
-	waitUntil(t, "the document once the refresh has finished", func() bool {
-		return slices.Contains(rec.publishedTopics(), doc)
-	})
+	select {
+	case <-returned:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the republish never ran after the refresh finished")
+	}
+	if !slices.Contains(rec.publishedTopics(), doc) {
+		t.Fatalf("%s was not published once the refresh had finished", doc)
+	}
 }
+
+// TestBothSweepGuardsMustFailTogether names a masking pair rather than
+// leaving it as two assertions that each pass because of the other.
+//
+// publishDiscovery refuses to sweep on two independent grounds: the publish
+// returned an error, and publisher.Runtime does not claim the topic.
+// Removing EITHER alone changes nothing, because a publish that failed is
+// also a publish the runtime did not claim — so each mutation is caught
+// only by the other guard, and a mutation report reads both as survivors.
+//
+// They are kept as two because they answer different questions and log
+// different reasons, and because the claim check is the one that would
+// still hold if PublishDeviceBundle ever grew a path that reported success
+// without writing. What has to be pinned is that removing BOTH is caught,
+// which is what this drives: the sweep must not run when the document was
+// refused, for whatever combination of reasons the code gives.
+func TestBothSweepGuardsMustFailTogether(t *testing.T) {
+	shortWindow(t)
+	b, dev, _, rec := pinBridge(t)
+	defer drainReconciles(t, b)
+	doc := bundleTopicFor(b, dev.name)
+	rec.setFail(doc)
+
+	topic, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, d0(dev), dev.app.Entities())
+	if err == nil {
+		t.Fatal("the stub accepted a document it was told to refuse")
+	}
+	if b.documentIsDeclared(topic) {
+		t.Errorf("the runtime claims %s although the broker refused it — the claim check "+
+			"would then let the sweep run and clear the previous release's whole fleet", topic)
+	}
+}
+
+// d0 is dev.app.Info(), named so the call above reads as one line.
+func d0(d *Device) profile.DeviceInfo { return d.app.Info() }
 
 // TestTheReconnectRepublishDoesNotOverlapItself. A flapping link fires
 // OnConnect repeatedly, and every pass costs a snapshot window and a
@@ -439,5 +496,24 @@ func TestStopDiscoveryClosesTheShutdownWindow(t *testing.T) {
 	}
 	if windows := rec.discoveryWindows(pinPrefix); len(windows) != 0 {
 		t.Errorf("a sweep opened %v after StopDiscovery", windows)
+	}
+}
+
+// TestTheMigrationBudgetIsNotOnePublishesBudget states an intent no stub
+// can exercise, so that the constant is not quietly reduced to the one it
+// sits next to.
+//
+// bundlePublishTimeout bounds a whole migration: 687 retained retractions,
+// each waiting on its own acknowledgement, and then a ~460 KB document.
+// publishTimeout bounds ONE publish. Cutting the first to the second is
+// invisible against any in-process stub and is exactly the change that
+// turns a slow broker into the half-migrated state — per-entity configs
+// gone, document not written — that the ordering exists to avoid.
+func TestTheMigrationBudgetIsNotOnePublishesBudget(t *testing.T) {
+	t.Parallel()
+	if bundlePublishTimeout < 10*publishTimeout {
+		t.Errorf("bundlePublishTimeout = %v against publishTimeout = %v: the migration is "+
+			"hundreds of round trips, not one, and cutting it off halfway leaves the "+
+			"appliance with no discovery config at all", bundlePublishTimeout, publishTimeout)
 	}
 }

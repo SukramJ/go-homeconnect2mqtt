@@ -9,6 +9,7 @@ import (
 	"errors"
 	"log/slog"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/SukramJ/go-hamqtt/publisher"
@@ -381,3 +382,73 @@ func TestBrokerMaximumIsUnknownBeforeTheClientExists(t *testing.T) {
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+// recordingTransport is a publisher.Transport that records the topics
+// crossing it, so the shutdown ordering can be read rather than assumed.
+type recordingTransport struct {
+	mu     sync.Mutex
+	topics []string
+}
+
+func (r *recordingTransport) Publish(_ context.Context, topic string, _ []byte, _ byte, _ bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.topics = append(r.topics, topic)
+	return nil
+}
+
+func (r *recordingTransport) Subscribe(context.Context, string, byte, publisher.Handler) error {
+	return nil
+}
+func (r *recordingTransport) Unsubscribe(context.Context, string) error { return nil }
+
+func (r *recordingTransport) seen() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.topics)
+}
+
+// stopperSpy records how much had been published at the moment discovery
+// was stopped. The COUNT is the assertion: "before" is an ordering, and an
+// ordering asserted by a boolean is an ordering asserted by nothing.
+type stopperSpy struct {
+	tr         *recordingTransport
+	calls      int
+	seenAtStop int
+}
+
+func (s *stopperSpy) StopDiscovery() {
+	s.calls++
+	s.seenAtStop = s.tr.seen()
+}
+
+// TestShutdownStopsDiscoveryBeforeTheOfflineMarker drives the shutdown
+// ordering serve() cannot be driven to demonstrate.
+//
+// The offline marker is the only availability signal a graceful stop
+// produces — a clean DISCONNECT suppresses the Last Will — so a discovery
+// publish that lands after it leaves a retained "online"-era config behind
+// on a broker this daemon has told Home Assistant it left. Two things
+// publish discovery asynchronously and outlive the call that started them,
+// and neither can be stopped from outside except by this call.
+func TestShutdownStopsDiscoveryBeforeTheOfflineMarker(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: 1}
+	tr := &recordingTransport{}
+	plane := haplane.New(tr, haPlaneConfig(cfg, nil, slog.New(slog.DiscardHandler)))
+	spy := &stopperSpy{tr: tr}
+
+	shutdownHAPlane(t.Context(), spy, plane, slog.New(slog.DiscardHandler))
+
+	if spy.calls != 1 {
+		t.Fatalf("StopDiscovery called %d times, want 1 — nothing else closes the window "+
+			"between the last discovery publish and the offline marker", spy.calls)
+	}
+	if spy.seenAtStop != 0 {
+		t.Errorf("%d messages had already gone out when discovery was stopped, want 0", spy.seenAtStop)
+	}
+	want := layout.Bridge(cfg.MQTTTopic)
+	if len(tr.topics) != 1 || tr.topics[0] != want {
+		t.Fatalf("the shutdown wrote %v, want exactly [%s]", tr.topics, want)
+	}
+}

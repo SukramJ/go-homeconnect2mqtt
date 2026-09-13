@@ -327,6 +327,15 @@ func TestAnEmptyDocumentIsWithheld(t *testing.T) {
 	if err == nil {
 		t.Fatal("an empty document was published")
 	}
+	// The error has to be THIS refusal, not any refusal. discovery.Validate
+	// also rejects a document with no components, so a test content with a
+	// non-nil error passes with the guard removed — the gate would then be
+	// the validator's, which is a different gate with a different reason
+	// and no obligation to keep saying no.
+	if !strings.Contains(err.Error(), "has no components") {
+		t.Errorf("err = %v, want the empty-document refusal — an error from somewhere else "+
+			"means this guard is being masked by another", err)
+	}
 	if want := d.BundleTopic(goldenDeviceEN); topic != want {
 		t.Errorf("topic = %q, want %q — the caller has to be able to name what was withheld", topic, want)
 	}

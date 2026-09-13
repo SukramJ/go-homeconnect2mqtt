@@ -38,6 +38,27 @@ func TestIsOwnConfig(t *testing.T) {
 		{"foreign unique_id", `{"unique_id":"zigbee2mqtt_x","state_topic":"zigbee2mqtt/x"}`, false},
 		{"foreign state root", `{"unique_id":"homeconnect_dw_op","state_topic":"other/dw/X/state"}`, false},
 		{"ours by namespace but naming no topic at all — unprovable, so not claimed", `{"unique_id":"homeconnect_dw_btn"}`, false},
+		// One row per topic key, each carrying that key ALONE. Without
+		// them the four keys mask one another: a button is claimed by its
+		// availability list whether or not the command topic is read, and
+		// a sensor by its state topic whether or not either is, so
+		// dropping any single key from the rule changes no verdict and
+		// the mutation survives. Each pair below is the same payload under
+		// two roots, so the key is shown to decide the answer in both
+		// directions.
+		{"state_topic alone, ours", `{"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/dw/X/state"}`, true},
+		{"state_topic alone, the sibling's", `{"unique_id":"homeconnect_dw_op","state_topic":"other/dw/X/state"}`, false},
+		{"command_topic alone, ours", `{"unique_id":"homeconnect_dw_btn","command_topic":"homeconnect/dw/X/set"}`, true},
+		{"command_topic alone, the sibling's", `{"unique_id":"homeconnect_dw_btn","command_topic":"other/dw/X/set"}`, false},
+		{"availability_topic alone, ours", `{"unique_id":"homeconnect_dw_op","availability_topic":"homeconnect/dw/availability"}`, true},
+		{"availability_topic alone, the sibling's", `{"unique_id":"homeconnect_dw_op","availability_topic":"other/dw/availability"}`, false},
+		{"the availability list alone, ours", `{` + avail + `"unique_id":"homeconnect_dw_op"}`, true},
+		{"the availability list alone, the sibling's", `{` + sibAvail + `"unique_id":"homeconnect_dw_op"}`, false},
+		// A payload whose topics do not agree about their root was
+		// published by nobody, and "all of them, or not ours" is the safe
+		// reading: a rule that took the first match it liked would be a
+		// rule an attacker-shaped payload could satisfy.
+		{"topics that disagree about their root", `{"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/dw/X/state","command_topic":"other/dw/X/set"}`, false},
 		{"not json", `not-json`, false},
 	}
 	for _, c := range cases {
