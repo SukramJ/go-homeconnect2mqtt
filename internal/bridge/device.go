@@ -288,13 +288,13 @@ func (b *Bridge) featureView(d *Device, e *homeconnect.Entity) state.Feature {
 // onState publishes the connection state and availability of a device and,
 // on a fresh connection, (re)publishes Home Assistant discovery.
 func (b *Bridge) onState(d *Device, s homeconnect.ConnectionState) {
-	b.publish(d.topics.connectionState(), []byte(s))
+	b.publish(d.topics.ConnectionState(), []byte(s))
 	avail := availOffline
 	if s == homeconnect.StateConnected {
 		avail = availOnline
 		b.publishDiscovery(context.Background(), d)
 	}
-	b.publish(d.topics.availability(), []byte(avail))
+	b.publish(d.topics.Availability(), []byte(avail))
 	if b.state != nil {
 		b.state.SetConnectionState(d.name, string(s), s == homeconnect.StateConnected)
 	}

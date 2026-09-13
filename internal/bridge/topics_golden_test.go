@@ -22,6 +22,7 @@ import (
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mapping"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/pincatalog"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 )
 
 // This file pins the other half of the wire: the state, command and
@@ -207,12 +208,12 @@ func realStateTopics(d *Device) []string {
 func advertised(t *testing.T, dev *Device) (states, commands map[string]string) {
 	t.Helper()
 	states, commands = map[string]string{}, map[string]string{}
-	for topic, p := range renderPayloads(t, dev) {
+	for cfgTopic, p := range renderPayloads(t, dev) {
 		if st, ok := p["state_topic"].(string); ok {
-			states[topic] = st
+			states[cfgTopic] = st
 		}
 		if ct, ok := p["command_topic"].(string); ok {
-			commands[topic] = ct
+			commands[cfgTopic] = ct
 		}
 	}
 	return states, commands
@@ -297,7 +298,7 @@ func TestTopicGolden(t *testing.T) {
 		}
 	}
 
-	availTopics := []string{dev.topics.availability(), dev.topics.connectionState()}
+	availTopics := []string{dev.topics.Availability(), dev.topics.ConnectionState()}
 	sort.Strings(availTopics)
 	referenced := map[string]bool{}
 	for _, p := range mustPayloads(t, dev) {
@@ -469,6 +470,58 @@ func TestCommandTopicsAreSubscribed(t *testing.T) {
 	t.Logf("%d advertised command topics, all covered by %v", len(commands), filters)
 }
 
+// TestAdvertisedCommandTopicsResolveToSomethingThatHandlesThem closes the
+// half of F3 that TestStateTopicBuildersAgree never looked at: the
+// OUTBOUND-to-INBOUND round trip.
+//
+// Being covered by the subscribe filter (TestCommandTopicsAreSubscribed)
+// only proves the message arrives. It does not prove anything acts on it.
+// The device sub-tree filter is "<root>/<device>/#", so a command topic
+// built by a path the handler does not recognise is delivered, matched,
+// dispatched — and dropped, with a log line at most. That is exactly the
+// shape the two synthetic program buttons had: internal/hass composed
+// "_control/<key>/set" inline, internal/bridge compared against its own
+// "_control/start_program" constants, and nothing compared the two
+// spellings. A rename on either side turns both buttons into no-ops that
+// look, from Home Assistant, exactly like working buttons.
+//
+// Every advertised command_topic must therefore be either a synthetic
+// control the handler recognises, or a feature the resolver can find.
+func TestAdvertisedCommandTopicsResolveToSomethingThatHandlesThem(t *testing.T) {
+	b, dev, _, _ := pinBridge(t)
+	_, commands := advertised(t, dev)
+	if len(commands) == 0 {
+		t.Fatal("no command topics advertised")
+	}
+
+	controls, features := 0, 0
+	for cfgTopic, ct := range commands {
+		rel, ok := dev.topics.Relative(ct)
+		if !ok {
+			t.Errorf("%s advertises %s, which is not a command topic of %s",
+				cfgTopic, ct, dev.topics.Base())
+			continue
+		}
+		switch rel {
+		case topic.ControlPath(topic.ControlStartProgram), topic.ControlPath(topic.ControlStopProgram):
+			controls++
+			continue
+		}
+		if _, ok := b.resolveEntity(dev, rel); !ok {
+			t.Errorf("%s advertises %s: the handler neither recognises it as a "+
+				"synthetic control nor resolves %q to a feature — the discovery "+
+				"builder and the command handler have diverged (F3)", cfgTopic, ct, rel)
+			continue
+		}
+		features++
+	}
+	if controls != 2 {
+		t.Errorf("synthetic control command topics = %d, want 2 (start + stop)", controls)
+	}
+	t.Logf("F3: %d advertised command topics — %d features, %d synthetic controls, all handled",
+		len(commands), features, controls)
+}
+
 // TestCommandFilterSwallowsTheDaemonsOwnStateTree is F4. The command
 // subscription is the whole device sub-tree, so the broker echoes every
 // state, availability and connection-state publish this daemon makes
@@ -496,10 +549,10 @@ func TestCommandFilterSwallowsTheDaemonsOwnStateTree(t *testing.T) {
 	if deviceFilter == "" {
 		t.Fatal("no device sub-tree subscription — F4 is fixed; update this test and the golden together")
 	}
-	own := append(realStateTopics(dev), dev.topics.availability(), dev.topics.connectionState())
-	for _, topic := range own {
-		if !matchFilter(deviceFilter, topic) {
-			t.Errorf("%s is published but not matched by %s", topic, deviceFilter)
+	own := append(realStateTopics(dev), dev.topics.Availability(), dev.topics.ConnectionState())
+	for _, own := range own {
+		if !matchFilter(deviceFilter, own) {
+			t.Errorf("%s is published but not matched by %s", own, deviceFilter)
 		}
 	}
 	t.Logf("F4: %s echoes %d of this daemon's own publishes back to it", deviceFilter, len(own))

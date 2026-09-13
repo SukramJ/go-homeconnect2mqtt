@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"strconv"
 	"strings"
 
 	"github.com/SukramJ/go-mqtt"
@@ -15,6 +14,7 @@ import (
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 )
 
 // Publisher is the subset of the MQTT client the discovery path needs.
@@ -82,22 +82,12 @@ type deviceBlock struct {
 	block    map[string]any
 }
 
-// featurePath mirrors the bridge topic layout: dotted name -> slash path,
-// unnamed -> _uid/<n>. This is the MQTT topic path, NOT the slugified id.
-func featurePath(e *homeconnect.Entity) string {
-	if e.Name() == "" {
-		return "_uid/" + strconv.Itoa(e.UID())
-	}
-	return strings.ReplaceAll(e.Name(), ".", "/")
-}
-
 func (d *Discovery) topicsFor(device string, e *homeconnect.Entity) entityTopics {
-	base := d.rootTopic + "/" + device
-	fp := featurePath(e)
+	dt := topic.NewDevice(d.rootTopic, device)
 	return entityTopics{
-		state:        base + "/" + fp + "/state",
-		command:      base + "/" + fp + "/set",
-		availability: base + "/availability",
+		state:        dt.State(e.Name(), e.UID()),
+		command:      dt.Command(e.Name(), e.UID()),
+		availability: dt.Availability(),
 	}
 }
 
@@ -230,10 +220,10 @@ func (d *Discovery) publishProgramControls(ctx context.Context, device string, e
 	if !hasProgram {
 		return
 	}
-	base := d.rootTopic + "/" + device
+	dt := topic.NewDevice(d.rootTopic, device)
 	controls := []struct{ key, nameEN, nameDE string }{
-		{"start_program", "Start program", "Programm starten"},
-		{"stop_program", "Stop program", "Programm stoppen"},
+		{topic.ControlStartProgram, "Start program", "Programm starten"},
+		{topic.ControlStopProgram, "Stop program", "Programm stoppen"},
 	}
 	for _, c := range controls {
 		name := c.nameEN
@@ -244,9 +234,9 @@ func (d *Discovery) publishProgramControls(ctx context.Context, device string, e
 			"unique_id":          dev.idPrefix + "_" + c.key,
 			"name":               name,
 			"default_entity_id":  "button." + slugify(device+"_"+c.key),
-			"command_topic":      base + "/_control/" + c.key + "/set",
+			"command_topic":      dt.ControlCommand(c.key),
 			"payload_press":      "PRESS",
-			"availability_topic": base + "/availability",
+			"availability_topic": dt.Availability(),
 			"device":             dev.block,
 		}
 		b, err := json.Marshal(payload)

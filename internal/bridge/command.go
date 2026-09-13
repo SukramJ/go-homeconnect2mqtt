@@ -16,6 +16,7 @@ import (
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 )
 
 // subscribeCommands subscribes each device to its command sub-tree. The
@@ -24,7 +25,7 @@ import (
 func (b *Bridge) subscribeCommands(ctx context.Context) error {
 	for _, d := range b.devices {
 		dev := d
-		filter := dev.topics.base + "/#"
+		filter := dev.topics.CommandFilter()
 		if _, err := b.mqtt.Subscribe(ctx, filter, b.qos, func(msg *mqtt.Message) {
 			if msg.Retain {
 				// Drop the broker's replay of the last retained command on
@@ -74,12 +75,11 @@ func (b *Bridge) subscribeBirth(ctx context.Context) error {
 // handleSet resolves an incoming "/set" command to a feature and applies
 // it, choosing the device-specific program-start path where applicable
 // (FK-4) and gating writes on the dynamic access window (FK-5).
-func (b *Bridge) handleSet(parent context.Context, d *Device, topic string, payload []byte) {
-	if !strings.HasSuffix(topic, "/set") {
+func (b *Bridge) handleSet(parent context.Context, d *Device, msgTopic string, payload []byte) {
+	rel, ok := d.topics.Relative(msgTopic)
+	if !ok {
 		return // a state/availability publish echoed back, ignore
 	}
-	rel := strings.TrimPrefix(topic, d.topics.base+"/")
-	rel = strings.TrimSuffix(rel, "/set")
 	value := strings.TrimSpace(string(payload))
 
 	if b.handleProgramControl(parent, d, rel) {
@@ -88,7 +88,7 @@ func (b *Bridge) handleSet(parent context.Context, d *Device, topic string, payl
 
 	entity, ok := b.resolveEntity(d, rel)
 	if !ok {
-		b.logger.Warn("bridge.command_unknown_feature", slog.String("device", d.name), slog.String("topic", topic))
+		b.logger.Warn("bridge.command_unknown_feature", slog.String("device", d.name), slog.String("topic", msgTopic))
 		return
 	}
 
@@ -114,13 +114,14 @@ func (b *Bridge) handleSet(parent context.Context, d *Device, topic string, payl
 // resolveEntity maps a relative topic path back to an entity, handling both
 // the dotted feature name and the _uid/<n> fallback path.
 func (b *Bridge) resolveEntity(d *Device, rel string) (*homeconnect.Entity, bool) {
-	if uidStr, ok := strings.CutPrefix(rel, "_uid/"); ok {
-		if uid, err := strconv.Atoi(uidStr); err == nil {
-			return d.app.Entity(uid)
-		}
+	name, uid, byUID := topic.FeatureName(rel)
+	if byUID {
+		return d.app.Entity(uid)
+	}
+	if name == "" {
 		return nil, false
 	}
-	return d.app.EntityByName(strings.ReplaceAll(rel, "/", "."))
+	return d.app.EntityByName(name)
 }
 
 // writeWithWindow writes a scalar value, retrying within the dynamic access
@@ -154,25 +155,22 @@ func (b *Bridge) writeWithWindow(ctx context.Context, d *Device, e *homeconnect.
 	}
 }
 
-// Synthetic program-control topics (published by the discovery layer; they back
-// no device feature). Start posts the selected program to /ro/activeProgram.
-const (
-	controlStartProgram = "_control/start_program"
-	controlStopProgram  = "_control/stop_program"
-)
-
 // handleProgramControl runs a synthetic start/stop control, reporting whether
 // rel was one (so the caller skips the feature-write path).
 func (b *Bridge) handleProgramControl(parent context.Context, d *Device, rel string) bool {
-	if rel != controlStartProgram && rel != controlStopProgram {
+	// The relative paths the discovery layer advertises as the two
+	// synthetic buttons' command_topic. Both sides read topic.ControlPath,
+	// so a press can never land on a path nothing handles (F3).
+	start, stop := topic.ControlPath(topic.ControlStartProgram), topic.ControlPath(topic.ControlStopProgram)
+	if rel != start && rel != stop {
 		return false
 	}
 	ctx, cancel := context.WithTimeout(parent, b.cfg.SendTimeoutDuration()+b.cmdRetryDelay*time.Duration(b.cmdRetries+1))
 	defer cancel()
 	switch rel {
-	case controlStartProgram:
+	case start:
 		b.startSelectedProgram(ctx, d)
-	case controlStopProgram:
+	case stop:
 		b.runProgramCall(ctx, d, "stop", func() error { _, err := d.app.StopActiveProgram(ctx); return err })
 	}
 	return true
