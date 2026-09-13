@@ -854,10 +854,12 @@ func TestRefusedOverrideIsLogged(t *testing.T) {
 	}
 }
 
-// TestHamqttBundleValidates is the schema question for the form step 6 will
-// publish. Nothing publishes a bundle yet; this only asks whether the
-// document this catalogue renders to is one Home Assistant would accept, so
-// step 6 does not discover the answer against a live installation.
+// TestHamqttBundleValidates is the schema question for the form step 6
+// publishes. It asks whether the document this catalogue renders to is one
+// Home Assistant would accept — and since step 6 it is also the reason
+// Discovery.publishBundle can afford to refuse a blocking document outright:
+// no document this daemon renders is blocking, in any of the four pinned
+// configurations, so the refusal is a guard rather than a gate.
 //
 // Step 4 found it Blocking() in the three enriched configurations, carrying
 // the eleven F13 rows — and a blocking bundle publishes NOTHING, so those
