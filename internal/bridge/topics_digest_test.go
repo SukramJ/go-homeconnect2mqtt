@@ -40,13 +40,23 @@ import (
 //     changed the thing it describes. It is corrected here and
 //     TestWillRowMatchesTheWillTheRuntimeStates now measures it.
 //
+// Moved a fourth time by F5 of the tombstone review, in exactly one row and
+// in the ADDITIVE direction: `subscribe_filters` gains
+// "homeassistant/device/+/config" at MQTT_QOS, the tombstone read-back's
+// snapshot window. The subscription itself shipped with the read-back; what
+// was missing was its line in this artefact, because the builder drives
+// subscribeCommands alone and only the sweep's transient window had ever
+// been stated by hand. "No golden moved" was therefore true of a file that
+// under-reported the wire. Nothing on the wire changes with this commit;
+// the file starts reporting what was already there.
+//
 // No published topic, no QoS of any PUBLISH, and no retain flag moved.
 //
 // topicsGoldenDigest is the SHA-256 of internal/bridge/testdata/topics.json,
 // held outside the file so a regeneration cannot pass unnoticed. See the
 // long note in internal/hass/golden_digest_test.go — same reasoning, same
 // standard: updating this literal is a declaration that names a finding.
-const topicsGoldenDigest = "37e5bc781d7f754c08d274361470bd00a04d96227af8c1762f6a4ef8a318fa97"
+const topicsGoldenDigest = "f99630e4c65625625aa9753eb89dc49011663ffaaf613177d7fcb778169b72f5"
 
 // TestTopicsGoldenMatchesItsPinnedDigest fails when topics.json was
 // regenerated without the accompanying declaration of intent.

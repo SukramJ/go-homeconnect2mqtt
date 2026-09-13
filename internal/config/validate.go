@@ -46,7 +46,7 @@ func Validate(c *Config) error {
 	if c.MQTTTopic == "" {
 		add("MQTT_TOPIC is required")
 	}
-	rangeCheck("MQTT_QOS", c.MQTTQoS, 0, 1)
+	rangeCheck("MQTT_QOS", c.QoSLevel(), 0, 1)
 	// Both-or-neither for MQTT credentials.
 	if (c.MQTTLogin == "") != (c.MQTTPassword == "") {
 		add("MQTT_LOGIN and MQTT_PASSWORD must both be set or both empty")

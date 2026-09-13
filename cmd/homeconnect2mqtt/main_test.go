@@ -137,7 +137,7 @@ func testPlane(cfg *config.Config) *haplane.Plane {
 		Prefix:      cfg.HASSBaseTopic,
 		StatusTopic: layout.Bridge(cfg.MQTTTopic),
 		Layout:      hass.NewLayout(cfg.MQTTTopic),
-		QoS:         haplane.QoS(cfg.MQTTQoS),
+		QoS:         haplane.QoS(cfg.QoSLevel()),
 		Retain:      cfg.RetainEnabled(),
 		Logger:      slog.New(slog.DiscardHandler),
 	})
@@ -166,7 +166,7 @@ func testWill(t *testing.T, cfg *config.Config) publisher.Will {
 // every payload now declares it.
 func TestWillIsTheAvailabilitySourceEveryEntityReads(t *testing.T) {
 	t.Parallel()
-	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: 1}
+	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: intPtr(1)}
 	will := mqttClientConfig(cfg, testWill(t, cfg), slog.New(slog.DiscardHandler)).Will
 	if will == nil {
 		t.Fatal("no Last Will configured: a killed daemon would leave every entity available forever")
@@ -201,7 +201,7 @@ func TestWillIsTheAvailabilitySourceEveryEntityReads(t *testing.T) {
 // and rebuilt the will from cfg would pass any comparison against cfg.
 func TestWillIsCopiedFromTheRuntimeNotSpelledAgain(t *testing.T) {
 	t.Parallel()
-	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: 1}
+	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: intPtr(1)}
 	perturbed := publisher.Will{
 		Topic:   "somewhere/else/entirely",
 		Payload: []byte("not-a-marker"),
@@ -227,7 +227,7 @@ func TestWillIsCopiedFromTheRuntimeNotSpelledAgain(t *testing.T) {
 func TestMQTTQoSZeroStaysQoSZero(t *testing.T) {
 	t.Parallel()
 	for in, want := range map[int]mqtt.QoS{0: mqtt.QoS0, 1: mqtt.QoS1} {
-		cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: in}
+		cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: intPtr(in)}
 		will := testWill(t, cfg)
 		if got := mqtt.QoS(will.QoS); got != want {
 			t.Errorf("MQTT_QOS: %d -> runtime will qos %v, want %v", in, got, want)
@@ -268,7 +268,7 @@ func TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker(t *testing.T) {
 	// meant appending "/x" to serve()'s second spelling of the topic
 	// survived the whole suite. #44 caught that once as M41 and it came
 	// back one line away.
-	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: 1}
+	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: intPtr(1)}
 	plane := haplane.New(&haplane.Transport{}, haPlaneConfig(cfg, nil, slog.New(slog.DiscardHandler)))
 	status := plane.StatusTopic()
 	if status != layout.Bridge(cfg.MQTTTopic) {
@@ -322,7 +322,7 @@ func TestThePlaneConfigStatesEveryFieldTheMigrationDependsOn(t *testing.T) {
 	t.Parallel()
 	cfg := &config.Config{
 		MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect",
-		HASSBaseTopic: "homeassistant", MQTTQoS: 0, MQTTRetain: boolPtr(false),
+		HASSBaseTopic: "homeassistant", MQTTQoS: intPtr(0), MQTTRetain: boolPtr(false),
 	}
 	var asked bool
 	got := haPlaneConfig(cfg, func() (uint32, bool) { asked = true; return 1024, true }, slog.New(slog.DiscardHandler))
@@ -433,7 +433,7 @@ func (s *stopperSpy) StopDiscovery() {
 // and neither can be stopped from outside except by this call.
 func TestShutdownStopsDiscoveryBeforeTheOfflineMarker(t *testing.T) {
 	t.Parallel()
-	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: 1}
+	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: intPtr(1)}
 	tr := &recordingTransport{}
 	plane := haplane.New(tr, haPlaneConfig(cfg, nil, slog.New(slog.DiscardHandler)))
 	spy := &stopperSpy{tr: tr}
@@ -452,3 +452,7 @@ func TestShutdownStopsDiscoveryBeforeTheOfflineMarker(t *testing.T) {
 		t.Fatalf("the shutdown wrote %v, want exactly [%s]", tr.topics, want)
 	}
 }
+
+// intPtr builds config.Config.MQTTQoS, which is a pointer so an explicit
+// MQTT_QOS of 0 is distinguishable from an absent key.
+func intPtr(v int) *int { return &v }

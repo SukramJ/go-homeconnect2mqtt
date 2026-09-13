@@ -13,6 +13,8 @@ import (
 	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/slug"
 )
 
 // DeviceConfig is one entry of the operator-maintained devices file
@@ -45,6 +47,21 @@ func LoadDevices(path string) ([]DeviceConfig, error) {
 		return nil, fmt.Errorf("profile: devices file %s has no devices", path)
 	}
 	seen := map[string]bool{}
+	// The SECOND uniqueness rule, and the one that costs entities when it
+	// is missing. Two names that are merely different are fine; two names
+	// that FOLD to one discovery node id are not, because hass.Discovery
+	// derives the node id with slug.Slug, and the fold is many-to-one:
+	// "My Oven" and "my-oven" are both "my_oven".
+	//
+	// Everything downstream of the node id then collides — one retained
+	// device-document topic, one `unique_id` namespace, and one key in
+	// bridge.priorDocuments, which is what the tombstone read-back is held
+	// under. Each appliance's pass reads the OTHER one's document as its
+	// own previous state and tombstones every component the other declares
+	// and it does not; the other pass does the same back, on every
+	// connection. Before tombstones existed this collision was confusing
+	// but inert, which is why the guard checked the raw name.
+	byNodeID := map[string]string{}
 	for i := range df.Devices {
 		d := &df.Devices[i]
 		d.ConnectionType = ConnectionType(strings.ToUpper(string(d.ConnectionType)))
@@ -58,6 +75,16 @@ func LoadDevices(path string) ([]DeviceConfig, error) {
 			return nil, fmt.Errorf("profile: duplicate device name %q", d.Name)
 		}
 		seen[d.Name] = true
+		node := slug.Slug(d.Name)
+		if first, clash := byNodeID[node]; clash {
+			return nil, fmt.Errorf(
+				"profile: device names %q and %q both become Home Assistant node id %q: "+
+					"they would share one discovery document, one unique_id namespace and one "+
+					"removal memory, and would delete each other's entities on every pass",
+				first, d.Name, node,
+			)
+		}
+		byNodeID[node] = d.Name
 		if d.ConnectionType != ConnectionAES && d.ConnectionType != ConnectionTLS {
 			return nil, fmt.Errorf("profile: device %q has invalid connection_type %q", d.Name, d.ConnectionType)
 		}

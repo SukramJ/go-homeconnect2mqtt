@@ -202,3 +202,154 @@ func TestSnapshotWithoutATransportIsReportedRatherThanAPanic(t *testing.T) {
 		t.Error("a snapshot without a transport reported success")
 	}
 }
+
+// TestSnapshotSubscribesAtTheConfiguredQoS is the pin the read-back window
+// did not have, and it is driven at QoS 0 for the reason that matters:
+// MQTT_QOS's shipped default is 1, which is also publisher.Config's own
+// default, so a window that hard-coded publisher.QoSAtLeastOnce would agree
+// with a correct one in every fixture the bridge tests use and be caught by
+// none of them.
+//
+// This repository has already paid for a second spelling of a QoS default
+// once — F9, a struct literal that omitted the field and upgraded the whole
+// installed base's delivery guarantee, with a broker capture as the only
+// evidence. internal/haplane/qos.go exists because of it, and this is the
+// one subscription that was still resolving its level on its own.
+func TestSnapshotSubscribesAtTheConfiguredQoS(t *testing.T) {
+	t.Parallel()
+	for _, want := range []byte{0, 1, 2} {
+		tr := &replayTransport{}
+		p := New(tr, Config{
+			Prefix:      "homeassistant",
+			StatusTopic: "homeconnect/status",
+			Layout:      testLayout{},
+			QoS:         QoS(int(want)),
+			Logger:      slog.New(slog.DiscardHandler),
+		})
+		if err := p.Snapshot(t.Context(), "homeassistant/device/+/config", time.Millisecond,
+			func(string, []byte) bool { return false }); err != nil {
+			t.Fatalf("Snapshot: %v", err)
+		}
+		tr.mu.Lock()
+		subs := append([]record(nil), tr.subs...)
+		tr.mu.Unlock()
+		if len(subs) != 1 {
+			t.Fatalf("MQTT_QOS %d: %d subscriptions, want 1", want, len(subs))
+		}
+		if subs[0].qos != want {
+			t.Errorf("MQTT_QOS %d: the window subscribed at QoS %d", want, subs[0].qos)
+		}
+	}
+}
+
+// handlerTransport hands the test the subscription's handler instead of
+// replaying anything itself, so a delivery can be made from ANOTHER
+// goroutine after Subscribe has returned.
+//
+// replayTransport cannot express the case below. It replays inline inside
+// Subscribe, which every other pin here needs, and which also means the
+// visit has finished before Snapshot reaches its own select — so "a visit
+// still running when the window closes" is unreachable through it and the
+// mutation that removes the guard survives.
+type handlerTransport struct {
+	capture
+	mu sync.Mutex
+	h  publisher.Handler
+}
+
+func (x *handlerTransport) Subscribe(ctx context.Context, filter string, qos byte, h publisher.Handler) error {
+	if err := x.capture.Subscribe(ctx, filter, qos, h); err != nil {
+		return err
+	}
+	x.mu.Lock()
+	x.h = h
+	x.mu.Unlock()
+	return nil
+}
+
+func (x *handlerTransport) Unsubscribe(context.Context, string) error { return nil }
+
+func (x *handlerTransport) handler() publisher.Handler {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	return x.h
+}
+
+// TestNoVisitRunsAfterSnapshotReturns closes the window on the window.
+//
+// `gated` used to read an atomic flag and then call visit, which is
+// publisher.Runtime.snapshot's idiom: a delivery that passes the read can be
+// descheduled and run its callback after Snapshot has already returned. That
+// is harmless while the callback only touches state the caller has finished
+// with, and it is not harmless here — the tombstone read-back's map escapes
+// into bridge.priorDocuments, where it is stored and read under a DIFFERENT
+// mutex. One live map under two mutexes is a concurrent map write, i.e. a
+// process-killing panic rather than a wrong answer.
+//
+// It is driven rather than left to the race detector, which found nothing
+// over -count=8. Two things have to be true for it to fail reliably, and
+// the first version of this test had neither: the delivery must come from a
+// goroutine that is NOT the one inside Subscribe, and the visit must still
+// be inside the callback when the window's timer fires. The assertion is
+// then made from inside the visit, after Snapshot has had every chance to
+// return.
+func TestNoVisitRunsAfterSnapshotReturns(t *testing.T) {
+	t.Parallel()
+	tr := &handlerTransport{}
+	p := snapshotPlane(t, tr)
+
+	var (
+		mu        sync.Mutex
+		returned  bool
+		late      bool
+		visited   bool
+		delivered = make(chan struct{})
+	)
+	go func() {
+		defer close(delivered)
+		for {
+			if h := tr.handler(); h != nil {
+				h("homeassistant/device/a/config", []byte(`{"components":{}}`), true)
+				return
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}()
+
+	err := p.Snapshot(t.Context(), "homeassistant/device/+/config", 30*time.Millisecond,
+		func(string, []byte) bool {
+			mu.Lock()
+			visited = true
+			mu.Unlock()
+			// Longer than the window, so the timer fires while this is
+			// still running.
+			time.Sleep(250 * time.Millisecond)
+			mu.Lock()
+			if returned {
+				late = true
+			}
+			mu.Unlock()
+			return false
+		})
+	mu.Lock()
+	returned = true
+	mu.Unlock()
+	if err != nil {
+		t.Fatalf("Snapshot: %v", err)
+	}
+	select {
+	case <-delivered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the delivery never happened")
+	}
+	mu.Lock()
+	gotVisit, gotLate := visited, late
+	mu.Unlock()
+	if !gotVisit {
+		t.Fatal("nothing was delivered, so this test proves nothing")
+	}
+	if gotLate {
+		t.Error("a visit was still running after Snapshot returned: the caller's map is live " +
+			"in two goroutines under two different mutexes")
+	}
+}

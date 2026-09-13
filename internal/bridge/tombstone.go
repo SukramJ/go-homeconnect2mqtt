@@ -131,6 +131,15 @@ func (p *priorDocuments) record(rt *publisher.Runtime, nodeID string, live map[s
 // them apart. [hass.Discovery.BundleComponents] therefore judges every
 // component by the payload rule the orphan sweep already uses, and a
 // component that is not provably ours never becomes prior state.
+//
+// "Provably" is the load-bearing word, and it is conditional rather than
+// absolute. The payload rule attributes on an EXACT match against a topic
+// only this instance renders; when it was a topic-prefix test, an instance
+// rooted at `homeconnect` accepted every component of one rooted at
+// `homeconnect/kitchen` as its own and tombstoned the live ones out of
+// Home Assistant. Two instances that share one MQTT_TOPIC root are not
+// separable by this rule or any other, and the answer there is
+// configuration, not code.
 func (b *Bridge) readPriorDocuments(ctx context.Context) map[string]map[string]discovery.Component {
 	out := map[string]map[string]discovery.Component{}
 	var mu sync.Mutex

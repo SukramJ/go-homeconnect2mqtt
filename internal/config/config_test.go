@@ -30,8 +30,8 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	if cfg.MQTTTopic != DefaultMQTTTopic {
 		t.Errorf("MQTTTopic = %q, want %q", cfg.MQTTTopic, DefaultMQTTTopic)
 	}
-	if cfg.MQTTQoS != DefaultMQTTQoS {
-		t.Errorf("MQTTQoS = %d, want %d", cfg.MQTTQoS, DefaultMQTTQoS)
+	if cfg.QoSLevel() != DefaultMQTTQoS {
+		t.Errorf("MQTTQoS = %d, want %d", cfg.QoSLevel(), DefaultMQTTQoS)
 	}
 	if !cfg.RetainEnabled() {
 		t.Error("RetainEnabled() = false, want true (default)")
@@ -44,6 +44,51 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	}
 	if cfg.Language != DefaultLanguage {
 		t.Errorf("Language = %q, want %q", cfg.Language, DefaultLanguage)
+	}
+}
+
+// TestMQTTQoSZeroSurvivesTheLoader is F9's pin one layer below where it was
+// pinned before, and the layer that actually defeated it.
+//
+// The translation point (internal/haplane/qos.go) has always mapped 0 to
+// at-most-once, and TestMQTTQoSZeroStaysQoSZero has always asserted it —
+// over a config.Config built BY HAND. Between an operator's file and that
+// function sits applyDefaults, which read `MQTT_QOS: 0` as "unset" and
+// wrote 1, so the level the daemon documents, offers in
+// config-template.yaml and accepts in Validate could not be obtained from
+// a config file at all. Nothing noticed, because no test had ever asked
+// the LOADER.
+//
+// So this drives config.Load, from both sources an operator has, and it
+// asserts the default is still the default — the over-correction that
+// would silently downgrade every installation instead.
+func TestMQTTQoSZeroSurvivesTheLoader(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		yaml string
+		env  mapEnv
+		want int
+	}{
+		{"an explicit 0 in the file", "MQTT_SERVER: tcp://h:1883\nMQTT_QOS: 0\n", nil, 0},
+		{"an explicit 1 in the file", "MQTT_SERVER: tcp://h:1883\nMQTT_QOS: 1\n", nil, 1},
+		{"the key absent", "MQTT_SERVER: tcp://h:1883\n", nil, DefaultMQTTQoS},
+		{"0 from the environment", "MQTT_SERVER: tcp://h:1883\n", mapEnv{EnvPrefix + "MQTT_QOS": "0"}, 0},
+		{"0 from the environment over a 1 in the file", "MQTT_SERVER: tcp://h:1883\nMQTT_QOS: 1\n", mapEnv{EnvPrefix + "MQTT_QOS": "0"}, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var env Env
+			if tc.env != nil {
+				env = tc.env
+			}
+			cfg, err := Load(strings.NewReader(tc.yaml), env)
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if got := cfg.QoSLevel(); got != tc.want {
+				t.Errorf("MQTT_QOS = %d, want %d — 0 is a level an operator can ask for, "+
+					"not the absence of an answer", got, tc.want)
+			}
+		})
 	}
 }
 
@@ -104,9 +149,9 @@ func TestValidateMultipleIssues(t *testing.T) {
 	c := &Config{
 		MQTTServer:       "tcp://h:1883",
 		MQTTTopic:        "t",
-		MQTTQoS:          5,  // out of range
-		ReconnectInitial: 30, // > max
-		ReconnectMax:     10, // < initial
+		MQTTQoS:          intPtr(5), // out of range
+		ReconnectInitial: 30,        // > max
+		ReconnectMax:     10,        // < initial
 		HandshakeTimeout: 60,
 		SendTimeout:      20,
 		Heartbeat:        20,
@@ -129,7 +174,7 @@ func TestValidateMultipleIssues(t *testing.T) {
 
 func TestValidateWebBind(t *testing.T) {
 	c := &Config{
-		MQTTServer: "tcp://h:1883", MQTTTopic: "t", MQTTQoS: 1,
+		MQTTServer: "tcp://h:1883", MQTTTopic: "t", MQTTQoS: intPtr(1),
 		ReconnectInitial: 1, ReconnectMax: 30, HandshakeTimeout: 60,
 		SendTimeout: 20, Heartbeat: 20, Language: "en",
 		WebEnable: true, WebBind: "not-a-hostport",
@@ -151,3 +196,7 @@ func TestDurationHelpers(t *testing.T) {
 		t.Error("HeartbeatDuration")
 	}
 }
+
+// intPtr is MQTT_QOS's sentinel in a test literal. The field is a pointer
+// so an explicit `MQTT_QOS: 0` survives applyDefaults; see Config.MQTTQoS.
+func intPtr(v int) *int { return &v }

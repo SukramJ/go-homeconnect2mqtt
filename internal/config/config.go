@@ -34,7 +34,16 @@ type Config struct {
 	MQTTLogin    string `yaml:"MQTT_LOGIN"`
 	MQTTPassword string `yaml:"MQTT_PASSWORD"`
 	MQTTTopic    string `yaml:"MQTT_TOPIC"`
-	MQTTQoS      int    `yaml:"MQTT_QOS"`
+	// MQTTQoS is a pointer for the same reason MQTTRetain is, and the
+	// reason is not symmetry: 0 is a LEVEL an operator can ask for, and a
+	// bare int cannot tell `MQTT_QOS: 0` from "the key is absent".
+	// applyDefaults filled the zero with 1, so the at-most-once level this
+	// daemon documents, offers in config-template.yaml and accepts in
+	// Validate could not be reached from a config file at all — F9 was
+	// fixed at the translation point (internal/haplane/qos.go) and
+	// defeated one layer below it, where every test that watched for it
+	// built a Config by hand instead of loading one.
+	MQTTQoS *int `yaml:"MQTT_QOS"`
 	// MQTTRetain is a pointer so an unset value can default to true while
 	// still letting operators force false.
 	MQTTRetain *bool `yaml:"MQTT_RETAIN"`
@@ -104,6 +113,15 @@ func (c *Config) HeartbeatDuration() time.Duration {
 // HASSBirthGracetimeDuration returns the Home Assistant birth grace time.
 func (c *Config) HASSBirthGracetimeDuration() time.Duration {
 	return time.Duration(c.HASSBirthGracetime) * time.Second
+}
+
+// QoSLevel is MQTT_QOS as a level. Unset (nil) is the shipped default;
+// an explicit 0 stays 0.
+func (c *Config) QoSLevel() int {
+	if c.MQTTQoS == nil {
+		return DefaultMQTTQoS
+	}
+	return *c.MQTTQoS
 }
 
 // RetainEnabled reports whether MQTT messages should be published with

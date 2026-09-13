@@ -692,7 +692,7 @@ func smallBridgeWith(
 
 	rec := &subRecorder{}
 	logger := slog.New(slog.DiscardHandler)
-	plane := planeWithLimit(t, rec, cfg.MQTTQoS, cfg.RetainEnabled(), maxPacket)
+	plane := planeWithLimit(t, rec, cfg.QoSLevel(), cfg.RetainEnabled(), maxPacket)
 	desc := smallDescription(t)
 	specs := make([]DeviceSpec, 0, len(names))
 	for _, name := range names {

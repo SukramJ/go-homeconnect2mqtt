@@ -123,8 +123,17 @@ To know what it published last time, the daemon reads its previous document
 back from the broker once per connection, immediately before the first
 publish of that connection. Every way that read can fail produces *fewer*
 removals and never different ones, and a document published by a second
-instance of this daemon is judged component by component against this
-instance's `MQTT_TOPIC` root, so a sibling's entities are never deleted.
+instance of this daemon is judged component by component: a component is
+carried forward only when its payload names a topic **only this instance
+renders** — `<MQTT_TOPIC>/status`, or `<MQTT_TOPIC>/<appliance>/availability`
+— so a sibling instance's entities are never deleted.
+
+That is an exact match rather than a prefix, and the difference is the whole
+guarantee. A prefix test claimed every component of an instance rooted
+*under* this one (`homeconnect` against `homeconnect/kitchen`) and deleted
+its live entities. Two instances that share a `MQTT_TOPIC` root **are** one
+instance as far as this rule can tell, and nothing distinguishes them: give
+each instance its own root.
 
 The daemon warns once per appliance on start when the curated filter drops
 anything (`hass.curated_components_omitted`, with the count). Setting

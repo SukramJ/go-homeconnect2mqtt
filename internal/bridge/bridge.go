@@ -123,7 +123,7 @@ func New(deps Deps) (*Bridge, error) {
 		cfg:           deps.Config,
 		mqtt:          deps.MQTT,
 		logger:        logger,
-		qos:           mqtt.QoS(deps.Config.MQTTQoS), //nolint:gosec // MQTT_QOS is validated to 0..1
+		qos:           mqtt.QoS(deps.Config.QoSLevel()), //nolint:gosec // MQTT_QOS is validated to 0..1
 		hass:          deps.HASS,
 		state:         deps.State,
 		plane:         deps.Plane,

@@ -88,6 +88,42 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
   the daemon itself was restarted.
 
 ### Fixed
+- **A second instance of this daemon whose `MQTT_TOPIC` sits *under* the
+  first's had 510 of its live entities deleted from Home Assistant, over and
+  over.** Which retained discovery payloads belong to this instance was
+  decided by a topic *prefix*: a component was claimed when every topic it
+  named began with `<MQTT_TOPIC>/`. `MQTT_TOPIC` only has to be non-empty, so
+  `homeconnect` and `homeconnect/kitchen` are two legal roots — and every
+  topic the second instance names begins with the first one's root. Driven
+  over the shipped catalogue, the outer instance claimed **687 of 687** of
+  the inner one's components and wrote a removal entry for the 510 that were
+  live: Home Assistant deleted those entities, with their recorder history,
+  areas, renames and every automation, script and dashboard card naming
+  them. The inner instance republished them and the outer one deleted them
+  again on its next connection — permanently. Attribution is now an **exact**
+  match against a topic only one instance renders (`<MQTT_TOPIC>/status`, or
+  `<MQTT_TOPIC>/<appliance>/availability`), never a prefix. Nothing on the
+  wire changes for a single instance, and two instances with disjoint roots
+  were never affected. Two instances sharing one `MQTT_TOPIC` root are still
+  indistinguishable — give each its own root.
+- **Two configured appliances whose names differ only in case, spaces or
+  punctuation deleted each other's entities on every pass.** The devices file
+  rejected two identical names, but the string that matters is the Home
+  Assistant node id, and it folds: `My Oven` and `my-oven` are both
+  `my_oven`. Both appliances then shared one retained discovery document, one
+  `unique_id` namespace and one removal memory, so each pass removed
+  everything the other had just declared. The daemon now refuses to start on
+  the collision and names both appliances and the id they share.
+- **`MQTT_QOS: 0` did nothing: every installation that asked for
+  at-most-once got at-least-once.** The value was read into a plain
+  integer and the defaulting step could not tell an explicit `0` from an
+  absent key, so it overwrote it with `1` before anything else saw it —
+  while `config-template.yaml` offered the key, validation accepted `0..1`,
+  and the conversion to the publisher's vocabulary handled `0` correctly.
+  The setting is now carried the same way `MQTT_RETAIN` is, so an explicit
+  `0` survives, from the file and from `HC2M_MQTT_QOS` alike. An
+  installation that never set the key is unaffected: absent still means
+  `1`.
 - **Home Assistant's retained birth message made every boot do the discovery
   migration twice, with a window in which the appliance had no config at
   all.** Home Assistant publishes `homeassistant/status` retained, so the

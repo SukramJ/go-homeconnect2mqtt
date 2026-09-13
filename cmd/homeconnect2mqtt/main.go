@@ -329,7 +329,7 @@ func haPlaneConfig(cfg *config.Config, brokerMax func() (uint32, bool), logger *
 		Prefix:              cfg.HASSBaseTopic,
 		StatusTopic:         layout.Bridge(cfg.MQTTTopic),
 		Layout:              hass.NewLayout(cfg.MQTTTopic),
-		QoS:                 haplane.QoS(cfg.MQTTQoS),
+		QoS:                 haplane.QoS(cfg.QoSLevel()),
 		Retain:              cfg.RetainEnabled(),
 		BrokerMaxPacketSize: brokerMax,
 		Logger:              logger,
