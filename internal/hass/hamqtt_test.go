@@ -699,3 +699,98 @@ func TestHamqttRenderPathPublishesNothing(t *testing.T) {
 		}
 	}
 }
+
+// TestObjectIDCompositionIsAnEquivalentMutant records a mutation that could
+// NOT be made to fail, and why.
+//
+// ObjectID slugifies the joined string, slugify(device + "_" + key). The
+// obvious alternative, slugify(device) + "_" + slugify(key), survives every
+// assertion in this package — 2 238 payloads, both device probes, all 687
+// keys — because the two are equal for every input the daemon can reach:
+// slugify collapses a run of separators to one underscore and trims the
+// ends, so the only way they can differ is for one half to slugify to the
+// empty string, and profile.validateDeviceName refuses a device name with no
+// ASCII letter or digit for exactly that reason.
+//
+// #41's standard is that an assertion which cannot be made to fail is named
+// rather than left as coverage nobody checked. This is that naming: the
+// mutation is EQUIVALENT, not missed, and the equivalence is asserted here
+// over the whole catalogue plus the device-name probes from §3.2 of the
+// measurement, together with the one input that breaks it.
+func TestObjectIDCompositionIsAnEquivalentMutant(t *testing.T) {
+	devices := []string{
+		goldenDeviceEN, goldenDeviceDE, "Küche", "Café", "ÜÄÖ",
+		"Waschmaschine / Trockner", "Dish_", "A-1", "x  y",
+	}
+	entities := pinEntities(t)
+	n := 0
+	for _, device := range devices {
+		for _, e := range entities {
+			key := featureKey(e)
+			joined := slugify(device + "_" + key)
+			separate := slugify(device) + "_" + slugify(key)
+			if joined != separate {
+				t.Errorf("device %q key %q: joined %q, separate %q", device, key, joined, separate)
+			}
+			n++
+		}
+	}
+	// The one input that separates them — and the one profile.LoadDevices
+	// refuses, because both halves of the identity would be empty.
+	if slugify("()"+"_"+"x") == slugify("()")+"_"+slugify("x") {
+		t.Error("the two compositions no longer differ for a device name that slugifies to " +
+			"nothing; this test's premise has changed and ObjectID is now genuinely untested")
+	}
+	t.Logf("the two ObjectID compositions agree over %d device x key pairs", n)
+}
+
+// TestGoHamqttRefusesAStateTopicOnAWriteOnlyPlatform records the second
+// mutation that could not be made to fail, and turns it into an assertion.
+//
+// Giving a button a readable state binding changes no byte: the library
+// projects state_topic only onto the platforms whose schema declares it, and
+// button is one of the ten that do not. That is a guarantee worth having —
+// a key Home Assistant does not declare is dropped in silence, so publishing
+// one is invisible in both directions — but it is the LIBRARY's guarantee,
+// and a test that only ever renders correct input never exercises it.
+//
+// So this renders the wrong input deliberately: a button entity with a
+// readable state binding, which the old hand-built path would have happily
+// given a state_topic (payloadFor branches on the platform, not on a schema).
+func TestGoHamqttRefusesAStateTopicOnAWriteOnlyPlatform(t *testing.T) {
+	d := New(nil, goldenPrefix, goldenRoot, goldenQoS, "en", false, slog.New(slog.DiscardHandler))
+	dev := hamqttDevice(goldenDeviceEN, pincatalog.Info)
+	slot := hamqttSlot(dev, goldenDeviceEN, "BSH", "Common", "Command", "AcknowledgeEvent")
+
+	ent := &model.Basic{
+		EntityKey:      "bsh_common_command_acknowledgeevent",
+		EntityPlatform: hacatalog.Platform(platformButton),
+		Description:    model.Description{Name: model.L("Acknowledge Event")},
+		Binds: []model.Binding{
+			{Role: model.RoleCommand, Slot: slot, Mode: model.Write},
+			{Role: model.RoleState, Slot: slot, Mode: model.Read},
+		},
+	}
+	comp, err := discovery.RenderComponent(d.hamqttContext(), dev, ent, discovery.Origin{})
+	if err != nil {
+		t.Fatalf("RenderComponent: %v", err)
+	}
+	if comp.StateTopic != "" {
+		t.Errorf("the library projected state_topic %q onto a button; Home Assistant declares "+
+			"no such key on that platform and would drop it in silence", comp.StateTopic)
+	}
+	if comp.CommandTopic == "" {
+		t.Error("the library projected no command_topic onto a button with a writable binding")
+	}
+	body, err := comp.EntityJSON()
+	if err != nil {
+		t.Fatalf("EntityJSON: %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		t.Fatalf("EntityJSON: %v", err)
+	}
+	if _, has := decoded["state_topic"]; has {
+		t.Error("the rendered button payload carries a state_topic")
+	}
+}

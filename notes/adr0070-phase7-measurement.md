@@ -1221,6 +1221,57 @@ rather than left as coverage nobody checked:
   (no button in the pin carries a class) and then the behaviour directly, on
   both renderers.
 
+### Mutation proof
+
+Twenty-one mutations, applied one at a time to `hamqtt.go`, `hamqtt_test.go`
+and `payload.go`, each run against the whole `internal/hass` and
+`internal/bridge` suite and reverted. **Nineteen caught.**
+
+| # | Mutation | Caught by |
+| --- | --- | --- |
+| M1 | `NodeID` uses `topic.Slug` instead of `slugify` | byte (de + curated) + bundle |
+| M2 | `UniqueID` drops the device-id prefix | byte (all four) + identity + buttons |
+| M3 | `ObjectID` slugifies the two halves separately | **equivalent mutant — see below** |
+| M4 | `Layout.Bridge` takes `topic.Default`'s `<root>/bridge/status` | byte + layout-agreement |
+| M5 | `Layout.State` suffix `/state` → `/value` | byte + layout-agreement + inertness |
+| M6 | `Layout.Command` suffix `/set` → `/write` | byte + layout-agreement + inertness |
+| M7 | `Layout.Availability` → `ConnectionState` | byte + layout-agreement + inertness |
+| M8 | `Layout` addresses the device by `Slot.Address` (the identity) | byte + layout-agreement + inertness |
+| M9 | `Encoding` left at the library default (envelope) | byte (all four) |
+| M10 | the per-entity form gains an origin block | byte (all four) |
+| M11 | availability narrowed to `model.BridgeOnly()` | byte (all four) |
+| M12 | the two synthetic program buttons are dropped | byte (all four) + buttons |
+| M13 | synthetic buttons use `commandPressPayload` | byte (all four) + buttons |
+| M14 | `sanitizeDescriptionForPlatform` stops filtering `device_class` | validate + bundle + button-inertness |
+| M15 | it keeps `options` on a non-enum sensor | validate + bundle |
+| M16 | `enabled_by_default` is never emitted | byte (all four) |
+| M17 | a button gains a readable state binding | **equivalent mutant — see below** |
+| M18 | the config topic is built from the four-segment unique-id form | compile |
+| M19 | the F13 rejection set loses one row | validate + bundle |
+| M20 | `deviceClassAllowed` accepts everything on `button` | button-inertness |
+| M21 | the verdict test accepts the four-segment form | topic-form |
+
+Two could not be made to fail, and both are **equivalent**, not missed. #41's
+standard is that such a thing is named rather than left as coverage nobody
+checked, so each has an assertion of its own:
+
+- **M3.** `slugify(device + "_" + key)` and `slugify(device) + "_" +
+  slugify(key)` are equal for every input the daemon can reach — `slugify`
+  collapses a run of separators to one underscore and trims the ends, so the
+  two can only differ when one half slugifies to empty, and
+  `profile.validateDeviceName` refuses a device name with no ASCII letter or
+  digit for exactly that reason.
+  `TestObjectIDCompositionIsAnEquivalentMutant` asserts the equivalence over
+  6 183 device × key pairs *and* the one input that breaks it; it fails if
+  `slugify` stops trimming.
+- **M17.** Giving a button a readable state binding changes no byte, because
+  go-hamqtt projects `state_topic` only onto the platforms whose schema
+  declares it and `button` is one of the ten that do not. That is the
+  library's guarantee, and a test that only ever renders correct input never
+  exercises it.
+  `TestGoHamqttRefusesAStateTopicOnAWriteOnlyPlatform` renders the wrong
+  input deliberately and asserts the refusal.
+
 ### `button` — the platform new to this rollout
 
 Neither sibling bridge publishes one. All **20** per appliance are
