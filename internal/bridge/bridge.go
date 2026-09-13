@@ -130,7 +130,7 @@ func (b *Bridge) Run(ctx context.Context) error {
 	// accepted after this daemon has announced itself gone would be
 	// executed by nobody and acknowledged by nothing. Stop drains, so it
 	// blocks on whatever a handler is doing.
-	defer b.stopCommands()
+	defer b.stopCommands()      //nolint:contextcheck // the drain is deliberately bounded independently of ctx: Run's ctx is cancelled by the time this fires, and a handler mid-write still has to finish
 	b.refreshDiscoveryOnce(ctx) // one-shot HASS_DISCOVERY_REFRESH migration
 	g, gctx := errgroup.WithContext(ctx)
 	for _, d := range b.devices {
@@ -167,8 +167,14 @@ func (b *Bridge) PublishOnline(ctx context.Context) {
 	}
 }
 
-// stopCommands drains the command router, bounded independently of the
-// worker context so a shutdown still drains after a cancel.
+// stopCommands drains the command router.
+//
+// The timeout is its own, deliberately not derived from Run's context:
+// that context is already cancelled when this runs, and a Stop on a
+// cancelled context would abandon a handler mid-write rather than let it
+// finish. Stop blocks on whatever a handler is currently doing, which is
+// the point — a command accepted and then dropped is a button press that
+// did nothing, with no error anywhere to explain it.
 func (b *Bridge) stopCommands() {
 	if b.commands == nil {
 		return

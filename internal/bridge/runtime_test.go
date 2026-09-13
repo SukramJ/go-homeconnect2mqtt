@@ -46,8 +46,8 @@ func (s *logSink) WithGroup(string) slog.Handler      { return s }
 func (s *logSink) sawMessage(msg string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for _, r := range s.records {
-		if r.Message == msg {
+	for i := range s.records {
+		if s.records[i].Message == msg {
 			return true
 		}
 	}

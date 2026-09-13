@@ -208,7 +208,7 @@ func TestWillIsCopiedFromTheRuntimeNotSpelledAgain(t *testing.T) {
 		Retain:  false,
 	}
 	got := mqttClientConfig(cfg, perturbed, slog.New(slog.DiscardHandler)).Will
-	if got.Topic != perturbed.Topic || string(got.Payload) != string(perturbed.Payload) ||
+	if got.Topic != perturbed.Topic || !bytes.Equal(got.Payload, perturbed.Payload) ||
 		byte(got.QoS) != perturbed.QoS || got.Retain != perturbed.Retain {
 		t.Errorf("will = %+v, want every field copied from the runtime's %+v — "+
 			"a field spelled again here is a field that can drift from the "+

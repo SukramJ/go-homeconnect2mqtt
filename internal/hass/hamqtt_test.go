@@ -18,6 +18,7 @@ import (
 	"github.com/SukramJ/go-hamqtt/discovery"
 	"github.com/SukramJ/go-hamqtt/model"
 	"github.com/SukramJ/go-hamqtt/publisher"
+
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/pincatalog"
 )

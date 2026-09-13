@@ -4,6 +4,7 @@
 package haplane
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"log/slog"
@@ -215,8 +216,9 @@ func TestPublishStateDeduplicatesARetainedRepeat(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	var got []string
-	for _, r := range c.records() {
+	recs := c.records()
+	got := make([]string, 0, len(recs))
+	for _, r := range recs {
 		got = append(got, string(r.payload))
 	}
 	want := []string{"Run", "Inactive", "Run"}
@@ -358,7 +360,7 @@ func TestWillAgreesWithTheAnnouncements(t *testing.T) {
 	if string(recs[0].payload) != string(publisher.BirthPayload) {
 		t.Errorf("birth payload = %q", recs[0].payload)
 	}
-	if string(recs[1].payload) != string(will.Payload) {
+	if !bytes.Equal(recs[1].payload, will.Payload) {
 		t.Errorf("offline payload = %q, will payload = %q", recs[1].payload, will.Payload)
 	}
 }
