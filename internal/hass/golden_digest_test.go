@@ -31,12 +31,15 @@ import (
 // because the test failed and you do not know which finding moved the
 // bytes, the answer is not to paste the new digest.
 var goldenDigests = map[string]string{
-	// Unchanged since the pins were taken (#40). No finding in this PR
-	// moves the English full set's topics or identity.
-	"discovery_full_en.json":    "ea481a97e07dd77d1c4b115af749afcafbcc385e0e4938d2f11159628a5d5901",
-	"discovery_full_de.json":    "472708115548a48ddb9d994e53e5f1c66832f7be043cb8e5ddc2c8f0067e6a06",
-	"discovery_curated_de.json": "28b4dd381b3d207c627685dc25c73dfb015da441c09f08592d268908ad336e04",
-	"discovery_plain_en.json":   "eaa174d99ebdd8a8b69ec7be543e5bfe94e5184f8eb98a10cd515e76e924e268",
+	// Moved once since the pins were taken (#40), by F1: in all four
+	// payload files the flat "availability_topic" was replaced by the
+	// two-source "availability" list plus "availability_mode": "all".
+	// No other key moved in any row, and identity_en.json is UNCHANGED —
+	// F1 touches no string Home Assistant keys a registry on.
+	"discovery_full_en.json":    "7dc318cdbf5b558800b5d21c56bafc6654712a3b34ae09b0d4f89b98d8e826ad",
+	"discovery_full_de.json":    "79e7488393b05e3219ad80b02c69e0480686137e34dc67cd2a3ac768383099cc",
+	"discovery_curated_de.json": "42e51f2f26d3eb3f6f583ae57b252864d9baac8130260fa1ddd5578514ea956b",
+	"discovery_plain_en.json":   "094c32e44b50f3827216dc068bbf8c4b8fa729bb8e774adcf4ad1375ff9a75bc",
 	"identity_en.json":          "16d00294cc7afb1e75f36408ee6cfe409080ab81de5fb0ddac6d0c56ccaad616",
 }
 

@@ -22,6 +22,7 @@ import (
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mapping"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/pincatalog"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 )
 
 // The golden files in testdata/ pin every byte this daemon publishes to
@@ -56,10 +57,11 @@ import (
 // fixes them produces a diff a reviewer can see. Do not "fix" the golden
 // file instead of the code. See the measurement document for F1-F12:
 //
-//   - F1 — no entity declares the bridge-level availability topic that the
-//     daemon's LWT actually writes, so a killed daemon leaves every entity
-//     showing its last value forever. Pinned by
-//     TestGoldenPinsTheBridgeAvailabilityGap.
+//   - F1 — FIXED. Every payload now declares both availability levels
+//     (bridge then device) under mode "all", and the bridge entry is the
+//     topic the Last Will writes. Asserted by
+//     TestEveryPayloadDeclaresBothAvailabilityLevels and
+//     TestBridgeAvailabilityTopicIsTheOneTheWillWrites.
 //   - F2 — the config topic's node id is sanitize(device) while every
 //     state and command topic uses the RAW device name. Pinned by
 //     TestGoldenPinsTheSanitizedNodeIDAsymmetry.
@@ -449,32 +451,86 @@ func TestGoldenPinsTheTopicForm(t *testing.T) {
 // nobody subscribed an entity to.
 //
 // This asserts the CURRENT, defective shape. The fix step flips it.
-func TestGoldenPinsTheBridgeAvailabilityGap(t *testing.T) {
-	const deviceAvail = goldenRoot + "/" + goldenDeviceEN + "/availability"
-	const bridgeAvail = goldenRoot + "/status"
-	n := 0
-	for _, r := range publishPin(t, "en", goldenDeviceEN, false, true) {
-		n++
-		if got := r.Payload["availability_topic"]; got != deviceAvail {
-			t.Errorf("%s: availability_topic = %v, want %q", r.Topic, got, deviceAvail)
-		}
-		if _, has := r.Payload["availability"]; has {
-			t.Errorf("%s carries both the flat and the list availability form", r.Topic)
-		}
-		if _, has := r.Payload["availability_mode"]; has {
-			t.Errorf("%s declares availability_mode with a single source", r.Topic)
-		}
-		for _, k := range []string{"payload_available", "payload_not_available"} {
-			if _, has := r.Payload[k]; has {
-				t.Errorf("%s declares %q; today it relies on Home Assistant's online/offline defaults", r.Topic, k)
+func TestEveryPayloadDeclaresBothAvailabilityLevels(t *testing.T) {
+	for _, tc := range goldenCases {
+		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
+			deviceAvail := goldenRoot + "/" + tc.device + "/availability"
+			want := canonicalString(t, []map[string]any{
+				{"topic": goldenRoot + "/status", "payload_available": "online", "payload_not_available": "offline"},
+				{"topic": deviceAvail, "payload_available": "online", "payload_not_available": "offline"},
+			})
+			n := 0
+			for _, r := range publishPin(t, tc.lang, tc.device, tc.curated, tc.enriched) {
+				n++
+				if got := canonicalString(t, r.Payload["availability"]); got != want {
+					t.Errorf("%s: availability = %s, want %s", r.Topic, got, want)
+				}
+				if got := r.Payload["availability_mode"]; got != "all" {
+					t.Errorf("%s: availability_mode = %v, want \"all\"", r.Topic, got)
+				}
+				// The flat pre-2024 form must be gone, not sitting beside
+				// the list: a payload carrying both is a contradiction
+				// Home Assistant resolves silently.
+				for _, k := range []string{"availability_topic", "payload_available", "payload_not_available"} {
+					if _, has := r.Payload[k]; has {
+						t.Errorf("%s carries the flat key %q alongside the availability list", r.Topic, k)
+					}
+				}
 			}
+			if n == 0 {
+				t.Fatal("no entities published")
+			}
+			t.Logf("F1: %d entities, every one declaring both levels under mode all", n)
+		})
+	}
+}
+
+// TestBridgeAvailabilityTopicIsTheOneTheWillWrites is F1's other half:
+// the topic every payload declares is the one the daemon's own Last Will,
+// birth and shutdown publishes write. Both sides read topic.Bridge, so
+// they cannot drift; this asserts the string that reaches the payload.
+//
+// It also asserts the topic is in the daemon's own publish root and not in
+// Home Assistant's discovery tree, which is why F1 needed no topic move
+// and no retraction of a retained copy at an old location.
+func TestBridgeAvailabilityTopicIsTheOneTheWillWrites(t *testing.T) {
+	want := topic.Bridge(goldenRoot)
+	if want != goldenRoot+"/status" {
+		t.Fatalf("topic.Bridge(%q) = %q, want %q", goldenRoot, want, goldenRoot+"/status")
+	}
+	if strings.HasPrefix(want, goldenPrefix+"/") {
+		t.Errorf("%q is inside Home Assistant's discovery tree", want)
+	}
+	for _, r := range publishPin(t, "en", goldenDeviceEN, false, true) {
+		list, ok := r.Payload["availability"].([]any)
+		if !ok || len(list) != 2 {
+			t.Fatalf("%s: availability is not a two-entry list: %v", r.Topic, r.Payload["availability"])
 		}
-		if strings.Contains(canonicalString(t, r.Payload), bridgeAvail+`"`) {
-			t.Errorf("%s references the bridge status topic — F1 is fixed; "+
-				"update this test and the goldens together", r.Topic)
+		first, ok := list[0].(map[string]any)
+		if !ok {
+			t.Fatalf("%s: availability[0] is not an object: %v", r.Topic, list[0])
+		}
+		if first["topic"] != want {
+			t.Errorf("%s: first availability source = %v, want %q (bridge before device)", r.Topic, first["topic"], want)
 		}
 	}
-	t.Logf("F1: %d entities, none of which references %q (the topic the Last Will writes)", n, bridgeAvail)
+}
+
+// availabilitySource reads the i-th availability topic out of a decoded
+// payload. The list came back through encoding/json, so its entries are
+// []any of map[string]any rather than the types the builder wrote.
+func availabilitySource(t *testing.T, payload map[string]any, i int) string {
+	t.Helper()
+	list, ok := payload["availability"].([]any)
+	if !ok || i >= len(list) {
+		t.Fatalf("availability is not a list with index %d: %v", i, payload["availability"])
+	}
+	m, ok := list[i].(map[string]any)
+	if !ok {
+		t.Fatalf("availability[%d] is not an object: %v", i, list[i])
+	}
+	s, _ := m["topic"].(string)
+	return s
 }
 
 func canonicalString(t *testing.T, v any) string {
@@ -495,8 +551,8 @@ func TestGoldenPinsTheSanitizedNodeIDAsymmetry(t *testing.T) {
 		if parts[2] != "geschirrspuler" {
 			t.Fatalf("%s: node id = %q, want %q", r.Topic, parts[2], "geschirrspuler")
 		}
-		if got := r.Payload["availability_topic"]; got != goldenRoot+"/"+goldenDeviceDE+"/availability" {
-			t.Errorf("%s: availability_topic = %v, want the RAW device name", r.Topic, got)
+		if got := availabilitySource(t, r.Payload, 1); got != goldenRoot+"/"+goldenDeviceDE+"/availability" {
+			t.Errorf("%s: device availability topic = %v, want the RAW device name", r.Topic, got)
 		}
 		if st, ok := r.Payload["state_topic"].(string); ok {
 			sawState = true
@@ -599,7 +655,7 @@ func TestGoldenPinsTheProgramButtonInconsistency(t *testing.T) {
 // entity anyway, under a different key, beside the one it replaced — so
 // nothing downstream would ever report it.
 func TestBothButtonPathsShareTheCommonPayloadShape(t *testing.T) {
-	common := []string{"unique_id", "name", "default_entity_id", "availability_topic", "device"}
+	common := []string{"unique_id", "name", "default_entity_id", "availability", "availability_mode", "device"}
 
 	var synthetic, derived int
 	for _, r := range publishPin(t, "de", goldenDeviceDE, false, true) {
@@ -624,8 +680,8 @@ func TestBothButtonPathsShareTheCommonPayloadShape(t *testing.T) {
 		if want := "button." + slugify(goldenDeviceDE+"_"+key); r.Payload["default_entity_id"] != want {
 			t.Errorf("%s: default_entity_id = %v, want %q", r.Topic, r.Payload["default_entity_id"], want)
 		}
-		if want := goldenRoot + "/" + goldenDeviceDE + "/availability"; r.Payload["availability_topic"] != want {
-			t.Errorf("%s: availability_topic = %v, want %q", r.Topic, r.Payload["availability_topic"], want)
+		if want := goldenRoot + "/" + goldenDeviceDE + "/availability"; availabilitySource(t, r.Payload, 1) != want {
+			t.Errorf("%s: device availability topic = %v, want %q", r.Topic, availabilitySource(t, r.Payload, 1), want)
 		}
 		if _, has := r.Payload["command_topic"]; !has {
 			t.Errorf("%s: a button with no command_topic is rejected by Home Assistant", r.Topic)

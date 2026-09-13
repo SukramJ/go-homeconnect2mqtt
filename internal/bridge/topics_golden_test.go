@@ -60,9 +60,10 @@ import (
 //     fixed-arity filter covers it. It is no longer unguarded: MQTT 5.0
 //     No Local plus a Device.Relative check before dispatch. Asserted by
 //     TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree.
-//   - F7 — the bridge status topic <root>/status carries the Last Will,
-//     and no entity references it. Pinned here as
-//     `availability_topics_no_entity_reads`.
+//   - F1 — FIXED. <root>/status carries the Last Will and is now declared
+//     by every payload, alongside the device availability topic, under
+//     mode "all". `availability_topics_no_entity_reads` is down to the
+//     single connection_state topic (F7, deliberately left).
 
 var updateTopicsGolden = flag.Bool("update-topics-golden", false,
 	"rewrite internal/bridge/testdata/topics.json from the current builders")
@@ -92,8 +93,10 @@ type topicGolden struct {
 	BridgeStatusTopic string `json:"bridge_status_topic"`
 	// DeviceAvailabilityTopics is what the device workers write.
 	DeviceAvailabilityTopics []string `json:"device_availability_topics"`
-	// AvailabilityTopicsNoEntityReads is F7: published, referenced by no
-	// discovery payload.
+	// AvailabilityTopicsNoEntityReads is published, referenced by no
+	// discovery payload. Since F1 that is connection_state alone (F7,
+	// deliberately left); the bridge status topic and the device
+	// availability topic are both declared by every payload.
 	AvailabilityTopicsNoEntityReads []string `json:"availability_topics_no_entity_reads"`
 	// StateTopics is every topic the device worker publishes a value to.
 	StateTopics []string `json:"state_topics"`
@@ -337,14 +340,21 @@ func TestTopicGolden(t *testing.T) {
 
 	availTopics := []string{dev.topics.Availability(), dev.topics.ConnectionState()}
 	sort.Strings(availTopics)
+	// Read the availability LIST, which is what the payloads carry since
+	// F1; the flat availability_topic key is gone.
 	referenced := map[string]bool{}
 	for _, p := range mustPayloads(t, dev) {
-		if at, ok := p["availability_topic"].(string); ok {
-			referenced[at] = true
+		list, _ := p["availability"].([]any)
+		for _, src := range list {
+			if m, ok := src.(map[string]any); ok {
+				if at, ok := m["topic"].(string); ok {
+					referenced[at] = true
+				}
+			}
 		}
 	}
 	unreferenced := []string{}
-	for _, at := range append([]string{pinRoot + "/status"}, availTopics...) {
+	for _, at := range append([]string{topic.Bridge(pinRoot)}, availTopics...) {
 		if !referenced[at] {
 			unreferenced = append(unreferenced, at)
 		}
@@ -352,7 +362,7 @@ func TestTopicGolden(t *testing.T) {
 	sort.Strings(unreferenced)
 
 	got := topicGolden{
-		BridgeStatusTopic:               pinRoot + "/status",
+		BridgeStatusTopic:               topic.Bridge(pinRoot),
 		DeviceAvailabilityTopics:        availTopics,
 		AvailabilityTopicsNoEntityReads: unreferenced,
 		StateTopics:                     realStateTopics(dev),

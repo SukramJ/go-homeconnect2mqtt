@@ -7,10 +7,15 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 	"testing"
 
 	"github.com/SukramJ/go-mqtt"
+
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 )
 
 func TestRunVersion(t *testing.T) {
@@ -118,5 +123,59 @@ func TestMQTTSessionSubscribeBypassesBreaker(t *testing.T) {
 	}
 	if len(sub.unsubscribed) != 1 || sub.unsubscribed[0] != "cmd/#" {
 		t.Fatalf("unsubscriber saw %v, want [cmd/#]", sub.unsubscribed)
+	}
+}
+
+// TestWillIsTheAvailabilitySourceEveryEntityReads is F1 on the publisher
+// side. The Last Will is the one publish this daemon never makes itself,
+// so it is the one the tests could not see: it is asserted here off the
+// mqtt.TCPConfig the transport is handed, not off the constants that went
+// into it.
+//
+// Until F1 the will wrote <MQTT_TOPIC>/status, which no discovery payload
+// referenced — so a killed daemon left every entity showing its last
+// retained value forever. The topic did not move (it was already in the
+// daemon's own publish root, not in Home Assistant's discovery tree,
+// which is why no retained copy needed retracting); what changed is that
+// every payload now declares it.
+func TestWillIsTheAvailabilitySourceEveryEntityReads(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: 1}
+	will := mqttClientConfig(cfg, slog.New(slog.DiscardHandler)).Will
+	if will == nil {
+		t.Fatal("no Last Will configured: a killed daemon would leave every entity available forever")
+	}
+	if want := topic.Bridge(cfg.MQTTTopic); will.Topic != want {
+		t.Errorf("will topic = %q, want %q", will.Topic, want)
+	}
+	if strings.HasPrefix(will.Topic, cfg.HASSBaseTopic+"/") {
+		t.Errorf("will topic %q is inside Home Assistant's discovery tree", will.Topic)
+	}
+	if string(will.Payload) != hass.PayloadNotAvailable {
+		t.Errorf("will payload = %q, want %q", will.Payload, hass.PayloadNotAvailable)
+	}
+	if !will.Retain {
+		t.Error("will is not retained: a subscriber connecting after the death sees nothing")
+	}
+	if will.QoS != mqttQoS(cfg) {
+		t.Errorf("will qos = %v, want %v (the birth publish's guarantee)", will.QoS, mqttQoS(cfg))
+	}
+}
+
+// TestMQTTQoSZeroStaysQoSZero is F9's pin at the translation point.
+// MQTT_QOS: 0 is an operator-facing promise of at-most-once, and the
+// go-hamqtt publisher vocabulary this migration moves onto reads QoS(0) as
+// *unset*, resolving it to QoS 1. The one place that translates it is
+// pinned so the upgrade cannot happen silently.
+func TestMQTTQoSZeroStaysQoSZero(t *testing.T) {
+	t.Parallel()
+	for in, want := range map[int]mqtt.QoS{0: mqtt.QoS0, 1: mqtt.QoS1} {
+		cfg := &config.Config{MQTTQoS: in}
+		if got := mqttQoS(cfg); got != want {
+			t.Errorf("MQTT_QOS: %d -> %v, want %v", in, got, want)
+		}
+		if got := mqttClientConfig(cfg, slog.New(slog.DiscardHandler)).Will.QoS; got != want {
+			t.Errorf("MQTT_QOS: %d -> will qos %v, want %v", in, got, want)
+		}
 	}
 }

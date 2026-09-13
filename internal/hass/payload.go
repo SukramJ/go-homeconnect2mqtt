@@ -35,6 +35,24 @@ const (
 	platformButton       = "button"
 )
 
+// Availability payloads. These are the two words the daemon writes to the
+// bridge status topic and to every device availability topic, and the two
+// every entity is told to read there. Home Assistant's own defaults happen
+// to be the same pair, but an entity that reads a topic must not depend on
+// a default agreeing with a publisher in another package: they are spelled
+// once, here, and read by internal/bridge and cmd/homeconnect2mqtt.
+const (
+	PayloadAvailable    = "online"
+	PayloadNotAvailable = "offline"
+)
+
+// availabilityModeAll requires EVERY declared source to say online. It is
+// written out rather than left to Home Assistant, whose default is
+// `latest` — which with two sources means whichever message arrived last
+// wins, so a live daemon reporting an unreachable appliance would read as
+// available.
+const availabilityModeAll = "all"
+
 // Entity categories (Home Assistant).
 const (
 	categoryDiagnostic = "diagnostic"
@@ -297,7 +315,38 @@ func payloadFor(e *homeconnect.Entity, platform, device string, t entityTopics, 
 	return p
 }
 
-// basePayload builds the five keys every entity this daemon publishes
+// applyAvailability attaches the entity's availability declaration: both
+// levels, and the mode that requires both.
+//
+// Until F1 was fixed every payload declared exactly one flat
+// `availability_topic`, the DEVICE topic — and the daemon's own Last Will
+// wrote the BRIDGE topic, which no payload referenced. The device
+// availability topic is only ever written by the daemon itself, so when
+// the daemon was killed, crashed or lost the broker without a clean
+// shutdown, nothing ever wrote `offline` anywhere an entity was reading:
+// all 687 entities stayed available, showing their last retained value
+// indefinitely. The will fired into a topic bound to nothing.
+//
+// Both sources are genuinely published, which is what makes mode `all`
+// safe here: the bridge topic by the will, the OnConnect birth and the
+// shutdown path in cmd/homeconnect2mqtt; the device topic by the device
+// worker on every connection-state change. A declared source that is
+// never published is not neutral under `all` — it is a permanently
+// unavailable entity with nothing in the log to say why.
+//
+// The flat `availability_topic` is REMOVED rather than left alongside the
+// list. Home Assistant accepts only one of the two forms; a payload
+// carrying both is a contradiction it resolves silently.
+func applyAvailability(p map[string]any, t entityTopics) {
+	delete(p, "availability_topic")
+	p["availability"] = []map[string]any{
+		{"topic": t.bridge, "payload_available": PayloadAvailable, "payload_not_available": PayloadNotAvailable},
+		{"topic": t.availability, "payload_available": PayloadAvailable, "payload_not_available": PayloadNotAvailable},
+	}
+	p["availability_mode"] = availabilityModeAll
+}
+
+// basePayload builds the keys every entity this daemon publishes
 // carries, whatever built it: the two identity strings Home Assistant keys
 // its registries on, the entity-id seed, the availability declaration and
 // the device block.
@@ -312,13 +361,18 @@ func payloadFor(e *homeconnect.Entity, platform, device string, t entityTopics, 
 // key is the per-entity id: featureKey(e) for a feature, the control key
 // for a synthetic button.
 func basePayload(platform, device, key, name string, t entityTopics, dev deviceBlock) map[string]any {
-	return map[string]any{
-		"unique_id":          dev.idPrefix + "_" + key,
-		"name":               name,
-		"default_entity_id":  platform + "." + slugify(device+"_"+key),
-		"availability_topic": t.availability,
-		"device":             dev.block,
+	p := map[string]any{
+		"unique_id":         dev.idPrefix + "_" + key,
+		"name":              name,
+		"default_entity_id": platform + "." + slugify(device+"_"+key),
+		"device":            dev.block,
 	}
+	// Attached here, in the one place both payload builders funnel
+	// through, rather than in each of them: an entity whose availability
+	// was forgotten is indistinguishable from a healthy one until the
+	// daemon dies, which is the failure mode this key exists to close.
+	applyAvailability(p, t)
+	return p
 }
 
 // deviceClassAllowed reports whether dc may be published on platform. sensor

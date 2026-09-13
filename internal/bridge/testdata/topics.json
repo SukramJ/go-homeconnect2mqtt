@@ -5,8 +5,7 @@
     "homeconnect/Geschirrspüler/connection_state"
   ],
   "availability_topics_no_entity_reads": [
-    "homeconnect/Geschirrspüler/connection_state",
-    "homeconnect/status"
+    "homeconnect/Geschirrspüler/connection_state"
   ],
   "state_topics": [
     "homeconnect/Geschirrspüler/BSH/Common/Appliance/Connected/state",

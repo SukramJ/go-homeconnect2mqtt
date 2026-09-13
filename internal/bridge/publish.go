@@ -11,16 +11,19 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 )
 
-// availability payload values.
+// availability payload values. Spelled once in internal/hass, because the
+// entity that reads this topic is told there which two words to expect
+// (F1); a third spelling here could drift from it silently.
 const (
-	availOnline  = "online"
-	availOffline = "offline"
+	availOnline  = hass.PayloadAvailable
+	availOffline = hass.PayloadNotAvailable
 )
 
 // payloadNone is Home Assistant's "no value" payload: an mqtt select clears its

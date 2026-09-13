@@ -75,6 +75,10 @@ type entityTopics struct {
 	state        string
 	command      string
 	availability string
+	// bridge is the daemon's own status topic — the one the Last Will
+	// writes, and the one every payload declares alongside the device
+	// topic (F1).
+	bridge string
 }
 
 type deviceBlock struct {
@@ -88,6 +92,7 @@ func (d *Discovery) topicsFor(device string, e *homeconnect.Entity) entityTopics
 		state:        dt.State(e.Name(), e.UID()),
 		command:      dt.Command(e.Name(), e.UID()),
 		availability: dt.Availability(),
+		bridge:       topic.Bridge(d.rootTopic),
 	}
 }
 
@@ -247,6 +252,7 @@ func (d *Discovery) publishProgramControls(ctx context.Context, device string, e
 	t := entityTopics{
 		command:      "", // no feature behind it; the control topic is its own
 		availability: dt.Availability(),
+		bridge:       topic.Bridge(d.rootTopic),
 	}
 	for _, c := range controls {
 		name := c.nameEN

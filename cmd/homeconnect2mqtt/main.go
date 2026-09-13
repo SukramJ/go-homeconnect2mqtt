@@ -28,6 +28,7 @@ import (
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mapping"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/state"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/version"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/web"
 )
@@ -90,20 +91,21 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	statusTopic := cfg.MQTTTopic + "/status"
-	client := mqtt.NewTCPClient(mqtt.TCPConfig{
-		BrokerURL:  cfg.MQTTServer,
-		ClientID:   config.ClientID,
-		Username:   cfg.MQTTLogin,
-		Password:   cfg.MQTTPassword,
-		CleanStart: true,
-		Will: &mqtt.Will{
-			Topic:   statusTopic,
-			Payload: []byte("offline"),
-			Retain:  true,
-		},
-		Logger: logger,
-	})
+	// The daemon's own availability topic: the broker-side will covers
+	// ungraceful death, the OnConnect hook below publishes the matching
+	// "online" birth, and the shutdown path re-publishes "offline" because
+	// a graceful DISCONNECT suppresses the will. Every discovery payload
+	// declares this same string as its bridge-level availability source,
+	// which is why both sides read it from one function (F1).
+	//
+	// It stays at <MQTT_TOPIC>/status, where it has always been. It is
+	// already in the daemon's own publish root rather than in Home
+	// Assistant's discovery tree, so there is nothing to move and no
+	// retained copy to retract; an operator automation watching it keeps
+	// working. It is bridge-level and not under a device because this
+	// daemon mirrors several appliances over one broker connection.
+	statusTopic := topic.Bridge(cfg.MQTTTopic)
+	client := mqtt.NewTCPClient(mqttClientConfig(cfg, logger))
 	lc := mqtt.NewLifecycle(mqtt.LifecycleConfig{
 		InitialBackoff: cfg.ReconnectInitialDuration(),
 		MaxBackoff:     cfg.ReconnectMaxDuration(),
@@ -111,7 +113,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 		Logger:         logger,
 	}, client)
 	lc.OnConnect(func(ctx context.Context) {
-		_ = client.Publish(ctx, statusTopic, []byte("online"), mqtt.QoS(cfg.MQTTQoS), true)
+		_ = client.Publish(ctx, statusTopic, []byte(hass.PayloadAvailable), mqttQoS(cfg), true)
 	})
 	if err := lc.Start(ctx); err != nil {
 		return fmt.Errorf("mqtt: %w", err)
@@ -134,13 +136,13 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	defer func() {
 		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = client.Publish(stopCtx, statusTopic, []byte("offline"), mqtt.QoS(cfg.MQTTQoS), true)
+		_ = client.Publish(stopCtx, statusTopic, []byte(hass.PayloadNotAvailable), mqttQoS(cfg), true)
 		_ = lc.Stop(stopCtx)
 	}()
 
 	var disc *hass.Discovery
 	if cfg.HASSEnable {
-		disc = hass.New(breaker, cfg.HASSBaseTopic, cfg.MQTTTopic, mqtt.QoS(cfg.MQTTQoS), cfg.Language, cfg.HASSDiscovery == "curated", logger)
+		disc = hass.New(breaker, cfg.HASSBaseTopic, cfg.MQTTTopic, mqttQoS(cfg), cfg.Language, cfg.HASSDiscovery == "curated", logger)
 		if cat, err := mapping.Load(mappingPath); err != nil {
 			logger.Warn("mapping.load", slog.String("err", err.Error()))
 		} else {
@@ -179,6 +181,44 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	g.Go(func() error { return br.Run(gctx) })
 	g.Go(func() error { return webSrv.Run(gctx) })
 	return g.Wait()
+}
+
+// mqttClientConfig builds the broker client configuration, including the
+// Last Will. It is a function rather than a literal inside run() so the
+// will — the one publish this daemon never makes itself — can be asserted
+// off the value the transport is handed, rather than off the constants
+// that went into it.
+func mqttClientConfig(cfg *config.Config, logger *slog.Logger) mqtt.TCPConfig {
+	return mqtt.TCPConfig{
+		BrokerURL:  cfg.MQTTServer,
+		ClientID:   config.ClientID,
+		Username:   cfg.MQTTLogin,
+		Password:   cfg.MQTTPassword,
+		CleanStart: true,
+		Will: &mqtt.Will{
+			// The same topic every discovery payload declares as its
+			// bridge-level availability source (F1).
+			Topic:   topic.Bridge(cfg.MQTTTopic),
+			Payload: []byte(hass.PayloadNotAvailable),
+			// Matched to the birth and shutdown publishes. It was left at
+			// the zero value (QoS 0) while those went out at MQTT_QOS,
+			// which was cosmetic only while nothing read the topic; every
+			// entity now does.
+			QoS:    mqttQoS(cfg),
+			Retain: true,
+		},
+		Logger: logger,
+	}
+}
+
+// mqttQoS translates the operator's MQTT_QOS (validated to 0..1) into the
+// transport's QoS. It is written out rather than cast at each call site
+// because the value 0 is load-bearing and its meaning is not portable: it
+// is QoS 0 here, and in the go-hamqtt publisher vocabulary this migration
+// moves onto, QoS(0) means *unset* and resolves to QoS 1. A deliberate
+// QoS 0 has to survive that translation, so there is one place to change.
+func mqttQoS(cfg *config.Config) mqtt.QoS {
+	return mqtt.QoS(cfg.MQTTQoS) //nolint:gosec // MQTT_QOS is validated to 0..1
 }
 
 func loadConfig(configPath string) (*config.Config, error) {
