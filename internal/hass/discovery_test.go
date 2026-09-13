@@ -196,9 +196,18 @@ func TestPublishDevice(t *testing.T) {
 
 type fakeEnricher struct{}
 
+// DeviceClass returns a class Home Assistant's sensor platform actually
+// declares. It used to return "custom_class", which it does not: sensor was
+// treated as an open vocabulary (F13) and any string was published, so the
+// entity was dropped by Home Assistant during schema validation, silently.
+// The refusal path is covered by TestEnrichmentOverrideIsRefusedWhenThe
+// PlatformDoesNotDeclareIt below.
 func (fakeEnricher) DeviceClass(feature string) (string, bool) {
-	if feature == "BSH.Common.Status.Temp" {
-		return "custom_class", true
+	switch feature {
+	case "BSH.Common.Status.Temp":
+		return "humidity", true
+	case "BSH.Common.Status.OperationState":
+		return "door", true // a binary_sensor class; the sensor platform refuses it
 	}
 	return "", false
 }
@@ -228,8 +237,46 @@ func TestEnrichmentOverride(t *testing.T) {
 	}
 	var p map[string]any
 	_ = json.Unmarshal([]byte(raw), &p)
-	if p["device_class"] != "custom_class" || p["unit_of_measurement"] != "K" {
+	if p["device_class"] != "humidity" || p["unit_of_measurement"] != "K" {
 		t.Errorf("enrichment override not applied: class=%v unit=%v", p["device_class"], p["unit_of_measurement"])
+	}
+}
+
+// TestEnrichmentOverrideIsRefusedWhenThePlatformDoesNotDeclareIt is F13 as a
+// unit test, independent of the shipped catalogue and of the pin fixture:
+// an operator override naming a class the target platform does not declare
+// must not reach the payload, because Home Assistant would then drop the
+// whole entity without a word.
+func TestEnrichmentOverrideIsRefusedWhenThePlatformDoesNotDeclareIt(t *testing.T) {
+	app, entities := buildEntities(t)
+	pub := newStubPub()
+	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
+	d.SetEnricher(fakeEnricher{})
+	d.PublishDevice(context.Background(), "dw", app.Info(), entities)
+
+	raw := pub.pubs["homeassistant/sensor/dw/bsh_common_status_operationstate/config"]
+	if raw == "" {
+		t.Fatal("missing operation-state sensor config")
+	}
+	var p map[string]any
+	if err := json.Unmarshal([]byte(raw), &p); err != nil {
+		t.Fatal(err)
+	}
+	if got, has := p["device_class"]; has && got == "door" {
+		t.Error(`the sensor carries device_class "door", which the sensor platform does not ` +
+			`declare; Home Assistant drops such an entity during schema validation`)
+	}
+	if _, has := p["unique_id"]; !has {
+		t.Error("the entity itself was dropped; the refusal must drop the KEY, not the entity")
+	}
+	// The refusal falls back to the HEURISTIC class rather than clearing the
+	// key, which is what keeps an enum sensor's options list (F13's rider).
+	if p["device_class"] != deviceClassEnum {
+		t.Errorf("device_class = %v, want %q: a refused override leaves the heuristic in place",
+			p["device_class"], deviceClassEnum)
+	}
+	if opts, _ := p["options"].([]any); len(opts) == 0 {
+		t.Error("the enum sensor lost its options list along with the refused override")
 	}
 }
 

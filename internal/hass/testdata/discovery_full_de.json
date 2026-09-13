@@ -7563,9 +7563,14 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "battery_charging",
+      "device_class": "enum",
       "entity_category": "diagnostic",
       "name": "Batterieladezustand",
+      "options": [
+        "Aus",
+        "Auto",
+        "Ein"
+      ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/BatteryChargingState/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_status_batterychargingstate"
     }
@@ -7664,7 +7669,6 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "plug",
       "entity_category": "diagnostic",
       "name": "Ladeverbindung",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/ChargingConnection/state",
@@ -23077,7 +23081,6 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Flaschenkühler-Tür",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/BottleCooler/state",
@@ -23111,7 +23114,6 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Chiller-Tür",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/Chiller/state",
@@ -23145,7 +23147,6 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Gemeinsame Chiller-Tür",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/ChillerCommon/state",
@@ -23179,7 +23180,6 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Chiller-Tür links",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/ChillerLeft/state",
@@ -23213,7 +23213,6 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Chiller-Tür rechts",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/ChillerRight/state",
@@ -23247,7 +23246,6 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Flex-Fach-Tür",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/FlexCompartment/state",
@@ -23281,7 +23279,6 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Gefrierschranktür",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/Freezer/state",
@@ -23315,7 +23312,6 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Kühlschranktür",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/Refrigerator/state",
@@ -23417,7 +23413,6 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "door",
       "entity_category": "diagnostic",
       "name": "Weinfach-Tür",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Status/Door/WineCompartment/state",

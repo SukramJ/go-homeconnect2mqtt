@@ -115,7 +115,27 @@ func (d *Discovery) deviceBlockFor(device string, info profile.DeviceInfo) devic
 
 // applyEnrichment localizes the friendly name and applies catalogue overrides
 // on top of the heuristic payload.
-func (d *Discovery) applyEnrichment(e *homeconnect.Entity, payload map[string]any) {
+//
+// A device_class override is applied only when the platform the entity landed
+// on declares it (F13). mapping.yaml is generated to mirror the official
+// `home_connect` integration, where thirteen of its features are BINARY
+// sensors; whenever an appliance models one of them as anything but a
+// read-only boolean this bridge classifies it as a `sensor`, and `sensor`
+// declares none of `door`, `plug`, `connectivity`, `light` or
+// `battery_charging`. Home Assistant then discards the entity whole, during
+// schema validation, with nothing on the wire and nothing in a log to say so.
+//
+// The refusal leaves the HEURISTIC class in place rather than clearing the
+// key, which is the same contract an absent catalogue entry has: an override
+// that cannot be published is an override that did not apply. That is also
+// what keeps an enum sensor's `options`, since the heuristic class it falls
+// back to is `enum` and sanitizeForPlatform keys the options branch on it.
+//
+// sanitizeForPlatform still runs afterwards and still filters the same pair.
+// This is not a replacement for it — the heuristic can produce a class the
+// platform refuses too — it is the point at which the daemon can still say
+// WHICH override it dropped and why.
+func (d *Discovery) applyEnrichment(e *homeconnect.Entity, payload map[string]any, platform string) {
 	if d.enrich == nil || e.Name() == "" {
 		return
 	}
@@ -124,7 +144,11 @@ func (d *Discovery) applyEnrichment(e *homeconnect.Entity, payload map[string]an
 		payload["name"] = name
 	}
 	if dc, ok := d.enrich.DeviceClass(f); ok {
-		payload["device_class"] = dc
+		if deviceClassAllowed(platform, dc) {
+			payload["device_class"] = dc
+		} else {
+			d.logRefusedDeviceClass(f, platform, dc)
+		}
 	}
 	if unit, ok := d.enrich.Unit(f); ok {
 		payload["unit_of_measurement"] = unit
@@ -142,6 +166,18 @@ func (d *Discovery) applyEnrichment(e *homeconnect.Entity, payload map[string]an
 			payload["enabled_by_default"] = false
 		}
 	}
+}
+
+// logRefusedDeviceClass names an operator override the target platform cannot
+// carry. Home Assistant says nothing when it drops such an entity, which is
+// the whole reason F13 survived unnoticed in the shipped catalogue; this is
+// the one place the daemon knows both halves of the pair.
+func (d *Discovery) logRefusedDeviceClass(feature, platform, dc string) {
+	d.logger.Warn("hass.device_class_refused",
+		slog.String("feature", feature),
+		slog.String("platform", platform),
+		slog.String("device_class", dc),
+		slog.String("action", "override dropped, heuristic class kept"))
 }
 
 // localizeOptions translates a select's enum options to the configured display
@@ -195,7 +231,7 @@ func (d *Discovery) PublishDevice(ctx context.Context, device string, info profi
 			continue
 		}
 		payload := payloadFor(e, platform, device, d.topicsFor(device, e), dev)
-		d.applyEnrichment(e, payload)
+		d.applyEnrichment(e, payload, platform)
 		d.localizeOptions(payload)
 		sanitizeForPlatform(payload, platform)
 		// Curated mode: only publish the enabled-by-default (primary) entities.

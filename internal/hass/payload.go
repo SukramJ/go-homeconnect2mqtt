@@ -21,6 +21,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
+
+	hacatalog "github.com/SukramJ/go-ha-catalog"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
@@ -78,26 +81,40 @@ const commandPressPayload = "true"
 // two button paths that survives their convergence (F6).
 const controlPressPayload = "PRESS"
 
-// Device classes Home Assistant accepts per platform. HA validates a discovery
-// config strictly and discards the WHOLE entity when device_class is not one of
-// them, so a class derived from the content type (or set by the operator
-// catalogue) is filtered against the platform it lands on before publishing.
-var (
-	binarySensorClasses = classSet("battery", "battery_charging", "carbon_monoxide", "cold",
-		"connectivity", "door", "garage_door", "gas", "heat", "light", "lock", "moisture",
-		"motion", "moving", "occupancy", "opening", "plug", "power", "presence", "problem",
-		"running", "safety", "smoke", "sound", "tamper", "update", "vibration", "window")
-	switchClasses = classSet("outlet", "switch")
-	buttonClasses = classSet("identify", "restart", "update")
-)
-
-func classSet(vals ...string) map[string]bool {
-	m := make(map[string]bool, len(vals))
-	for _, v := range vals {
-		m[v] = true
+// deviceClasses is Home Assistant's per-platform device-class vocabulary,
+// decoded once from go-ha-catalog's embedded snapshot of home-assistant/core.
+//
+// It replaces three hand-maintained sets and, more importantly, a
+// `case platformSensor: return true` that trusted the operator catalogue
+// absolutely (F13). Home Assistant validates a discovery config strictly and
+// discards the WHOLE entity when device_class is not one of the classes the
+// target platform declares — silently, before the entity exists, with no
+// error on the wire and no log line. `sensor` is not the open vocabulary the
+// old code assumed: it declares 62 classes and `door`, `plug`,
+// `battery_charging`, `connectivity` and `light` are not among them.
+//
+// The table is a data file embedded in go-ha-catalog, so a decode failure is
+// a broken build of this binary rather than a runtime condition, and
+// TestDeviceClassTableLoads asserts it. When it does fail, deviceClassAllowed
+// fails CLOSED — no entity carries a device_class at all. That costs every
+// entity an icon and its class semantics; the open failure costs the whole
+// entity, and at ADR 0070 step 6, where a device bundle is validated as one
+// document, it costs every entity on the device.
+var deviceClasses = sync.OnceValue(func() map[string]map[string]bool {
+	raw, err := hacatalog.LoadDeviceClasses()
+	if err != nil {
+		return nil
 	}
-	return m
-}
+	out := make(map[string]map[string]bool, len(raw))
+	for platform, classes := range raw {
+		set := make(map[string]bool, len(classes))
+		for _, c := range classes {
+			set[c] = true
+		}
+		out[platform] = set
+	}
+	return out
+})
 
 // classify maps an entity to a Home Assistant platform. ok is false when
 // the entity should not be exposed via discovery (e.g. a raw program node).
@@ -387,26 +404,23 @@ func basePayload(platform, device, key, name string, t entityTopics, dev deviceB
 	return p
 }
 
-// deviceClassAllowed reports whether dc may be published on platform. sensor
-// and number carry HA's open-ended value classes (the operator catalogue is
-// trusted there); the boolean platforms take a small fixed set and select takes
-// none at all. `enum` is sensor-only — attaching it to the event binary_sensors
-// (both the enum heuristic and the catalogue used to) makes HA reject them.
+// deviceClassAllowed reports whether dc may be published on platform, against
+// Home Assistant's own per-platform tables rather than against a judgement
+// about which platforms have an "open" vocabulary. None of them does: `select`
+// declares no device class at all, `switch` two, `button` three,
+// `binary_sensor` 28, `number` 58 and `sensor` 62 — and the two largest are
+// not supersets of the smallest. `enum` is sensor-only; `door`, `plug`,
+// `connectivity`, `light` and `battery_charging` are binary_sensor-only.
+//
+// An unknown platform and a failed table load both answer false. Publishing no
+// device class is recoverable; publishing one the platform refuses is not
+// visible at all.
 func deviceClassAllowed(platform, dc string) bool {
-	switch platform {
-	case platformSensor:
-		return true
-	case platformNumber:
-		return dc != deviceClassEnum
-	case platformBinarySensor:
-		return binarySensorClasses[dc]
-	case platformSwitch:
-		return switchClasses[dc]
-	case platformButton:
-		return buttonClasses[dc]
-	default: // select
+	t := deviceClasses()
+	if t == nil {
 		return false
 	}
+	return t[platform][dc]
 }
 
 // sanitizeForPlatform strips attributes the target platform rejects. It runs
