@@ -20,10 +20,14 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/SukramJ/go-hamqtt/publisher"
+	hagomqtt "github.com/SukramJ/go-hamqtt/publisher/gomqtt"
+
 	"github.com/SukramJ/go-mqtt"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/bridge"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mapping"
@@ -91,41 +95,57 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// The daemon's own availability topic: the broker-side will covers
-	// ungraceful death, the OnConnect hook below publishes the matching
-	// "online" birth, and the shutdown path re-publishes "offline" because
-	// a graceful DISCONNECT suppresses the will. Every discovery payload
-	// declares this same string as its bridge-level availability source,
-	// which is why both sides read it from one function (F1).
+	// The daemon's own availability topic and the whole Home Assistant
+	// publish plane.
 	//
-	// It stays at <MQTT_TOPIC>/status, where it has always been. It is
-	// already in the daemon's own publish root rather than in Home
+	// The ordering here is a knot and the placeholder transport is what
+	// unties it: the Last Will is part of CONNECT, so the MQTT client
+	// needs publisher.Runtime.Will BEFORE it exists — while the runtime
+	// needs a transport wrapping that very client. The plane is therefore
+	// built over haplane.Transport and the real adapter wired into it
+	// below, before the lifecycle starts.
+	//
+	// The status topic stays at <MQTT_TOPIC>/status, where it has always
+	// been: already in the daemon's own publish root rather than in Home
 	// Assistant's discovery tree, so there is nothing to move and no
-	// retained copy to retract; an operator automation watching it keeps
-	// working. It is bridge-level and not under a device because this
-	// daemon mirrors several appliances over one broker connection.
-	statusTopic := layout.Bridge(cfg.MQTTTopic)
-	client := mqtt.NewTCPClient(mqttClientConfig(cfg, logger))
+	// retained copy to retract, and an operator automation watching it
+	// keeps working. It is bridge-level and not under a device because
+	// this daemon mirrors several appliances over one broker connection.
+	//
+	// Both StatusTopic and Layout are stated, and that IS the assertion:
+	// publisher.New fills an empty StatusTopic from the layout and refuses
+	// one that disagrees with it. Every discovery payload declares this
+	// same string as its bridge-level availability source (F1), so the two
+	// sides cannot drift — under `availability_mode: all` a typo would
+	// grey out the whole fleet with nothing on the wire naming the cause.
+	haLink := &haplane.Transport{}
+	plane := haplane.New(haLink, haplane.Config{
+		Prefix:      cfg.HASSBaseTopic,
+		StatusTopic: layout.Bridge(cfg.MQTTTopic),
+		Layout:      hass.NewLayout(cfg.MQTTTopic),
+		QoS:         haplane.QoS(cfg.MQTTQoS),
+		Retain:      cfg.RetainEnabled(),
+		Logger:      logger,
+	})
+	will, err := plane.Will()
+	if err != nil {
+		return fmt.Errorf("mqtt: last will: %w", err)
+	}
+
+	client := mqtt.NewTCPClient(mqttClientConfig(cfg, will, logger))
 	lc := mqtt.NewLifecycle(mqtt.LifecycleConfig{
 		InitialBackoff: cfg.ReconnectInitialDuration(),
 		MaxBackoff:     cfg.ReconnectMaxDuration(),
 		Jitter:         cfg.ReconnectJitterDuration(),
 		Logger:         logger,
 	}, client)
-	lc.OnConnect(func(ctx context.Context) {
-		_ = client.Publish(ctx, statusTopic, []byte(hass.PayloadAvailable), mqttQoS(cfg), true)
-	})
-	if err := lc.Start(ctx); err != nil {
-		return fmt.Errorf("mqtt: %w", err)
-	}
 	// Circuit breaker between the bridge and the broker: during a
 	// degraded-broker phase (TCP link up, acks missing) publishes fail
 	// fast with mqtt.ErrCircuitOpen instead of each stalling on the ack
 	// timeout, and bounded half-open probes test recovery. Defaults: 5
 	// consecutive broker-side failures open the circuit, recovery is
 	// probed after 30s. The lifecycle's reconnect loop stays in charge
-	// of the link itself; the status-topic publishes below intentionally
-	// bypass the breaker for the same reason.
+	// of the link itself.
 	breaker := mqtt.NewBreaker(client, mqtt.BreakerConfig{
 		OnStateChange: func(from, to mqtt.BreakerState) {
 			logger.Warn("homeconnect2mqtt.mqtt_breaker_state",
@@ -133,16 +153,14 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 				slog.String("to", to.String()))
 		},
 	})
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		_ = client.Publish(stopCtx, statusTopic, []byte(hass.PayloadNotAvailable), mqttQoS(cfg), true)
-		_ = lc.Stop(stopCtx)
-	}()
+	haLink.Wire(haTransport(layout.Bridge(cfg.MQTTTopic), breaker, client))
+
+	// The MQTT surface handed to the bridge, same split.
+	session := mqtt.SplitClient(breaker, client)
 
 	var disc *hass.Discovery
 	if cfg.HASSEnable {
-		disc = hass.New(breaker, cfg.HASSBaseTopic, cfg.MQTTTopic, mqttQoS(cfg), cfg.Language, cfg.HASSDiscovery == "curated", logger)
+		disc = hass.New(plane, cfg.HASSBaseTopic, cfg.MQTTTopic, cfg.Language, cfg.HASSDiscovery == "curated", logger)
 		if cat, err := mapping.Load(mappingPath); err != nil {
 			logger.Warn("mapping.load", slog.String("err", err.Error()))
 		} else {
@@ -151,23 +169,43 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 		}
 	}
 
-	// The MQTT surface handed to the bridge: Publish is gated by the
-	// circuit breaker, while Subscribe/Unsubscribe go straight to the
-	// client — subscriptions are startup-path calls with their own
-	// SUBACK-bounded wait and must not be rejected during a publish-side
-	// broker brownout. mqtt.SplitClient (go-mqtt v1.4.0) is exactly this
-	// shape; it replaces the struct this file used to hand-roll.
-	session := mqtt.SplitClient(breaker, client)
-
 	var store *state.Store
 	if cfg.WebEnable {
 		store = state.New(nil)
 	}
 
-	br, err := bridge.New(bridge.Deps{Config: cfg, MQTT: session, Logger: logger, Devices: specs, HASS: disc, State: store})
+	br, err := bridge.New(bridge.Deps{
+		Config: cfg, MQTT: session, Logger: logger,
+		Devices: specs, HASS: disc, State: store, Plane: plane,
+	})
 	if err != nil {
 		return err
 	}
+
+	// Registered before Start so the very first connect takes it too, and
+	// on EVERY (re)connect rather than only at boot: the broker publishes
+	// the will on the drop, so a reconnected daemon that does not
+	// re-announce stays offline in Home Assistant while happily publishing
+	// state nobody displays. PublishOnline also rebuilds the discovery
+	// runtime and opens the state plane's dedup gate, both of which
+	// describe a broker connection rather than this process.
+	lc.OnConnect(br.PublishOnline)
+	if err := lc.Start(ctx); err != nil {
+		return fmt.Errorf("mqtt: %w", err)
+	}
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+		// Drain the discovery runtime's birth-replay worker BEFORE the
+		// offline marker: a replay that landed after it would write
+		// "online"-era configs to a broker this daemon has already told
+		// Home Assistant it left.
+		plane.Close()
+		if err := plane.AnnounceOffline(stopCtx); err != nil {
+			logger.Warn("homeconnect2mqtt.offline_failed", slog.String("err", err.Error()))
+		}
+		_ = lc.Stop(stopCtx)
+	}()
 
 	if !cfg.WebEnable {
 		return br.Run(ctx)
@@ -183,12 +221,45 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	return g.Wait()
 }
 
+// haTransport is the transport the Home Assistant plane publishes and
+// subscribes through.
+//
+// A function rather than a literal inside serve() for the same reason
+// mqttClientConfig is one: serve needs a broker and cannot be driven by a
+// test, so a policy spelled inline there is a policy nothing checks. This
+// one carries two, and both are deliberate:
+//
+//   - Publish through the breaker, subscribe around it. Subscriptions are
+//     startup-path calls with their own SUBACK-bounded wait and must not
+//     be rejected during a publish-side broker brownout.
+//   - The two availability markers on statusTopic bypass the breaker, as
+//     they always have. See haplane.BypassFor for why that asymmetry is
+//     load-bearing rather than an oversight.
+func haTransport(statusTopic string, breaker mqtt.Publisher, client mqtt.Client) publisher.Transport {
+	return haplane.BypassFor(statusTopic,
+		hagomqtt.Split(breaker, client),
+		hagomqtt.Transport(client))
+}
+
+// shutdownTimeout bounds the final offline marker and the DISCONNECT.
+const shutdownTimeout = 5 * time.Second
+
 // mqttClientConfig builds the broker client configuration, including the
 // Last Will. It is a function rather than a literal inside run() so the
 // will — the one publish this daemon never makes itself — can be asserted
 // off the value the transport is handed, rather than off the constants
 // that went into it.
-func mqttClientConfig(cfg *config.Config, logger *slog.Logger) mqtt.TCPConfig {
+//
+// Every field of the will is COPIED from publisher.Will and none is
+// spelled again here. That is what makes the two halves agree by
+// construction: the broker writes the same topic, the same payload and
+// the same guarantee the runtime's own AnnounceOnline/AnnounceOffline
+// use, and the same topic every discovery payload declares as its
+// bridge-level availability source (F1). A literal at this call site is
+// exactly how a will nobody reads gets configured — which is the defect
+// go-hamqtt's publisher package exists to stop reproducing, and which
+// this daemon had until F1.
+func mqttClientConfig(cfg *config.Config, will publisher.Will, logger *slog.Logger) mqtt.TCPConfig {
 	return mqtt.TCPConfig{
 		BrokerURL:  cfg.MQTTServer,
 		ClientID:   config.ClientID,
@@ -196,29 +267,13 @@ func mqttClientConfig(cfg *config.Config, logger *slog.Logger) mqtt.TCPConfig {
 		Password:   cfg.MQTTPassword,
 		CleanStart: true,
 		Will: &mqtt.Will{
-			// The same topic every discovery payload declares as its
-			// bridge-level availability source (F1).
-			Topic:   layout.Bridge(cfg.MQTTTopic),
-			Payload: []byte(hass.PayloadNotAvailable),
-			// Matched to the birth and shutdown publishes. It was left at
-			// the zero value (QoS 0) while those went out at MQTT_QOS,
-			// which was cosmetic only while nothing read the topic; every
-			// entity now does.
-			QoS:    mqttQoS(cfg),
-			Retain: true,
+			Topic:   will.Topic,
+			Payload: will.Payload,
+			QoS:     mqtt.QoS(will.QoS),
+			Retain:  will.Retain,
 		},
 		Logger: logger,
 	}
-}
-
-// mqttQoS translates the operator's MQTT_QOS (validated to 0..1) into the
-// transport's QoS. It is written out rather than cast at each call site
-// because the value 0 is load-bearing and its meaning is not portable: it
-// is QoS 0 here, and in the go-hamqtt publisher vocabulary this migration
-// moves onto, QoS(0) means *unset* and resolves to QoS 1. A deliberate
-// QoS 0 has to survive that translation, so there is one place to change.
-func mqttQoS(cfg *config.Config) mqtt.QoS {
-	return mqtt.QoS(cfg.MQTTQoS) //nolint:gosec // MQTT_QOS is validated to 0..1
 }
 
 func loadConfig(configPath string) (*config.Config, error) {

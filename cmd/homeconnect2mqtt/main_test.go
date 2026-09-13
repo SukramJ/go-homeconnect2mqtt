@@ -11,9 +11,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/SukramJ/go-hamqtt/publisher"
+
 	"github.com/SukramJ/go-mqtt"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 )
@@ -126,6 +129,28 @@ func TestMQTTSessionSubscribeBypassesBreaker(t *testing.T) {
 	}
 }
 
+// testPlane is the composition root's own plane, built exactly as serve
+// builds it, so a will asserted here is the will the daemon ships.
+func testPlane(cfg *config.Config) *haplane.Plane {
+	return haplane.New(&haplane.Transport{}, haplane.Config{
+		Prefix:      cfg.HASSBaseTopic,
+		StatusTopic: layout.Bridge(cfg.MQTTTopic),
+		Layout:      hass.NewLayout(cfg.MQTTTopic),
+		QoS:         haplane.QoS(cfg.MQTTQoS),
+		Retain:      cfg.RetainEnabled(),
+		Logger:      slog.New(slog.DiscardHandler),
+	})
+}
+
+func testWill(t *testing.T, cfg *config.Config) publisher.Will {
+	t.Helper()
+	will, err := testPlane(cfg).Will()
+	if err != nil {
+		t.Fatalf("Will: %v", err)
+	}
+	return will
+}
+
 // TestWillIsTheAvailabilitySourceEveryEntityReads is F1 on the publisher
 // side. The Last Will is the one publish this daemon never makes itself,
 // so it is the one the tests could not see: it is asserted here off the
@@ -141,7 +166,7 @@ func TestMQTTSessionSubscribeBypassesBreaker(t *testing.T) {
 func TestWillIsTheAvailabilitySourceEveryEntityReads(t *testing.T) {
 	t.Parallel()
 	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: 1}
-	will := mqttClientConfig(cfg, slog.New(slog.DiscardHandler)).Will
+	will := mqttClientConfig(cfg, testWill(t, cfg), slog.New(slog.DiscardHandler)).Will
 	if will == nil {
 		t.Fatal("no Last Will configured: a killed daemon would leave every entity available forever")
 	}
@@ -157,25 +182,109 @@ func TestWillIsTheAvailabilitySourceEveryEntityReads(t *testing.T) {
 	if !will.Retain {
 		t.Error("will is not retained: a subscriber connecting after the death sees nothing")
 	}
-	if will.QoS != mqttQoS(cfg) {
-		t.Errorf("will qos = %v, want %v (the birth publish's guarantee)", will.QoS, mqttQoS(cfg))
+	if will.QoS != mqtt.QoS1 {
+		t.Errorf("will qos = %v, want %v (MQTT_QOS, the birth publish's guarantee)", will.QoS, mqtt.QoS1)
+	}
+}
+
+// TestWillIsCopiedFromTheRuntimeNotSpelledAgain is the seam a literal at
+// the call site would hide. publisher.Runtime.AnnounceOnline and
+// AnnounceOffline write Config.StatusTopic at Config.QoS retained, and
+// the will has to be the same three; a will nobody reads is
+// indistinguishable from no will at all, which is the defect this daemon
+// shipped until F1 and which two of its sibling bridges still had when
+// go-hamqtt's publisher package was written.
+//
+// It is asserted by PERTURBING the runtime's answer rather than by
+// comparing two constants: a mqttClientConfig that ignored its argument
+// and rebuilt the will from cfg would pass any comparison against cfg.
+func TestWillIsCopiedFromTheRuntimeNotSpelledAgain(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: 1}
+	perturbed := publisher.Will{
+		Topic:   "somewhere/else/entirely",
+		Payload: []byte("not-a-marker"),
+		QoS:     2,
+		Retain:  false,
+	}
+	got := mqttClientConfig(cfg, perturbed, slog.New(slog.DiscardHandler)).Will
+	if got.Topic != perturbed.Topic || !bytes.Equal(got.Payload, perturbed.Payload) ||
+		byte(got.QoS) != perturbed.QoS || got.Retain != perturbed.Retain {
+		t.Errorf("will = %+v, want every field copied from the runtime's %+v — "+
+			"a field spelled again here is a field that can drift from the "+
+			"announcements and from every entity's availability list", got, perturbed)
 	}
 }
 
 // TestMQTTQoSZeroStaysQoSZero is F9's pin at the translation point.
 // MQTT_QOS: 0 is an operator-facing promise of at-most-once, and the
-// go-hamqtt publisher vocabulary this migration moves onto reads QoS(0) as
-// *unset*, resolving it to QoS 1. The one place that translates it is
-// pinned so the upgrade cannot happen silently.
+// go-hamqtt publisher vocabulary this migration moved onto reads QoS(0)
+// as *unset*, resolving it to QoS 1. The whole chain is pinned here — the
+// mapping, the runtime the plane builds out of it, and the will that
+// runtime states — so the upgrade cannot happen silently at any of the
+// three.
 func TestMQTTQoSZeroStaysQoSZero(t *testing.T) {
 	t.Parallel()
 	for in, want := range map[int]mqtt.QoS{0: mqtt.QoS0, 1: mqtt.QoS1} {
-		cfg := &config.Config{MQTTQoS: in}
-		if got := mqttQoS(cfg); got != want {
-			t.Errorf("MQTT_QOS: %d -> %v, want %v", in, got, want)
+		cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: in}
+		will := testWill(t, cfg)
+		if got := mqtt.QoS(will.QoS); got != want {
+			t.Errorf("MQTT_QOS: %d -> runtime will qos %v, want %v", in, got, want)
 		}
-		if got := mqttClientConfig(cfg, slog.New(slog.DiscardHandler)).Will.QoS; got != want {
-			t.Errorf("MQTT_QOS: %d -> will qos %v, want %v", in, got, want)
+		if got := mqttClientConfig(cfg, will, slog.New(slog.DiscardHandler)).Will.QoS; got != want {
+			t.Errorf("MQTT_QOS: %d -> client will qos %v, want %v", in, got, want)
 		}
+	}
+}
+
+// recordingClient is an mqtt.Client that records what reached it.
+type recordingClient struct {
+	recordingSubscriber
+	topics []string
+}
+
+func (c *recordingClient) Publish(_ context.Context, topic string, _ []byte, _ mqtt.QoS, _ bool, _ ...mqtt.PublishOption) error {
+	c.topics = append(c.topics, topic)
+	return nil
+}
+
+// TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker pins the two
+// policies of the transport the Home Assistant plane runs on, which serve()
+// cannot be driven to demonstrate.
+//
+// The asymmetry is the point and it is easy to lose: publisher.Runtime has
+// ONE transport, so wiring it straight through the breaker would put the
+// birth and death markers behind the same circuit as the 687 discovery
+// configs. mqtt.Breaker counts ErrNotConnected and ErrConnectionLost as
+// failures, so a connection drop is exactly what opens it — and the first
+// thing a reconnected daemon does is announce itself online.
+func TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker(t *testing.T) {
+	t.Parallel()
+	const status = "homeconnect/status"
+	client := &recordingClient{}
+	failing := &failingPublisher{}
+	// A breaker whose underlying publisher always fails, tripped open, so
+	// a publish that goes THROUGH it is refused and one that bypasses it
+	// reaches the client. That is the state a reconnect actually finds.
+	breaker := mqtt.NewBreaker(failing, mqtt.BreakerConfig{FailureThreshold: 1})
+	tr := haTransport(status, breaker, client)
+	_ = tr.Publish(t.Context(), "homeassistant/sensor/x/y/config", []byte("{}"), 1, true)
+
+	if err := tr.Publish(t.Context(), "homeassistant/sensor/x/y/config", []byte("{}"), 1, true); !errors.Is(err, mqtt.ErrCircuitOpen) {
+		t.Fatalf("a discovery config did not go through the breaker: %v", err)
+	}
+	if err := tr.Publish(t.Context(), status, []byte("online"), 1, true); err != nil {
+		t.Errorf("the birth marker was refused by the open breaker (%v) — every entity would "+
+			"sit unavailable until a recovery probe happened to succeed", err)
+	}
+	if len(client.topics) != 1 || client.topics[0] != status {
+		t.Errorf("the client saw %v, want only %q", client.topics, status)
+	}
+	if err := tr.Subscribe(t.Context(), "homeassistant/#", 1, nil); err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	if len(client.subscribed) != 1 {
+		t.Errorf("subscriptions did not reach the client: %v — they must bypass the publish-side "+
+			"breaker, or a brownout would stop the daemon resubscribing", client.subscribed)
 	}
 }

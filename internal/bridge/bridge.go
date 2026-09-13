@@ -12,9 +12,12 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/SukramJ/go-hamqtt/publisher"
+
 	"github.com/SukramJ/go-mqtt"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/state"
@@ -36,6 +39,10 @@ type Deps struct {
 	HASS *hass.Discovery
 	// State is the optional in-memory cache feeding the web UI (nil disables).
 	State *state.Store
+	// Plane is the go-hamqtt publish runtime: the state plane every
+	// worker publishes through, and the discovery plane the orphan sweep
+	// reads. Required.
+	Plane *haplane.Plane
 }
 
 // Bridge owns the per-device workers and the shared MQTT publish settings.
@@ -44,10 +51,14 @@ type Bridge struct {
 	mqtt    mqtt.Client
 	logger  *slog.Logger
 	qos     mqtt.QoS
-	retain  bool
 	devices []*Device
 	hass    *hass.Discovery
 	state   *state.Store
+	plane   *haplane.Plane
+
+	// commands is the inbound half: one route per device, handlers run on
+	// router workers rather than on the transport's read loop.
+	commands *publisher.CommandRouter
 
 	// Command write-window retry budget (FK-5).
 	cmdRetries    int
@@ -67,6 +78,9 @@ func New(deps Deps) (*Bridge, error) {
 	if deps.MQTT == nil {
 		return nil, fmt.Errorf("bridge: nil mqtt client")
 	}
+	if deps.Plane == nil {
+		return nil, fmt.Errorf("bridge: nil publish plane")
+	}
 	logger := deps.Logger
 	if logger == nil {
 		logger = slog.Default()
@@ -76,9 +90,9 @@ func New(deps Deps) (*Bridge, error) {
 		mqtt:          deps.MQTT,
 		logger:        logger,
 		qos:           mqtt.QoS(deps.Config.MQTTQoS), //nolint:gosec // MQTT_QOS is validated to 0..1
-		retain:        deps.Config.RetainEnabled(),
 		hass:          deps.HASS,
 		state:         deps.State,
+		plane:         deps.Plane,
 		cmdRetries:    3,
 		cmdRetryDelay: time.Second,
 		reconciling:   map[string]bool{},
@@ -112,6 +126,11 @@ func (b *Bridge) Run(ctx context.Context) error {
 	if err := b.subscribeCommands(ctx); err != nil {
 		return fmt.Errorf("bridge: subscribe commands: %w", err)
 	}
+	// Stopped before the daemon's "offline" marker goes out: a command
+	// accepted after this daemon has announced itself gone would be
+	// executed by nobody and acknowledged by nothing. Stop drains, so it
+	// blocks on whatever a handler is doing.
+	defer b.stopCommands()      //nolint:contextcheck // the drain is deliberately bounded independently of ctx: Run's ctx is cancelled by the time this fires, and a handler mid-write still has to finish
 	b.refreshDiscoveryOnce(ctx) // one-shot HASS_DISCOVERY_REFRESH migration
 	g, gctx := errgroup.WithContext(ctx)
 	for _, d := range b.devices {
@@ -132,4 +151,37 @@ func (b *Bridge) Run(ctx context.Context) error {
 	err := g.Wait()
 	b.logger.Info("bridge.stopped")
 	return err
+}
+
+// PublishOnline is the (re)connect hook: it rebuilds the Home Assistant
+// plane for the new broker connection and announces this daemon online.
+//
+// Both halves belong to the connection rather than to the process. The
+// discovery runtime's superseded/declared/announced maps and the state
+// plane's dedup cache are statements about a BROKER, and a reconnect may
+// be to one that applied none of them — see haplane.Plane.Reconnect.
+func (b *Bridge) PublishOnline(ctx context.Context) {
+	b.plane.Reconnect()
+	if err := b.plane.AnnounceOnline(ctx); err != nil {
+		b.logger.Warn("bridge.online_failed", slog.String("err", err.Error()))
+	}
+}
+
+// stopCommands drains the command router.
+//
+// The timeout is its own, deliberately not derived from Run's context:
+// that context is already cancelled when this runs, and a Stop on a
+// cancelled context would abandon a handler mid-write rather than let it
+// finish. Stop blocks on whatever a handler is currently doing, which is
+// the point — a command accepted and then dropped is a button press that
+// did nothing, with no error anywhere to explain it.
+func (b *Bridge) stopCommands() {
+	if b.commands == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), commandDrainTimeout)
+	defer cancel()
+	if err := b.commands.Stop(ctx); err != nil {
+		b.logger.Warn("bridge.command_stop", slog.String("err", err.Error()))
+	}
 }

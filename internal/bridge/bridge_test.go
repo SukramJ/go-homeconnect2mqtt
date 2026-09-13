@@ -6,13 +6,19 @@ package bridge
 import (
 	"context"
 	"encoding/base64"
+	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	hagomqtt "github.com/SukramJ/go-hamqtt/publisher/gomqtt"
+
 	"github.com/SukramJ/go-mqtt"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
@@ -95,12 +101,29 @@ func smallDescription(t *testing.T) *profile.Description {
 
 func b64(n int) string { return base64.RawURLEncoding.EncodeToString(make([]byte, n)) }
 
+// testPlane builds the real go-hamqtt publish plane over a stub client,
+// with the shipped defaults. Every test that builds a Bridge needs one:
+// the state plane is where entity values, availability and
+// connection_state now go, so a Bridge without it cannot publish at all.
+func testPlane(c mqtt.Client) *haplane.Plane {
+	cfg := testCfg()
+	return haplane.New(hagomqtt.Transport(c), haplane.Config{
+		Prefix:      "homeassistant",
+		StatusTopic: layout.Bridge(cfg.MQTTTopic),
+		Layout:      hass.NewLayout(cfg.MQTTTopic),
+		QoS:         haplane.QoS(cfg.MQTTQoS),
+		Retain:      cfg.RetainEnabled(),
+		Logger:      slog.New(slog.DiscardHandler),
+	})
+}
+
 func buildTestBridge(t *testing.T) (*Bridge, *stubMQTT) {
 	t.Helper()
 	stub := newStubMQTT()
 	b, err := New(Deps{
 		Config: testCfg(),
 		MQTT:   stub,
+		Plane:  testPlane(stub),
 		Devices: []DeviceSpec{{
 			Config: profile.DeviceConfig{
 				Name: "dishwasher", Host: "192.168.1.50",
@@ -212,7 +235,19 @@ func TestNewValidations(t *testing.T) {
 	if _, err := New(Deps{Config: testCfg(), MQTT: nil}); err == nil {
 		t.Error("expected error for nil mqtt")
 	}
-	if _, err := New(Deps{Config: testCfg(), MQTT: stub}); err == nil {
+	// A nil plane is refused at construction rather than at the first
+	// publish: since ADR 0070 phase 7 step 5 the state plane is the only
+	// way a device worker reaches the broker, and a daemon that built
+	// without one would run silently and mirror nothing.
+	// The REASON is asserted, not merely that something failed: this call
+	// is also missing its devices, so a New that stopped checking the
+	// plane would still error and still pass a bare err != nil test. The
+	// daemon would then build without a state plane and mirror nothing.
+	if _, err := New(Deps{Config: testCfg(), MQTT: stub}); err == nil ||
+		!strings.Contains(err.Error(), "plane") {
+		t.Errorf("New without a plane = %v, want an error naming the plane", err)
+	}
+	if _, err := New(Deps{Config: testCfg(), MQTT: stub, Plane: testPlane(stub)}); err == nil {
 		t.Error("expected error for no devices")
 	}
 }
@@ -222,7 +257,7 @@ func TestTLSDeviceBuilds(t *testing.T) {
 	// connect with ErrTLSPSKUnsupported unless built with the tlspsk tag.
 	stub := newStubMQTT()
 	b, err := New(Deps{
-		Config: testCfg(), MQTT: stub,
+		Config: testCfg(), MQTT: stub, Plane: testPlane(stub),
 		Devices: []DeviceSpec{{
 			Config:      profile.DeviceConfig{Name: "old", Host: "h", ConnectionType: profile.ConnectionTLS, PSK64: b64(32)},
 			Description: smallDescription(t),
@@ -241,6 +276,7 @@ func TestBridgeRunStopsOnCancel(t *testing.T) {
 	b, err := New(Deps{
 		Config: testCfg(),
 		MQTT:   stub,
+		Plane:  testPlane(stub),
 		Devices: []DeviceSpec{{
 			// 127.0.0.1:80 refuses fast, so the worker cycles into the
 			// offline backoff path; cancel must end Run promptly.
@@ -279,7 +315,7 @@ func TestBridgeRunStopsOnCancel(t *testing.T) {
 func TestNewRejectsMissingHost(t *testing.T) {
 	stub := newStubMQTT()
 	_, err := New(Deps{
-		Config: testCfg(), MQTT: stub,
+		Config: testCfg(), MQTT: stub, Plane: testPlane(stub),
 		Devices: []DeviceSpec{{
 			Config:      profile.DeviceConfig{Name: "x", ConnectionType: profile.ConnectionAES, PSK64: b64(32), IV64: b64(16)},
 			Description: smallDescription(t),

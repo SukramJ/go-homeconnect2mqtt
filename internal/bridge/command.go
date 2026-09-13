@@ -6,82 +6,159 @@ package bridge
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/SukramJ/go-hamqtt/publisher"
+	"github.com/SukramJ/go-hamqtt/publisher/gomqtt"
+
 	"github.com/SukramJ/go-mqtt"
 
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
 
-// subscribeCommands subscribes each device to its command sub-tree. The
-// MQTT adapter replays subscriptions across reconnects, so one call at
-// startup is enough.
+// commandDrainTimeout bounds the router's shutdown drain.
+const commandDrainTimeout = 5 * time.Second
+
+// subscribeCommands wires the inbound half onto publisher.CommandRouter:
+// one route per device, covering that device's command sub-tree.
+//
+// # The filter, and why it is still the whole sub-tree
+//
+// The feature path is variable-depth — a Home Connect feature is a dotted
+// name of any length — so no fixed-arity filter covers the command tree
+// and "<root>/<device>/#" is forced. It therefore also matches all 689 of
+// this daemon's own state, availability and connection-state publishes for
+// the device (F4). Three things keep that from turning a state publish
+// into a command this daemon issues to itself:
+//
+//   - MQTT 5.0 No Local, so the broker does not forward this daemon's own
+//     publishes back to it at all. The shipped go-hamqtt transport adapter
+//     implements publisher.NoLocalSubscriber and the router uses it, so
+//     the option survives the move rather than having to be re-passed.
+//   - publisher.CommandConfig.DeliverRetained, off. No Local does not
+//     cover the retained replay the broker delivers on (re)subscribe —
+//     that is not a forward — and this is now a stated policy rather than
+//     a hand-written `if msg.Retain` a refactor could drop.
+//   - [shouldDispatch]'s Relative check, which is the real disjointness
+//     rule: a command topic ends in "/set" and a state topic in "/state".
+//     That is a SUFFIX, which an MQTT filter cannot express, which is why
+//     publisher.CommandRouter.CheckDisjoint and
+//     publisher.StateConfig.CommandFilters — both of which decide by
+//     matching a filter — cannot be used here and would refuse every one
+//     of this daemon's own state publishes if they were. See
+//     TestCommandFilterCannotBeStatedToTheStatePlane, which asserts that
+//     rather than leaving it as a comment.
+//
+// # One route per device, and no overlap
+//
+// A broker sends one PUBLISH copy per matching subscription, and a client
+// that re-matches each copy against its whole filter list runs every
+// matching handler per copy — so two overlapping routes run a handler
+// twice per published message, which openccu-loom measured against
+// Mosquitto and needed a separate connection to fix. The routes here are
+// "<root>/<name>/#" per configured device and LoadDevices refuses a
+// duplicate name, so they differ in a literal level and cannot overlap;
+// publisher.CommandRouter refuses the pair at registration if they ever
+// do. The two transient discovery-tree subscriptions this daemon used to
+// install are gone (the sweep opens one window under the discovery
+// prefix), and the birth subscription is under the discovery prefix too,
+// so neither can multiply a command.
 func (b *Bridge) subscribeCommands(ctx context.Context) error {
+	router := publisher.NewCommandRouter(gomqtt.Transport(b.mqtt), b.commandConfig(ctx))
 	for _, d := range b.devices {
 		dev := d
 		filter := dev.topics.CommandFilter()
-		// The feature path is variable-depth, so no fixed-arity filter
-		// covers the command tree: the subscription is the whole device
-		// sub-tree and therefore also matches all 689 of this daemon's own
-		// state, availability and connection-state publishes (F4).
-		//
-		// Two guards, because neither alone is enough. MQTT 5.0 No Local
-		// tells the broker not to forward a message back to the connection
-		// that published it, which removes the echo at the source — but it
-		// does not cover the retained replay the broker delivers on
-		// (re)subscribe, which is not a forward, and it is a no-op on a
-		// 3.1.1 link. The retained check below covers that half.
-		if _, err := b.mqtt.Subscribe(ctx, filter, b.qos, func(msg *mqtt.Message) {
-			if !shouldDispatch(dev, msg) {
-				return
-			}
-			// handleSet makes blocking Home Connect cloud HTTP calls with
-			// retry/backoff loops; the adapter calls this handler
-			// synchronously inline in its read loop, so a blocking call here
-			// would stall PUBACK/PINGRESP processing and could trip a
-			// spurious ping_timeout. See [mqtt.MessageHandler].
-			go b.handleSet(ctx, dev, msg.Topic, msg.Payload)
-		}, mqtt.WithNoLocal()); err != nil {
-			return err
+		if err := router.Handle(filter, func(hctx context.Context, cmd publisher.Command) {
+			b.onCommand(hctx, dev, cmd)
+		}); err != nil {
+			// A rejected route is a composition mistake — a malformed
+			// filter, a duplicate, an overlap — not a broker condition,
+			// so it fails the boot rather than being retried.
+			return fmt.Errorf("bridge: route %s: %w", filter, err)
 		}
 	}
+	if err := router.Start(ctx); err != nil {
+		return err
+	}
+	b.commands = router
 	return b.subscribeBirth(ctx)
+}
+
+// commandConfig is the router's policy, in one function rather than a
+// literal inside subscribeCommands.
+//
+// It is a function for the same reason mqttClientConfig is one: two of
+// these fields are policy an assertion has to be able to reach.
+// DeliverRetained in particular is masked downstream by shouldDispatch's
+// own retained check — both are wanted, a retained command re-fires a
+// stale write on every (re)subscribe — so a test that only watched the
+// outcome would pass with either of them gone.
+// TestTheRouterItselfDropsARetainedDelivery builds a router from THIS
+// value, which is what makes the policy observable on its own.
+func (b *Bridge) commandConfig(ctx context.Context) publisher.CommandConfig {
+	return publisher.CommandConfig{
+		// Stated, never defaulted: publisher.QoS's zero value is
+		// QoSUnset, which resolves to QoS 1, so an operator's MQTT_QOS: 0
+		// would be silently upgraded here (F9).
+		QoS: haplane.QoS(b.cfg.MQTTQoS),
+		// A retained command is somebody's `mosquitto_pub -r` left behind,
+		// and the broker replays it on every (re)subscribe.
+		DeliverRetained: false,
+		// The handler context derives from this, not from Start's: a
+		// handler whose write was cancelled because the call that started
+		// the router returned is a defect with nothing in the log.
+		Lifecycle: ctx,
+		Logger:    b.logger,
+	}
+}
+
+// onCommand is the routed-command handler. It runs on a router worker,
+// never on the transport's read loop, which is what makes the blocking
+// Home Connect cloud calls in handleSet safe: the old code had to spawn a
+// goroutine per delivery for exactly that reason, and an unbounded one at
+// that. Order is preserved per topic, which the goroutine gave up.
+func (b *Bridge) onCommand(ctx context.Context, d *Device, cmd publisher.Command) {
+	if !shouldDispatch(d, cmd.Topic, cmd.Retained) {
+		return
+	}
+	b.handleSet(ctx, d, cmd.Topic, cmd.Payload)
 }
 
 // shouldDispatch decides, without side effects, whether an inbound message
 // on the device sub-tree is a command this daemon should act on.
 //
 // It is a function rather than an inline pair of early returns because the
-// alternative is untestable: the handler's only effect is to start a
-// goroutine, and a goroutine that returns immediately leaves no trace, so
-// deleting either check below is invisible to every test that can be
+// alternative is untestable: a handler that returns early leaves no trace,
+// so deleting either check below is invisible to every test that can be
 // written against the handler itself.
 //
 // Both checks earn their place:
 //
-//   - Retained. The broker replays the last retained message on every
-//     (re)subscribe, so without this a stale command topic — or this
-//     daemon's own retained state loopback — re-fires the write on every
-//     reconnect. MQTT 5.0 No Local does not cover this: a retained
-//     delivery at subscribe time is not a forward. See [mqtt.MessageHandler]
-//     for the retained bit.
+//   - Retained. publisher.CommandConfig.DeliverRetained is off, so the
+//     router already drops these — but the router's policy and this
+//     daemon's are two statements, and the one that costs an operator a
+//     re-fired write on every reconnect is worth asserting twice. A
+//     retained delivery at subscribe time is not a forward, so MQTT 5.0
+//     No Local does not cover it either.
 //   - A command topic at all. The subscription is the whole device
 //     sub-tree (the feature path is variable-depth, so no fixed-arity
 //     filter fits), which matches every state, availability and
 //     connection-state topic this daemon publishes for the device. With
 //     MQTT_RETAIN: false the retained check never fires, and each of those
 //     used to spawn a goroutine whose only job was to return (F4).
-func shouldDispatch(d *Device, msg *mqtt.Message) bool {
-	if msg.Retain {
+func shouldDispatch(d *Device, topic string, retained bool) bool {
+	if retained {
 		return false
 	}
-	_, ok := d.topics.Relative(msg.Topic)
+	_, ok := d.topics.Relative(topic)
 	return ok
 }
 

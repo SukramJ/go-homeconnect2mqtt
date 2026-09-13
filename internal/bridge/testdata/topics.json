@@ -1475,12 +1475,8 @@
   ],
   "subscribe_filters": [
     {
-      "filter": "homeassistant/+/+/+/config",
-      "qos": 0
-    },
-    {
-      "filter": "homeassistant/+/geschirrspuler/+/config",
-      "qos": 0
+      "filter": "homeassistant/#",
+      "qos": 1
     },
     {
       "filter": "homeassistant/status",
@@ -1496,7 +1492,7 @@
   ],
   "publish_qos_retain": {
     "bridge_status": "qos=MQTT_QOS retain=true",
-    "bridge_will": "qos=0 retain=true",
+    "bridge_will": "qos=MQTT_QOS retain=true",
     "device_availability": "qos=MQTT_QOS retain=MQTT_RETAIN",
     "discovery_config": "qos=MQTT_QOS retain=true",
     "discovery_retract": "qos=MQTT_QOS retain=true (empty payload)",

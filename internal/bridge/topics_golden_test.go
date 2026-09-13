@@ -18,8 +18,11 @@ import (
 	"sync"
 	"testing"
 
+	hagomqtt "github.com/SukramJ/go-hamqtt/publisher/gomqtt"
+
 	"github.com/SukramJ/go-mqtt"
 
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mapping"
@@ -149,24 +152,39 @@ func optionNames(opts []mqtt.SubscribeOption) []string {
 }
 
 // subRecorder records subscriptions with their QoS — the argument every
-// other stub in this repository discards.
+// other stub in this repository discards — and doubles as a minimal
+// broker: it holds a retained tree and flushes the matching part of it to
+// a fresh subscriber inline, which is what a real broker does and what
+// publisher.Runtime's snapshot window depends on. A window that opens
+// before its subscription exists sees none of the messages it was opened
+// for.
 type subRecorder struct {
 	mu       sync.Mutex
 	filters  []filterQoS
 	pubs     []pubCall
 	handlers map[string]mqtt.MessageHandler
+	// retained is the broker-side tree the sweep reads. Seeded by a test;
+	// this stub deliberately does NOT add this daemon's own publishes to
+	// it, so a sweep pin says exactly what it was given.
+	retained map[string][]byte
 }
 
 type pubCall struct {
 	topic  string
 	qos    mqtt.QoS
 	retain bool
+	// retraction records an empty retained payload, which is MQTT's
+	// deletion of a retained message. It is a separate field rather than
+	// len(payload)==0 at the read site because the sweep pins care about
+	// nothing else, and a recorder that kept every payload would make
+	// them compare 687 discovery bodies to count one deletion.
+	retraction bool
 }
 
-func (s *subRecorder) Publish(_ context.Context, topic string, _ []byte, qos mqtt.QoS, retain bool, _ ...mqtt.PublishOption) error {
+func (s *subRecorder) Publish(_ context.Context, topic string, payload []byte, qos mqtt.QoS, retain bool, _ ...mqtt.PublishOption) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.pubs = append(s.pubs, pubCall{topic, qos, retain})
+	s.pubs = append(s.pubs, pubCall{topic, qos, retain, len(payload) == 0 && retain})
 	return nil
 }
 
@@ -178,10 +196,37 @@ func (s *subRecorder) Subscribe(_ context.Context, filter string, qos mqtt.QoS, 
 		s.handlers = map[string]mqtt.MessageHandler{}
 	}
 	s.handlers[filter] = h
+	replay := make([]*mqtt.Message, 0, len(s.retained))
+	for topic, payload := range s.retained {
+		if matchFilter(filter, topic) {
+			replay = append(replay, &mqtt.Message{Topic: topic, Payload: payload, Retain: true})
+		}
+	}
+	s.mu.Unlock()
+	for _, msg := range replay {
+		h(msg)
+	}
+	s.mu.Lock()
 	return mqtt.SubscribeResult{}, nil
 }
 
 func (s *subRecorder) Unsubscribe(context.Context, string) error { return nil }
+
+// planeFor builds the REAL go-hamqtt publish plane over the recorder, at
+// a chosen MQTT_QOS and MQTT_RETAIN. It is the same construction
+// cmd/homeconnect2mqtt performs, so every assertion made against it is an
+// assertion about the shipped composition root.
+func planeFor(t *testing.T, rec *subRecorder, qos int, retain bool) *haplane.Plane {
+	t.Helper()
+	return haplane.New(hagomqtt.Transport(rec), haplane.Config{
+		Prefix:      pinPrefix,
+		StatusTopic: layout.Bridge(pinRoot),
+		Layout:      hass.NewLayout(pinRoot),
+		QoS:         haplane.QoS(qos),
+		Retain:      retain,
+		Logger:      slog.New(slog.DiscardHandler),
+	})
+}
 
 // pinBridge wires a REAL Bridge and a REAL hass.Discovery over the pin
 // catalogue and the shipped defaults, with the publish/subscribe calls
@@ -215,14 +260,21 @@ func pinBridgeQoS(t *testing.T, qos int) (*Bridge, *Device, *hass.Discovery, *su
 
 	rec := &subRecorder{}
 	logger := slog.New(slog.DiscardHandler)
+	// The REAL publish plane over the recorder, so every assertion below
+	// reads the QoS byte and the retain flag the transport was handed
+	// rather than the constant that fed them. That is what lets the F9
+	// pin survive a whole plane moving: a step that re-routes these calls
+	// through another library still has to hand the transport a 0.
+	plane := planeFor(t, rec, qos, cfg.RetainEnabled())
 	// HASS_DISCOVERY defaults to "curated"; the pin uses the full set so
 	// the topic tree is the widest one this daemon can produce.
-	disc := hass.New(rec, pinPrefix, pinRoot, mqtt.QoS(cfg.MQTTQoS), cfg.Language, false, logger) //nolint:gosec // test value from the caller
+	disc := hass.New(plane, pinPrefix, pinRoot, cfg.Language, false, logger)
 	disc.SetEnricher(cat)
 
 	b, err := New(Deps{
 		Config: cfg,
 		MQTT:   rec,
+		Plane:  plane,
 		Logger: logger,
 		HASS:   disc,
 		Devices: []DeviceSpec{{
@@ -277,7 +329,7 @@ func renderPayloads(t *testing.T, dev *Device) map[string]map[string]any {
 		t.Fatalf("mapping.Load: %v", err)
 	}
 	pr := &payloadRecorder{payloads: map[string]map[string]any{}}
-	d := hass.New(pr, pinPrefix, pinRoot, pinQoS, "de", false, slog.New(slog.DiscardHandler))
+	d := hass.New(pr, pinPrefix, pinRoot, "de", false, slog.New(slog.DiscardHandler))
 	d.SetEnricher(cat)
 	d.PublishDevice(context.Background(), dev.name, dev.app.Info(), dev.app.Entities())
 	if len(pr.payloads) == 0 {
@@ -291,14 +343,14 @@ type payloadRecorder struct {
 	payloads map[string]map[string]any
 }
 
-func (p *payloadRecorder) Publish(_ context.Context, topic string, payload []byte, _ mqtt.QoS, _ bool, _ ...mqtt.PublishOption) error {
+func (p *payloadRecorder) Publish(_ context.Context, topic string, payload []byte) (bool, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	var m map[string]any
 	if err := json.Unmarshal(payload, &m); err == nil {
 		p.payloads[topic] = m
 	}
-	return nil
+	return true, nil
 }
 
 func sortedKeys[V any](m map[string]V) []string {
@@ -320,7 +372,7 @@ func sortedValues(m map[string]string) []string {
 
 // TestTopicGolden pins the whole non-discovery topic tree.
 func TestTopicGolden(t *testing.T) {
-	b, dev, disc, rec := pinBridge(t)
+	b, dev, _, rec := pinBridge(t)
 
 	if err := b.subscribeCommands(context.Background()); err != nil {
 		t.Fatalf("subscribeCommands: %v", err)
@@ -328,11 +380,19 @@ func TestTopicGolden(t *testing.T) {
 	rec.mu.Lock()
 	filters := append([]filterQoS(nil), rec.filters...)
 	rec.mu.Unlock()
-	// The two transient reconcile filters are built by the production
-	// code too; ask it rather than re-deriving the strings here.
-	filters = append(filters,
-		filterQoS{Filter: disc.ConfigFilter(), QoS: int(mqtt.QoS0)},
-		filterQoS{Filter: disc.DeviceConfigFilter(dev.name), QoS: int(mqtt.QoS0)})
+	// The orphan sweep's snapshot window. It is transient — installed for
+	// publisher.Config.SweepWindow and taken down again — so it is not in
+	// the recorder after subscribeCommands; it is measured off the
+	// transport by TestSweepWindowIsTheOnlyDiscoverySubscription and
+	// stated here, once, in the same shape.
+	//
+	// It replaced the two narrower filters the hand-rolled reconcile
+	// installed (homeassistant/+/+/+/config and
+	// homeassistant/+/<slug>/+/config, both hard-wired to QoS 0). One
+	// window at MQTT_QOS is what publisher.Runtime.Sweep opens, because it
+	// parses all three discovery topic forms out of one subscription
+	// rather than encoding one of them in a filter.
+	filters = append(filters, filterQoS{Filter: pinPrefix + "/#", QoS: int(pinQoS)})
 	sort.Slice(filters, func(i, j int) bool { return filters[i].Filter < filters[j].Filter })
 
 	states, commands := advertised(t, dev)
@@ -385,7 +445,7 @@ func TestTopicGolden(t *testing.T) {
 			"entity_state":        "qos=MQTT_QOS retain=MQTT_RETAIN",
 			"device_availability": "qos=MQTT_QOS retain=MQTT_RETAIN",
 			"bridge_status":       "qos=MQTT_QOS retain=true",
-			"bridge_will":         "qos=0 retain=true",
+			"bridge_will":         "qos=MQTT_QOS retain=true",
 		},
 	}
 
@@ -632,7 +692,7 @@ func TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree(t *testing.T) {
 			t.Errorf("%s is published but not matched by %s — the filter narrowed; "+
 				"update this test and the golden together", own, deviceFilter)
 		}
-		if shouldDispatch(dev, &mqtt.Message{Topic: own}) {
+		if shouldDispatch(dev, own, false) {
 			t.Errorf("%s is one of this daemon's own publishes, but the handler "+
 				"would dispatch it (F4)", own)
 		}
@@ -642,10 +702,10 @@ func TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree(t *testing.T) {
 	// must still drop the broker's retained replay of one.
 	_, commands := advertised(t, dev)
 	for cfgTopic, ct := range commands {
-		if !shouldDispatch(dev, &mqtt.Message{Topic: ct}) {
+		if !shouldDispatch(dev, ct, false) {
 			t.Errorf("%s advertises %s, which the handler would not dispatch", cfgTopic, ct)
 		}
-		if shouldDispatch(dev, &mqtt.Message{Topic: ct, Retain: true}) {
+		if shouldDispatch(dev, ct, true) {
 			t.Errorf("%s: a RETAINED replay of %s would be dispatched — a stale "+
 				"command re-fires its write on every reconnect", cfgTopic, ct)
 		}
