@@ -417,6 +417,17 @@ func (d *Discovery) PublishDeviceBundle(ctx context.Context, device string, info
 		d.logger.Error("hass.bundle_render", slog.String("device", device), slog.String("err", err.Error()))
 		return "", err
 	}
+	return d.publishBundle(ctx, device, b)
+}
+
+// publishBundle is PublishDeviceBundle's gates and its write, separated
+// from the render so a test can drive them with a document of its own.
+//
+// Without that separation the blocking-validation gate is unreachable from
+// a test: a document this daemon renders is never blocking (that is what
+// #43 fixed), so the only way to assert that a blocking one is withheld is
+// to hand one in.
+func (d *Discovery) publishBundle(ctx context.Context, device string, b *discovery.Bundle) (string, error) {
 	topic := publisher.BundleConfigTopic(d.baseTopic, b.NodeID)
 	if len(b.Components) == 0 {
 		err := fmt.Errorf("hass: device document for %q has no components", device)

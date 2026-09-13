@@ -279,7 +279,9 @@ func TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker(t *testing.T) {
 	// a publish that goes THROUGH it is refused and one that bypasses it
 	// reaches the client. That is the state a reconnect actually finds.
 	breaker := mqtt.NewBreaker(failing, mqtt.BreakerConfig{FailureThreshold: 1})
-	tr := haTransport(status, breaker, client)
+	// haPlaneTransport, not haTransport: the derivation of the bypass topic
+	// is the part that can be wrong, so it has to be inside what is driven.
+	tr := haPlaneTransport(plane, breaker, client)
 	_ = tr.Publish(t.Context(), "homeassistant/sensor/x/y/config", []byte("{}"), 1, true)
 
 	if err := tr.Publish(t.Context(), "homeassistant/sensor/x/y/config", []byte("{}"), 1, true); !errors.Is(err, mqtt.ErrCircuitOpen) {

@@ -362,12 +362,17 @@ func TestABlockingDocumentIsWithheld(t *testing.T) {
 			break
 		}
 	}
-	if err := d.validateBundle(goldenDeviceEN, d.BundleTopic(goldenDeviceEN), b); err == nil {
-		t.Fatal("a document with two components sharing a unique_id validated")
-	}
 	var ve *discovery.ValidationError
 	if !errors.As(discovery.Validate(b), &ve) || !ve.Blocking() {
 		t.Fatal("the fixture is not blocking, so this test proves nothing")
+	}
+	topic, err := d.publishBundle(t.Context(), goldenDeviceEN, b)
+	if err == nil {
+		t.Fatal("a blocking document was published — Home Assistant drops such a document " +
+			"whole, so that costs the appliance every entity it has")
+	}
+	if want := d.BundleTopic(goldenDeviceEN); topic != want {
+		t.Errorf("topic = %q, want %q", topic, want)
 	}
 	if rec.written() != 0 {
 		t.Errorf("a blocking document wrote %d messages", rec.written())

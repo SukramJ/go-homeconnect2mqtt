@@ -158,16 +158,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 				slog.String("to", to.String()))
 		},
 	})
-	// The bypass topic is the plane's OWN answer, not a second rendering of
-	// it. publisher.New has already reconciled haplane.Config.StatusTopic
-	// against the layout and refused them if they disagreed, so this is the
-	// one string that cannot drift from the one the Last Will writes and
-	// every discovery payload names. Spelling layout.Bridge(cfg.MQTTTopic)
-	// here a second time is how the two come apart — and when they do, the
-	// availability markers silently rejoin the circuit breaker, a drop
-	// opens it, the reconnect's first act is refused with ErrCircuitOpen,
-	// and every entity sits unavailable under `availability_mode: all`.
-	haLink.Wire(haTransport(plane.StatusTopic(), breaker, client))
+	haLink.Wire(haPlaneTransport(plane, breaker, client))
 
 	// The MQTT surface handed to the bridge, same split.
 	session := mqtt.SplitClient(breaker, client)
@@ -263,6 +254,29 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 //   - The two availability markers on statusTopic bypass the breaker, as
 //     they always have. See haplane.BypassFor for why that asymmetry is
 //     load-bearing rather than an oversight.
+//
+// haPlaneTransport wires the plane's transport, deriving the bypass topic
+// from the PLANE rather than rendering it a second time.
+//
+// It takes the plane rather than the topic for the reason go-mtec2mqtt's
+// review gave for the same shape: a function handed the finished string can
+// only ever be tested against the string the test hands it, so the
+// derivation — the part that can be wrong — is not covered. serve() cannot
+// be driven, so the derivation has to live somewhere that can be.
+//
+// publisher.New has already reconciled haplane.Config.StatusTopic against
+// the layout and refused them if they disagreed, so the plane's answer is
+// the one string that cannot drift from the one the Last Will writes and
+// every discovery payload names. Spelling layout.Bridge(cfg.MQTTTopic) here
+// a second time is how the two come apart — and when they do, the
+// availability markers silently rejoin the circuit breaker, a drop opens
+// it, the reconnect's first act is refused with ErrCircuitOpen, and every
+// entity sits unavailable under `availability_mode: all`. #44 caught
+// exactly that as M41 and it came back one line away.
+func haPlaneTransport(plane *haplane.Plane, breaker mqtt.Publisher, client mqtt.Client) publisher.Transport {
+	return haTransport(plane.StatusTopic(), breaker, client)
+}
+
 func haTransport(statusTopic string, breaker mqtt.Publisher, client mqtt.Client) publisher.Transport {
 	return haplane.BypassFor(statusTopic,
 		hagomqtt.Split(breaker, client),
