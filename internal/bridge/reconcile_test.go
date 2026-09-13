@@ -216,6 +216,11 @@ func TestAStaggeredUpgradeDoesNotDeleteTheSiblingsFleet(t *testing.T) {
 func TestSweepDoesNotRetractASecondAppliancesConfigs(t *testing.T) {
 	shortWindow(t)
 	b, dev, _, rec := pinBridge(t)
+	// The second appliance is CONFIGURED — it has simply not connected
+	// yet. That is what makes the scope measurable: a pass that judged the
+	// whole fleet would own its configs and, with nothing claimed, clear
+	// them. A fixture that left it out of b.devices would pass either way.
+	b.devices = append(b.devices, &Device{name: "Backofen", topics: newDeviceTopics(pinRoot, "Backofen")})
 
 	other := "homeassistant/sensor/backofen/bsh_common_status_operationstate/config"
 	seedRetained(rec, map[string]string{
