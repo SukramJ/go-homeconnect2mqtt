@@ -632,9 +632,22 @@ func TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree(t *testing.T) {
 			t.Errorf("%s is published but not matched by %s — the filter narrowed; "+
 				"update this test and the golden together", own, deviceFilter)
 		}
-		if rel, ok := dev.topics.Relative(own); ok {
-			t.Errorf("%s is one of this daemon's own publishes, but Relative accepts "+
-				"it as command %q — it would be dispatched (F4)", own, rel)
+		if shouldDispatch(dev, &mqtt.Message{Topic: own}) {
+			t.Errorf("%s is one of this daemon's own publishes, but the handler "+
+				"would dispatch it (F4)", own)
+		}
+	}
+
+	// The guard must not be so eager that it drops real commands, and it
+	// must still drop the broker's retained replay of one.
+	_, commands := advertised(t, dev)
+	for cfgTopic, ct := range commands {
+		if !shouldDispatch(dev, &mqtt.Message{Topic: ct}) {
+			t.Errorf("%s advertises %s, which the handler would not dispatch", cfgTopic, ct)
+		}
+		if shouldDispatch(dev, &mqtt.Message{Topic: ct, Retain: true}) {
+			t.Errorf("%s: a RETAINED replay of %s would be dispatched — a stale "+
+				"command re-fires its write on every reconnect", cfgTopic, ct)
 		}
 	}
 	t.Logf("F4: %s still matches %d of this daemon's own publishes; No Local stops the "+

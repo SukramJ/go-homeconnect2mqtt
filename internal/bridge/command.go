@@ -38,18 +38,7 @@ func (b *Bridge) subscribeCommands(ctx context.Context) error {
 		// (re)subscribe, which is not a forward, and it is a no-op on a
 		// 3.1.1 link. The retained check below covers that half.
 		if _, err := b.mqtt.Subscribe(ctx, filter, b.qos, func(msg *mqtt.Message) {
-			if msg.Retain {
-				// Drop the broker's replay of the last retained command on
-				// (re)subscribe: without this, a stale command topic (or our
-				// own retained state loopback) re-fires the write on every
-				// reconnect. See [mqtt.MessageHandler] for the retained bit.
-				return
-			}
-			// Decide whether this is a command topic at all BEFORE spawning
-			// anything. Under MQTT_RETAIN: false the retained check above
-			// never fires, and every state publish this daemon makes used to
-			// spawn a goroutine whose only job was to return.
-			if _, ok := dev.topics.Relative(msg.Topic); !ok {
+			if !shouldDispatch(dev, msg) {
 				return
 			}
 			// handleSet makes blocking Home Connect cloud HTTP calls with
@@ -63,6 +52,37 @@ func (b *Bridge) subscribeCommands(ctx context.Context) error {
 		}
 	}
 	return b.subscribeBirth(ctx)
+}
+
+// shouldDispatch decides, without side effects, whether an inbound message
+// on the device sub-tree is a command this daemon should act on.
+//
+// It is a function rather than an inline pair of early returns because the
+// alternative is untestable: the handler's only effect is to start a
+// goroutine, and a goroutine that returns immediately leaves no trace, so
+// deleting either check below is invisible to every test that can be
+// written against the handler itself.
+//
+// Both checks earn their place:
+//
+//   - Retained. The broker replays the last retained message on every
+//     (re)subscribe, so without this a stale command topic — or this
+//     daemon's own retained state loopback — re-fires the write on every
+//     reconnect. MQTT 5.0 No Local does not cover this: a retained
+//     delivery at subscribe time is not a forward. See [mqtt.MessageHandler]
+//     for the retained bit.
+//   - A command topic at all. The subscription is the whole device
+//     sub-tree (the feature path is variable-depth, so no fixed-arity
+//     filter fits), which matches every state, availability and
+//     connection-state topic this daemon publishes for the device. With
+//     MQTT_RETAIN: false the retained check never fires, and each of those
+//     used to spawn a goroutine whose only job was to return (F4).
+func shouldDispatch(d *Device, msg *mqtt.Message) bool {
+	if msg.Retain {
+		return false
+	}
+	_, ok := d.topics.Relative(msg.Topic)
+	return ok
 }
 
 // subscribeBirth watches the Home Assistant status topic and re-publishes

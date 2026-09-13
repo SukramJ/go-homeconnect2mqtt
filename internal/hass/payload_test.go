@@ -157,3 +157,37 @@ func TestCuratedModeSkipsDisabled(t *testing.T) {
 		t.Error("curated mode should still publish primary OperationState")
 	}
 }
+
+// TestSortLocalizedCollatesUmlauts is the part of F11 the catalogue
+// cannot exercise: no shipped German label happens to start with an
+// umlaut, so the fold that makes the ordering correct is invisible in the
+// golden files. A plain byte sort files every umlaut after "z", because
+// their UTF-8 encodings sit above ASCII.
+func TestSortLocalizedCollatesUmlauts(t *testing.T) {
+	t.Parallel()
+	got := []string{"Zonen", "Öl", "Ausgeschaltet", "Über", "Ändern", "Straße", "Strasse"}
+	sortLocalized(got)
+	want := []string{"Ändern", "Ausgeschaltet", "Öl", "Strasse", "Straße", "Über", "Zonen"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("sortLocalized = %v, want %v", got, want)
+		}
+	}
+}
+
+// TestSortLocalizedIsDeterministic pins the tie-break: two labels with
+// the same collation key (here "Straße" and "Strasse") must not swap
+// between runs, or every regeneration of a golden would produce a
+// different file.
+func TestSortLocalizedIsDeterministic(t *testing.T) {
+	t.Parallel()
+	a := []string{"Straße", "Strasse"}
+	b := []string{"Strasse", "Straße"}
+	sortLocalized(a)
+	sortLocalized(b)
+	for i := range a {
+		if a[i] != b[i] {
+			t.Fatalf("order depends on input: %v vs %v", a, b)
+		}
+	}
+}
