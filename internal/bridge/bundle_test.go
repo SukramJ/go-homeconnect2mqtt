@@ -159,6 +159,13 @@ func TestTheSweepIsSkippedWhenTheDocumentWasNotPublished(t *testing.T) {
 	})
 
 	b.publishDiscovery(t.Context(), dev)
+	// Drained BEFORE the assertion, not in a deferred cleanup after it.
+	// reconcileOrphans registers its device synchronously and then does the
+	// work on a goroutine, so a test that read the window list the instant
+	// publishDiscovery returned was racing the subscribe — and losing that
+	// race looks exactly like a sweep that correctly did not run. Removing
+	// BOTH guards at once was not caught until this line moved.
+	drainReconciles(t, b)
 
 	if windows := rec.discoveryWindows(pinPrefix); len(windows) != 0 {
 		t.Errorf("the sweep opened %v although the document was not published", windows)
@@ -290,13 +297,16 @@ func TestTheReconnectRepublishWaitsForTheOneShotRefresh(t *testing.T) {
 	defer drainReconciles(t, b)
 	doc := bundleTopicFor(b, dev.name)
 
-	// The pass is driven directly and its RETURN is what is observed, not
-	// the absence of a publish after a sleep. That distinction is the
-	// finding: the first version of this test waited 50 ms and then
-	// asserted the document was absent, which passed whether the gate held
-	// or not — the migration it was watching for takes longer than the
-	// sleep, so removing the gate entirely left the test green. A
-	// negative asserted by waiting is a negative asserted by nothing.
+	// The fleet is emptied first, and that is what makes the observation
+	// deterministic rather than a race against the work. With no
+	// appliances the pass is microseconds long, so "it has not returned"
+	// can only mean "it is still waiting on the gate". Two earlier versions
+	// of this test failed to catch the gate's removal for the opposite
+	// reason: the pass over a real appliance is a 687-message retraction
+	// and a 460 KB document, so it had not returned — and had published
+	// nothing yet — whether the gate held or not. A negative asserted
+	// against slow work is a negative asserted by nothing.
+	b.devices = nil
 	returned := make(chan struct{})
 	go func() {
 		defer close(returned)
@@ -319,9 +329,10 @@ func TestTheReconnectRepublishWaitsForTheOneShotRefresh(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatal("the republish never ran after the refresh finished")
 	}
-	if !slices.Contains(rec.publishedTopics(), doc) {
-		t.Fatalf("%s was not published once the refresh had finished", doc)
-	}
+	// What it publishes once released is TestPublishOnlineRepublishes-
+	// EveryAppliancesDocument's assertion, over a fleet this one has
+	// deliberately emptied.
+	_ = doc
 }
 
 // TestBothSweepGuardsMustFailTogether names a masking pair rather than
@@ -490,6 +501,7 @@ func TestStopDiscoveryClosesTheShutdownWindow(t *testing.T) {
 	b.StopDiscovery()
 	b.republishDiscovery(t.Context())
 	b.publishDiscovery(t.Context(), dev)
+	drainReconciles(t, b)
 
 	if got := rec.publishedTopics(); slices.Contains(got, bundleTopicFor(b, dev.name)) {
 		t.Errorf("a discovery publish reached the broker after StopDiscovery: %v", got)
