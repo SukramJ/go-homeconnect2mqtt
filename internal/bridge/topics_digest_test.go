@@ -13,13 +13,15 @@ import (
 // Moved twice since #40: by F4, the device sub-tree subscription gained
 // "options": ["WithNoLocal"]; by F1, "homeconnect/status" left
 // "availability_topics_no_entity_reads", which is now the single
-// connection_state topic (F7, deliberately left).
+// connection_state topic (F7, deliberately left); by F5, the programless
+// selected-program entity became a read-only sensor, so it no longer
+// advertises a command topic.
 //
 // topicsGoldenDigest is the SHA-256 of internal/bridge/testdata/topics.json,
 // held outside the file so a regeneration cannot pass unnoticed. See the
 // long note in internal/hass/golden_digest_test.go — same reasoning, same
 // standard: updating this literal is a declaration that names a finding.
-const topicsGoldenDigest = "f9048546ab20f45822329e7a1e2ea78d2c17b7af883d3a146c0ba3830e3db9f7"
+const topicsGoldenDigest = "a6806d0b94287efc7c1d4e6b60dc1c544b1c11d96a5a6992a23d80d3bb397719"
 
 // TestTopicsGoldenMatchesItsPinnedDigest fails when topics.json was
 // regenerated without the accompanying declaration of intent.

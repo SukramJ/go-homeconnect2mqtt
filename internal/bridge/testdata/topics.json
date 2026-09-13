@@ -1388,7 +1388,6 @@
     "homeconnect/Geschirrspüler/BSH/Common/Option/RemainingProgramTimeEstimationState/set",
     "homeconnect/Geschirrspüler/BSH/Common/Option/SmartEnergyService/SmartStartEnabled/set",
     "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgram/set",
-    "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgramNoPrograms/set",
     "homeconnect/Geschirrspüler/BSH/Common/Setting/AlarmClock/set",
     "homeconnect/Geschirrspüler/BSH/Common/Setting/AmbientLightEnabled/set",
     "homeconnect/Geschirrspüler/BSH/Common/Setting/ChildLock/set",

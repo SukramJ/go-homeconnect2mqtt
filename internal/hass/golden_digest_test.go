@@ -34,13 +34,18 @@ var goldenDigests = map[string]string{
 	// Moved once since the pins were taken (#40), by F1: in all four
 	// payload files the flat "availability_topic" was replaced by the
 	// two-source "availability" list plus "availability_mode": "all".
-	// No other key moved in any row, and identity_en.json is UNCHANGED —
-	// F1 touches no string Home Assistant keys a registry on.
-	"discovery_full_en.json":    "7dc318cdbf5b558800b5d21c56bafc6654712a3b34ae09b0d4f89b98d8e826ad",
-	"discovery_full_de.json":    "79e7488393b05e3219ad80b02c69e0480686137e34dc67cd2a3ac768383099cc",
-	"discovery_curated_de.json": "42e51f2f26d3eb3f6f583ae57b252864d9baac8130260fa1ddd5578514ea956b",
-	"discovery_plain_en.json":   "094c32e44b50f3827216dc068bbf8c4b8fa729bb8e774adcf4ad1375ff9a75bc",
-	"identity_en.json":          "16d00294cc7afb1e75f36408ee6cfe409080ab81de5fb0ddac6d0c56ccaad616",
+	// No other key moved in any row, and identity_en.json was UNCHANGED by
+	// F1 — it touches no string Home Assistant keys a registry on.
+	//
+	// Moved a second time by F5: in all five files, exactly one row moves
+	// from the select platform to the sensor platform
+	// (bsh_common_root_selectedprogramnoprograms). Its config topic and
+	// default_entity_id change with the platform; its unique_id does not.
+	"discovery_full_en.json":    "07ccb6722c98fde08fd0cdec8869957e4587c560b9b614b09a1f375ee460b880",
+	"discovery_full_de.json":    "29a051f0640ea557a0b4b2b4d16099794b446f6805efbf531dc26c0443fa1b4b",
+	"discovery_curated_de.json": "d572fe509f06f557d1ce9c9e24746cf89e596ad4083e440cbfbf23893b33fc8b",
+	"discovery_plain_en.json":   "9120a86322c7b308df91ef82fd4b96ee6e6f99f3d5add77eb431de074f963c78",
+	"identity_en.json":          "a725b3b2f3072047d8f2f95bdc7b078ae0f34aadb3b3e74c6cf46d72a9e7eb93",
 }
 
 // TestGoldenFilesMatchTheirPinnedDigests fails when a golden file was

@@ -5022,40 +5022,6 @@
     }
   },
   {
-    "topic": "homeassistant/select/dishwasher/bsh_common_root_selectedprogramnoprograms/config",
-    "qos": 1,
-    "retain": true,
-    "payload": {
-      "availability": [
-        {
-          "payload_available": "online",
-          "payload_not_available": "offline",
-          "topic": "homeconnect/status"
-        },
-        {
-          "payload_available": "online",
-          "payload_not_available": "offline",
-          "topic": "homeconnect/Dishwasher/availability"
-        }
-      ],
-      "availability_mode": "all",
-      "command_topic": "homeconnect/Dishwasher/BSH/Common/Root/SelectedProgramNoPrograms/set",
-      "default_entity_id": "select.dishwasher_bsh_common_root_selectedprogramnoprograms",
-      "device": {
-        "identifiers": [
-          "homeconnect_dishwasher"
-        ],
-        "manufacturer": "BOSCH",
-        "model": "SMV6ZCX49E",
-        "name": "Dishwasher"
-      },
-      "name": "Selected Program No Programs",
-      "options": [],
-      "state_topic": "homeconnect/Dishwasher/BSH/Common/Root/SelectedProgramNoPrograms/state",
-      "unique_id": "homeconnect_dishwasher_bsh_common_root_selectedprogramnoprograms"
-    }
-  },
-  {
     "topic": "homeassistant/select/dishwasher/bsh_common_setting_powerstate/config",
     "qos": 1,
     "retain": true,
@@ -6953,6 +6919,38 @@
       "name": "Protection Port",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Root/ProtectionPort/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_root_protectionport"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/dishwasher/bsh_common_root_selectedprogramnoprograms/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Dishwasher/availability"
+        }
+      ],
+      "availability_mode": "all",
+      "default_entity_id": "sensor.dishwasher_bsh_common_root_selectedprogramnoprograms",
+      "device": {
+        "identifiers": [
+          "homeconnect_dishwasher"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Dishwasher"
+      },
+      "name": "Selected Program No Programs",
+      "state_topic": "homeconnect/Dishwasher/BSH/Common/Root/SelectedProgramNoPrograms/state",
+      "unique_id": "homeconnect_dishwasher_bsh_common_root_selectedprogramnoprograms"
     }
   },
   {

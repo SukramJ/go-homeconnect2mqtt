@@ -65,10 +65,12 @@ import (
 //   - F2 — the config topic's node id is sanitize(device) while every
 //     state and command topic uses the RAW device name. Pinned by
 //     TestGoldenPinsTheSanitizedNodeIDAsymmetry.
-//   - F5 — a writable selected-program element whose appliance exposes no
-//     programs produces a select with an EMPTY options list: a dropdown
-//     with nothing in it, which can never be set. Pinned by
-//     TestGoldenPinsTheEmptyOptionsSelect.
+//   - F5 — FIXED. A writable selected-program element whose appliance
+//     exposes no programs used to produce a select with an EMPTY options
+//     list — a visible, writable dropdown that can never be set. It is now
+//     a read-only sensor, as the non-writable branch has always been.
+//     Asserted by TestNoSelectIsPublishedWithoutOptions and
+//     TestSelectedProgramWithNoProgramsFallsBackToASensor.
 //   - F6 — the two synthetic program buttons carry neither
 //     entity_category nor enabled_by_default, so they are enabled and
 //     prominent while every other command button is disabled+config.
@@ -575,26 +577,46 @@ func TestGoldenPinsTheSanitizedNodeIDAsymmetry(t *testing.T) {
 //
 // Pinned as current behaviour. Every select must carry an options key —
 // that part is asserted, not logged — and the empty one is named.
-func TestGoldenPinsTheEmptyOptionsSelect(t *testing.T) {
-	empty := 0
+func TestNoSelectIsPublishedWithoutOptions(t *testing.T) {
+	for _, tc := range goldenCases {
+		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
+			selects := 0
+			for _, r := range publishPin(t, tc.lang, tc.device, tc.curated, tc.enriched) {
+				if !strings.HasPrefix(r.Topic, goldenPrefix+"/select/") {
+					continue
+				}
+				selects++
+				opts, ok := r.Payload["options"].([]any)
+				if !ok {
+					t.Errorf("%s is a select with no options key at all — Home Assistant rejects it", r.Topic)
+					continue
+				}
+				if len(opts) == 0 {
+					t.Errorf("%s is a select with an empty options list: a visible, "+
+						"writable dropdown with nothing in it, which can never be set (F5)", r.Topic)
+				}
+			}
+			if selects == 0 {
+				t.Fatal("no selects in the pin")
+			}
+		})
+	}
+}
+
+// TestSelectedProgramWithNoProgramsFallsBackToASensor is F5's other side:
+// the entity does not disappear, it changes platform. A read-only sensor
+// still shows the current selection, which is what the read-only
+// selected-program branch has always produced.
+func TestSelectedProgramWithNoProgramsFallsBackToASensor(t *testing.T) {
+	const key = "bsh_common_root_selectedprogramnoprograms"
+	var found string
 	for _, r := range publishPin(t, "en", goldenDeviceEN, false, true) {
-		if !strings.HasPrefix(r.Topic, goldenPrefix+"/select/") {
-			continue
-		}
-		opts, ok := r.Payload["options"].([]any)
-		if !ok {
-			t.Errorf("%s is a select with no options key at all — Home Assistant rejects it", r.Topic)
-			continue
-		}
-		if len(opts) == 0 {
-			empty++
-			t.Logf("F5: %s is a select with an empty options list", r.Topic)
+		if strings.Contains(r.Topic, "/"+key+"/") {
+			found = r.Topic
 		}
 	}
-	if empty != 1 {
-		t.Errorf("selects with empty options = %d, want 1 (the pin catalogue's "+
-			"BSH.Common.Root.SelectedProgramNoPrograms) — F5 may be fixed; "+
-			"update this test and the goldens together", empty)
+	if want := goldenPrefix + "/sensor/" + slugify(goldenDeviceEN) + "/" + key + "/config"; found != want {
+		t.Errorf("the programless selected-program entity is published at %q, want %q", found, want)
 	}
 }
 
@@ -713,10 +735,10 @@ func TestGoldenPlatformCensus(t *testing.T) {
 	// when its payload happens to round-trip and even immediately after a
 	// golden regeneration.
 	want := map[string]map[string]int{
-		"discovery_full_en.json":    {"sensor": 498, "binary_sensor": 103, "select": 37, "button": 20, "switch": 15, "number": 14},
-		"discovery_full_de.json":    {"sensor": 498, "binary_sensor": 103, "select": 37, "button": 20, "switch": 15, "number": 14},
-		"discovery_curated_de.json": {"sensor": 93, "binary_sensor": 43, "select": 18, "number": 11, "button": 6, "switch": 6},
-		"discovery_plain_en.json":   {"sensor": 498, "binary_sensor": 103, "select": 37, "button": 20, "switch": 15, "number": 14},
+		"discovery_full_en.json":    {"sensor": 499, "binary_sensor": 103, "select": 36, "button": 20, "switch": 15, "number": 14},
+		"discovery_full_de.json":    {"sensor": 499, "binary_sensor": 103, "select": 36, "button": 20, "switch": 15, "number": 14},
+		"discovery_curated_de.json": {"sensor": 94, "binary_sensor": 43, "select": 17, "number": 11, "button": 6, "switch": 6},
+		"discovery_plain_en.json":   {"sensor": 499, "binary_sensor": 103, "select": 36, "button": 20, "switch": 15, "number": 14},
 	}
 	for _, tc := range goldenCases {
 		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {

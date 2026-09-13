@@ -111,9 +111,20 @@ func classify(e *homeconnect.Entity) (platform string, ok bool) {
 		// synthetic "start program" control, not by writing this.
 		return platformSensor, true
 	case profile.KindSelectedProgram:
-		// Choosable when writable -> a select listing the programs to stage;
-		// otherwise a read-only sensor showing the current selection.
-		if e.Desc.Writable() {
+		// Choosable when writable AND there is something to choose from ->
+		// a select listing the programs to stage; otherwise a read-only
+		// sensor showing the current selection.
+		//
+		// The programs are normally folded into the enumeration by the
+		// parser, but an appliance that exposes none leaves it empty, and
+		// this used to route on the kind alone: the result was a select
+		// with "options": [], a visible, writable dropdown with nothing in
+		// it that can never be set (F5). Falling back to the sensor is
+		// what the read-only branch below already does, and it still shows
+		// the current selection. The superseded select config retracts
+		// itself — reconcileOrphans clears the retained config topics this
+		// daemon owns and no longer publishes, on the next discovery run.
+		if e.Desc.Writable() && e.Desc.IsEnum() {
 			return platformSelect, true
 		}
 		return platformSensor, true

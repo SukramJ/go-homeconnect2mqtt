@@ -834,12 +834,6 @@
     "device_identifier": "homeconnect_dishwasher"
   },
   {
-    "config_topic": "homeassistant/select/dishwasher/bsh_common_root_selectedprogramnoprograms/config",
-    "unique_id": "homeconnect_dishwasher_bsh_common_root_selectedprogramnoprograms",
-    "default_entity_id": "select.dishwasher_bsh_common_root_selectedprogramnoprograms",
-    "device_identifier": "homeconnect_dishwasher"
-  },
-  {
     "config_topic": "homeassistant/select/dishwasher/bsh_common_setting_powerstate/config",
     "unique_id": "homeconnect_dishwasher_bsh_common_setting_powerstate",
     "default_entity_id": "select.dishwasher_bsh_common_setting_powerstate",
@@ -1137,6 +1131,12 @@
     "config_topic": "homeassistant/sensor/dishwasher/bsh_common_root_protectionport/config",
     "unique_id": "homeconnect_dishwasher_bsh_common_root_protectionport",
     "default_entity_id": "sensor.dishwasher_bsh_common_root_protectionport",
+    "device_identifier": "homeconnect_dishwasher"
+  },
+  {
+    "config_topic": "homeassistant/sensor/dishwasher/bsh_common_root_selectedprogramnoprograms/config",
+    "unique_id": "homeconnect_dishwasher_bsh_common_root_selectedprogramnoprograms",
+    "default_entity_id": "sensor.dishwasher_bsh_common_root_selectedprogramnoprograms",
     "device_identifier": "homeconnect_dishwasher"
   },
   {

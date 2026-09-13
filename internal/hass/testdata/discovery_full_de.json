@@ -4972,40 +4972,6 @@
     }
   },
   {
-    "topic": "homeassistant/select/geschirrspuler/bsh_common_root_selectedprogramnoprograms/config",
-    "qos": 1,
-    "retain": true,
-    "payload": {
-      "availability": [
-        {
-          "payload_available": "online",
-          "payload_not_available": "offline",
-          "topic": "homeconnect/status"
-        },
-        {
-          "payload_available": "online",
-          "payload_not_available": "offline",
-          "topic": "homeconnect/Geschirrspüler/availability"
-        }
-      ],
-      "availability_mode": "all",
-      "command_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgramNoPrograms/set",
-      "default_entity_id": "select.geschirrspuler_bsh_common_root_selectedprogramnoprograms",
-      "device": {
-        "identifiers": [
-          "homeconnect_geschirrspuler"
-        ],
-        "manufacturer": "BOSCH",
-        "model": "SMV6ZCX49E",
-        "name": "Geschirrspüler"
-      },
-      "name": "Selected Program No Programs",
-      "options": [],
-      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgramNoPrograms/state",
-      "unique_id": "homeconnect_geschirrspuler_bsh_common_root_selectedprogramnoprograms"
-    }
-  },
-  {
     "topic": "homeassistant/select/geschirrspuler/bsh_common_setting_powerstate/config",
     "qos": 1,
     "retain": true,
@@ -6887,6 +6853,38 @@
       "name": "Schutzport",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/ProtectionPort/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_root_protectionport"
+    }
+  },
+  {
+    "topic": "homeassistant/sensor/geschirrspuler/bsh_common_root_selectedprogramnoprograms/config",
+    "qos": 1,
+    "retain": true,
+    "payload": {
+      "availability": [
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/status"
+        },
+        {
+          "payload_available": "online",
+          "payload_not_available": "offline",
+          "topic": "homeconnect/Geschirrspüler/availability"
+        }
+      ],
+      "availability_mode": "all",
+      "default_entity_id": "sensor.geschirrspuler_bsh_common_root_selectedprogramnoprograms",
+      "device": {
+        "identifiers": [
+          "homeconnect_geschirrspuler"
+        ],
+        "manufacturer": "BOSCH",
+        "model": "SMV6ZCX49E",
+        "name": "Geschirrspüler"
+      },
+      "name": "Selected Program No Programs",
+      "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Root/SelectedProgramNoPrograms/state",
+      "unique_id": "homeconnect_geschirrspuler_bsh_common_root_selectedprogramnoprograms"
     }
   },
   {
