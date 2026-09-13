@@ -76,11 +76,21 @@ type Bridge struct {
 	started  chan struct{}
 	startOne sync.Once
 
-	// republishing serialises the (re)connect republish passes. A flapping
-	// link fires OnConnect repeatedly, and two passes over the same fleet
-	// buy nothing: the second is deduplicated against the first by the
-	// runtime, having first waited out a snapshot window per device.
-	republishing atomic.Bool
+	// republishMu serialises the (re)connect republish passes and
+	// republishPending coalesces them. A flapping link fires OnConnect
+	// repeatedly, and two CONCURRENT passes over the same fleet buy
+	// nothing but a second snapshot window per appliance.
+	//
+	// Coalescing rather than skipping, and the difference is load-bearing:
+	// a pass running when the link drops has already published some
+	// appliances' documents against the runtime of the connection that
+	// died, and a later pass that simply gave up because one was in flight
+	// would leave exactly those appliances unpublished on the new
+	// connection. The flag is set BEFORE the lock is taken, so whoever
+	// holds the lock takes the flag and a request made while a pass is
+	// running is always honoured by another pass.
+	republishMu      sync.Mutex
+	republishPending atomic.Bool
 }
 
 // New builds the bridge and all device workers. It fails fast on a
@@ -223,10 +233,12 @@ func (b *Bridge) republishDiscovery(ctx context.Context) {
 	case <-ctx.Done():
 		return
 	}
-	if !b.republishing.CompareAndSwap(false, true) {
-		return
+	b.republishPending.Store(true)
+	b.republishMu.Lock()
+	defer b.republishMu.Unlock()
+	if !b.republishPending.CompareAndSwap(true, false) {
+		return // a pass that started after this request was made has done the work
 	}
-	defer b.republishing.Store(false)
 	for _, d := range b.devices {
 		if ctx.Err() != nil {
 			return

@@ -169,6 +169,47 @@ type subRecorder struct {
 	// this stub deliberately does NOT add this daemon's own publishes to
 	// it, so a sweep pin says exactly what it was given.
 	retained map[string][]byte
+	// fail names one topic this stub refuses, so a test can drive the
+	// difference between a document that was BUILT and one that was
+	// PUBLISHED. A refused publish is recorded nowhere: the broker did not
+	// take it.
+	fail string
+}
+
+// setFail makes the stub refuse one topic. Empty clears the refusal.
+func (s *subRecorder) setFail(topic string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.fail = topic
+}
+
+// publishedTopics is every non-retraction publish the stub accepted.
+func (s *subRecorder) publishedTopics() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []string
+	for _, p := range s.pubs {
+		if !p.retraction {
+			out = append(out, p.topic)
+		}
+	}
+	return out
+}
+
+// discoveryWindows is every snapshot subscription the sweep opened. The
+// SUBSCRIBE list is read rather than the live handler map, because the
+// window unsubscribes on the way out: a pin that read the map could not
+// tell a sweep that ran from one that never started.
+func (s *subRecorder) discoveryWindows(prefix string) []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []string
+	for _, f := range s.filters {
+		if strings.HasPrefix(f.Filter, prefix) {
+			out = append(out, f.Filter)
+		}
+	}
+	return out
 }
 
 type pubCall struct {
@@ -186,6 +227,9 @@ type pubCall struct {
 func (s *subRecorder) Publish(_ context.Context, topic string, payload []byte, qos mqtt.QoS, retain bool, _ ...mqtt.PublishOption) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.fail != "" && topic == s.fail {
+		return errors.New("subRecorder: refused " + topic)
+	}
 	s.pubs = append(s.pubs, pubCall{topic, qos, retain, len(payload) == 0 && retain})
 	return nil
 }

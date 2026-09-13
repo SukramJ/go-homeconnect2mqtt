@@ -74,9 +74,9 @@ func siblingConfig(key string) string {
 // window only has to be long enough to be entered.
 func shortWindow(t *testing.T) {
 	t.Helper()
-	prev := reconcileCollectWindow
-	reconcileCollectWindow = 20 * time.Millisecond
-	t.Cleanup(func() { reconcileCollectWindow = prev })
+	prev := reconcileCollectWindow.Get()
+	reconcileCollectWindow.Set(20 * time.Millisecond)
+	t.Cleanup(func() { reconcileCollectWindow.Set(prev) })
 }
 
 // TestReportOnlySweepOverTheRealFleet is the measurement this migration
@@ -343,9 +343,9 @@ func TestSweepWindowIsTheOnlyDiscoverySubscription(t *testing.T) {
 // which is what the flag means to clear.
 func TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished(t *testing.T) {
 	shortWindow(t)
-	prevSettle := refreshSettleDelay
-	refreshSettleDelay = time.Millisecond
-	t.Cleanup(func() { refreshSettleDelay = prevSettle })
+	prevSettle := refreshSettleDelay.Get()
+	refreshSettleDelay.Set(time.Millisecond)
+	t.Cleanup(func() { refreshSettleDelay.Set(prevSettle) })
 
 	b, _, _, rec := pinBridge(t)
 	b.cfg.HASSDiscoveryRefresh = true

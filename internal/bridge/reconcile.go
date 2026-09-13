@@ -7,23 +7,43 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/SukramJ/go-hamqtt/publisher"
 )
 
+// tunable is a duration the pins can shorten while sweeps are running.
+//
+// An atomic rather than a plain var, and that is not defensive style: the
+// sweep runs on a goroutine of its own, a test that restores the default on
+// cleanup writes while such a goroutine reads, and the race detector
+// reports it against whichever test happens to be running rather than
+// against the one that leaked the goroutine. A plain var made that a flake
+// that moved around the package.
+type tunable struct{ nanos atomic.Int64 }
+
+func newTunable(d time.Duration) *tunable {
+	t := &tunable{}
+	t.Set(d)
+	return t
+}
+
+func (t *tunable) Get() time.Duration  { return time.Duration(t.nanos.Load()) }
+func (t *tunable) Set(d time.Duration) { t.nanos.Store(int64(d)) }
+
 // reconcileCollectWindow is how long a snapshot subscription listens
 // before it decides what is an orphan; the broker delivers the retained
 // discovery tree right after the subscribe.
 //
-// A var rather than a const so the pins can shorten it. A sweep test that
-// waits two seconds for a window it controls is a test that will one day
-// be deleted for being slow.
-var reconcileCollectWindow = 2 * time.Second
+// Shortenable so the pins can drive it. A sweep test that waits two seconds
+// for a window it controls is a test that will one day be deleted for being
+// slow.
+var reconcileCollectWindow = newTunable(2 * time.Second)
 
 // refreshSettleDelay is how long we wait after clearing all discovery configs so
 // Home Assistant removes the entities before the workers re-publish them.
-var refreshSettleDelay = 3 * time.Second
+var refreshSettleDelay = newTunable(3 * time.Second)
 
 // The orphan sweep, and why it reports rather than retracts.
 //
@@ -90,7 +110,7 @@ func (b *Bridge) refreshDiscoveryOnce(ctx context.Context) {
 	// Let HA drop the entities before the workers re-publish fresh configs.
 	select {
 	case <-ctx.Done():
-	case <-time.After(refreshSettleDelay):
+	case <-time.After(refreshSettleDelay.Get()):
 	}
 }
 
@@ -166,7 +186,7 @@ func (b *Bridge) collectOwnConfigs(ctx context.Context, devices ...string) ([]st
 		// Look, never touch: the retraction below is the caller's, over a
 		// list the caller narrowed. See the note at the head of this file.
 		ReportOnly: true,
-		Window:     reconcileCollectWindow,
+		Window:     reconcileCollectWindow.Get(),
 		Owns:       b.hass.OwnsConfigTopic(devices...),
 		Inspect: func(t publisher.ConfigTopic, body []byte) {
 			// Runs on the transport's read loop: cheap, and it publishes
