@@ -416,7 +416,14 @@ func basePayload(platform, device, key, name string, t entityTopics, dev deviceB
 // device class is recoverable; publishing one the platform refuses is not
 // visible at all.
 func deviceClassAllowed(platform, dc string) bool {
-	t := deviceClasses()
+	return deviceClassAllowedIn(deviceClasses(), platform, dc)
+}
+
+// deviceClassAllowedIn is deviceClassAllowed against a given table, so the
+// fail-closed branch is reachable from a test. It cannot be reached from a
+// correct build — TestDeviceClassTableLoads asserts the table decodes — and a
+// branch nothing can exercise is a branch nobody has checked.
+func deviceClassAllowedIn(t map[string]map[string]bool, platform, dc string) bool {
 	if t == nil {
 		return false
 	}

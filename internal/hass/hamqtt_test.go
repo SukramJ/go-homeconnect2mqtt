@@ -580,6 +580,39 @@ func TestCatalogueDeviceClassesAgainstEveryPlatform(t *testing.T) {
 		t.Errorf("mapping.yaml carries %d device_class entries reachable from the pin, want 35", len(catalogued))
 	}
 
+	// The two F13 literals must agree with the catalogue and with each other.
+	// f13RefusedOverrides is keyed by entity key and f13CatalogueRows by
+	// feature name; without this, a wrong class in either is invisible,
+	// because the eleven rows are checked for the ABSENCE of a class and
+	// absence looks the same whichever class was named.
+	for name, dc := range f13CatalogueRows {
+		if catalogued[name] != dc {
+			t.Errorf("f13CatalogueRows says %s carries %q; mapping.yaml says %q", name, dc, catalogued[name])
+		}
+		if got, reached := f13RefusedOverrides[slugify(name)]; reached && got != dc {
+			t.Errorf("f13RefusedOverrides says %s carries %q, f13CatalogueRows says %q",
+				name, got, dc)
+		}
+	}
+	for key, dc := range f13RefusedOverrides {
+		found := false
+		for name, want := range f13CatalogueRows {
+			if slugify(name) == key {
+				found, _ = true, want
+				break
+			}
+		}
+		if !found {
+			t.Errorf("f13RefusedOverrides row %q (%q) has no feature in f13CatalogueRows", key, dc)
+		}
+	}
+	for name, dc := range f13AlreadyStrippedDownstream {
+		if catalogued[name] != dc {
+			t.Errorf("f13AlreadyStrippedDownstream says %s carries %q; mapping.yaml says %q",
+				name, dc, catalogued[name])
+		}
+	}
+
 	for _, platform := range []string{
 		platformSensor, platformNumber, platformBinarySensor,
 		platformSelect, platformSwitch, platformButton,
@@ -622,6 +655,38 @@ func TestCatalogueDeviceClassesAgainstEveryPlatform(t *testing.T) {
 // loses its device_class rather than carrying one Home Assistant refuses —
 // and that branch must be unreachable in a correct build rather than a
 // behaviour anyone relies on.
+// TestDeviceClassAllowanceFailsClosedWithoutTheTable reaches the branch a
+// correct build cannot: go-ha-catalog's snapshot is embedded, so the decode
+// cannot fail at runtime, and a mutation from `return false` to `return true`
+// there changes no byte and fails no test unless the branch is exercised
+// deliberately.
+//
+// It must fail CLOSED. Publishing no device_class costs every entity an icon
+// and its class semantics and is recoverable by an operator; publishing one
+// the platform refuses is not visible at all, and at ADR 0070 step 6 it costs
+// the whole device.
+func TestDeviceClassAllowanceFailsClosedWithoutTheTable(t *testing.T) {
+	for _, platform := range []string{
+		platformSensor, platformNumber, platformBinarySensor,
+		platformSelect, platformSwitch, platformButton,
+	} {
+		for _, dc := range []string{"temperature", deviceClassEnum, "door", "outlet", "restart", ""} {
+			if deviceClassAllowedIn(nil, platform, dc) {
+				t.Errorf("deviceClassAllowedIn(nil, %q, %q) = true; it must fail closed", platform, dc)
+			}
+		}
+	}
+	// And with a table it is the table that decides, so the nil check is not
+	// simply a constant false.
+	tbl := map[string]map[string]bool{platformSensor: {"temperature": true}}
+	if !deviceClassAllowedIn(tbl, platformSensor, "temperature") {
+		t.Error("deviceClassAllowedIn ignores the table it is given")
+	}
+	if deviceClassAllowedIn(tbl, platformSensor, "door") {
+		t.Error("deviceClassAllowedIn allows a class the table it is given does not list")
+	}
+}
+
 func TestDeviceClassTableLoads(t *testing.T) {
 	tbl := deviceClasses()
 	if tbl == nil {
