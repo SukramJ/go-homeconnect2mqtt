@@ -94,6 +94,13 @@ type Bridge struct {
 	// running is always honoured by another pass.
 	republishMu      sync.Mutex
 	republishPending atomic.Bool
+
+	// prior is what the retained device documents declared before this
+	// connection published anything — the memory a removal needs, and the
+	// only thing this daemon has that can tell a component it REMOVED from
+	// one it never had. See [priorDocuments] here and
+	// internal/hass/tombstone.go for what is done with it.
+	prior priorDocuments
 }
 
 // New builds the bridge and all device workers. It fails fast on a

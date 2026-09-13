@@ -33,7 +33,7 @@ For a standard Home Assistant install with the Mosquitto broker:
 | `mqtt_password` | password | `""` | MQTT password (only when `mqtt_server` is set). |
 | `mqtt_topic` | str | `homeconnect` | Base MQTT topic for published appliance state. |
 | `hass_enable` | bool | `true` | Publish Home Assistant MQTT discovery so entities appear automatically. |
-| `hass_discovery` | list(full\|curated) | `curated` | `curated` (default) publishes only the primary set, aligned with the entities the official Home Connect integration creates (~60 instead of ~590 across three appliances); `full` exposes every feature (the long tail disabled-by-default + categorized as diagnostic/config). **Switching `full` → `curated` on a running installation removes nothing:** discovery is one retained device document per appliance, and a document does not delete a component by leaving it out — the ~510 components per appliance that `curated` drops keep their Home Assistant entity, keep reading *available*, and keep receiving live state, so you see no change at all. The add-on logs `hass.curated_components_omitted` with the count on start; delete them as described under *Removing an entity* below. |
+| `hass_discovery` | list(full\|curated) | `curated` | `curated` (default) publishes only the primary set, aligned with the entities the official Home Connect integration creates (~60 instead of ~590 across three appliances); `full` exposes every feature (the long tail disabled-by-default + categorized as diagnostic/config). **Switching `full` → `curated` on a running installation DELETES entities:** the ~510 components per appliance that `curated` drops are tombstoned in the device document, so Home Assistant removes them along with their recorder history and anything referencing them. The add-on logs `hass.curated_components_omitted` with the count on start; see *Removing an entity* below. |
 | `hass_discovery_refresh` | bool | `false` | One-shot migration. On start the add-on clears all its retained discovery configs and re-creates the entities, so Home Assistant picks up changes it caches at first registration (entity **category**, name). Set it `true`, restart, then set it back to `false`. Resets per-entity room/custom-name; entity ids and automations are preserved. |
 | `language` | list(en\|de) | `en` | Friendly-name language. Entity **names** are localized; entity **ids** stay English and language-independent. |
 | `web_enable` | bool | `true` | Enable the read-only diagnostic web UI (served via Ingress). |
@@ -83,27 +83,32 @@ mosquitto_pub -h core-mosquitto -u <user> -P <password>   -t 'homeassistant/devi
 
 **Removing an entity.** A device document does not delete a component by
 leaving it out, so a feature you exclude in `mapping.yaml`, or lose by
-switching `hass_discovery` from `full` to `curated`, keeps its entity in Home
-Assistant. It does not merely linger showing its last value: it keeps *both*
-availability sources this add-on publishes (`<mqtt_topic>/status` and
-`<mqtt_topic>/<appliance>/connected`, both `online`) and it keeps receiving
-live state, because `hass_discovery` is applied only when discovery is
-rendered — never on the state topics. In Home Assistant it is
-indistinguishable from an entity that is still offered.
+switching `hass_discovery` from `full` to `curated`, is *tombstoned* instead:
+the document carries an entry for it holding a platform and nothing else,
+which is Home Assistant's own form for a removal, and the entity is deleted.
+Its recorder history goes with it, as does anything that referenced it —
+automations, scripts, dashboard cards, its area and its rename.
+
+To know what it published last time, the add-on reads its previous document
+back from the broker once per connection, immediately before the first
+publish of that connection. Every way that read can fail leaves *more*
+entities in place and never removes a different one, and a document published
+by a second instance of this add-on — which addresses the same topic, because
+`mqtt_topic` appears in neither the discovery prefix nor the appliance slug —
+is judged component by component against this instance's own root, so a
+sibling's entities are never deleted.
 
 That matters most for the cheapest trigger there is, one option: on a
 three-appliance installation, flipping `hass_discovery` from `full` to
-`curated` leaves **about 510 such entities per appliance** behind, and the
-operator who set it to reduce clutter sees nothing change. The add-on says
-so on start —
+`curated` removes **about 510 entities per appliance**. The add-on says so on
+start —
 
 ```
 WARN hass.curated_components_omitted device=Geschirrspüler omitted=510 published=177
 ```
 
-— and the removal is manual: restart Home Assistant (or reload the MQTT
-integration) first — the delete option only appears once the entity is no
-longer being provided — then delete the entities from the device page.
+— and setting the option back to `full` re-creates the entities, but not
+their history.
 
 ## Notes
 

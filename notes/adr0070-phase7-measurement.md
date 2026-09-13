@@ -2730,6 +2730,251 @@ survived.
 | M37 | the same mutation against the pre-fix whole-file check | 1 | **survived** (the masking, confirmed) |
 
 
+
+---
+
+## Step 8 outcome — tombstones, and the read-back that makes them possible
+
+This is the change #48 deferred *to* its own PR, and the deferral's three
+stated reasons are answered here rather than restated.
+
+### What an operator sees
+
+Before: flipping `HASS_DISCOVERY` from `full` to `curated` left **510
+phantom components per appliance**. Not inert — `curated` is read only
+inside `internal/hass`, so each of the 510 kept its retained per-entity
+registry entry, kept **both** availability sources publishing `online` and
+kept **receiving live state**. In Home Assistant they were
+indistinguishable from real entities, and the operator who set the option to
+reduce clutter saw no change at all.
+
+After: the same 510 are removed. And the trigger surface is the general one
+— a feature excluded in `mapping.yaml`, a replaced description file, a
+different appliance — not just the option flip.
+
+### The mechanism, and the one place it diverges from go-daikin2mqtt
+
+`discovery.Bundle.RemoveComponents` writes `{"platform":"…"}` and keeps the
+`unique_id` in `Bundle.Tombstones` (`json:"-"`), which is what lets
+`publisher.SupersededTopics` still retract the removed entity's old
+per-entity config. That half is go-daikin2mqtt PR #80's, unchanged.
+
+The read-back is **not**. daikin reads its prior documents through a
+`ReportOnly` `publisher.Runtime.Sweep`, whose filter is hard-wired to
+`<prefix>/#`. Two reasons that does not transfer:
+
+- On this bridge `<prefix>/#` replays all 687 retained per-entity configs
+  and the ~473 KB document itself, per appliance, **on the one path this
+  release cannot undo**. `<prefix>/device/+/config` replays one message per
+  appliance.
+- It is the SAME filter the post-publish orphan sweep uses, and the
+  SUBSCRIBE list is what pins that sweep as *not having run*
+  (`TestTheSweepIsSkippedWhenTheDocumentWasNotPublished`). A read-back
+  sharing the filter makes that pin unable to fail — confirmed: it is what
+  M11 mutates, and it turns the sweep pin red.
+
+So `haplane.Plane.Snapshot` is `Runtime.snapshot` without the sweep: one
+narrow window, the same teardown discipline (`context.WithoutCancel`, 5 s),
+the same QoS resolution — plus one thing the sweep's has no use for. Its
+visitor reports whether the caller has everything it came for, and the
+window closes the moment it does. The read-back sits in front of the
+migration, so a steady-state boot must not hold a subscription open for two
+seconds after its documents have already arrived. A window nothing completes
+still runs out its time, because MQTT has no end-of-retained signal and that
+is the only answer available when the broker holds nothing.
+
+### Can a live component be tombstoned? — the question, answered
+
+An adversarial review of go-daikin2mqtt #78/#79/#80 proved the "fewer, never
+different" claim **breaks in one direction**: where two instances share a
+device node id, instance B read A's document, did not recognise it as
+foreign, and tombstoned A's **live** components — removed from the entity
+registry, with dashboards, automations, area and rename lost, then restored
+and removed again in a permanent ping-pong.
+
+This bridge meets the same precondition. F8: two daemons with different
+`MQTT_TOPIC` roots, the same `HASS_BASE_TOPIC` and an appliance name in
+common produce byte-identical node ids, `unique_id`s, `identifiers[0]` and
+`default_entity_id`s, so they address the **same** document topic and
+nothing about the topic can tell them apart.
+
+What this bridge has that daikin did not is `MQTT_TOPIC` **inside every
+component**. `state_topic` and `command_topic` are `<root>/…`, and since F1
+every component carries the two-source availability list, both under
+`<root>`. Measured on the pin catalogue: every one of the 687 components
+names at least one topic (667 a `state_topic`, the 20 buttons a
+`command_topic`), and all of them carry the availability list. So the
+document is attributable component by component, by exactly the rule the
+orphan sweep already uses — `Discovery.IsOwnConfig`, as fixed for F8's
+`button` hole.
+
+`Discovery.BundleComponents` applies it per component, so a component that
+is not provably ours never becomes prior state. Three answers follow:
+
+1. **A live component of THIS instance is never tombstoned**, because
+   `ApplyTombstones` subtracts against `b.Components` — a key the new
+   document declares is never in the gone set, so `RemoveComponents` is
+   never handed one.
+2. **A live component of a SIBLING instance is never tombstoned**, because
+   its topics are under another root.
+3. **Every other failure direction produces fewer tombstones, never
+   different ones**: a window that sees nothing, a document that does not
+   parse, a truncated one, one with no `components` key, an empty map, a
+   component that is not an object, a component with no platform, a
+   tombstone this daemon wrote itself, a foreign `unique_id` namespace, and
+   a component naming no topic at all — all yield nil prior state, and the
+   publish proceeds exactly as it would have without the read.
+
+Both sibling cases are DRIVEN, not asserted against the predicate
+(`TestTheReadBackIgnoresASiblingsDocument`, `TestASiblingsWholeDocumentIsDeclined`),
+which is the lesson every bad defect in this programme has taught.
+
+### Where the state lives
+
+On the `publisher.Runtime` it was read through, not on a flag. That runtime
+is rebuilt by `haplane.Plane.Reconnect` at the head of every (re)connect, so
+the memo is **self-invalidating** on the next connection: no flag for a
+caller to forget, and no window in which a reconnect races a load. It is
+also why `publishDiscovery` reads `Plane.Runtime()` ONCE and carries it
+through — a pass that straddles a reconnect must not write its result into
+the new connection's memory, and re-reading the runtime afterwards is
+exactly how it would.
+
+### The gates run on the document that is published
+
+The same review found that daikin's size preflight and validator inspected
+the document *before* `RemoveComponents` added its entries — a gate on the
+wrong artefact, and the miss is precisely the fleet-wide deletion the gate
+exists to prevent. Here `PublishDeviceBundle` applies the tombstones and
+*then* calls `publishBundle`, so `discovery.Validate` and
+`haplane.Plane.preflight` both marshal the finished shape.
+`TestThePreflightMeasuresTheDocumentTheRemovalsProduced` drives a broker
+limit chosen **between** the two sizes, which is the only interval in which
+the two orderings give different answers. Measured: **39.8 bytes per
+removal** on the small fixture.
+
+The empty-document gate moved with it. It read `len(b.Components) == 0`, and
+a tombstone IS an entry — an appliance that classified to zero entities
+against a prior document of 687 would render 687 entries declaring nothing
+and walk straight through. It now counts LIVE components.
+
+### The measurement
+
+| | full (`de`) | curated (`de`) | curated after the flip |
+| --- | ---: | ---: | ---: |
+| Components declared | 687 | 177 | 177 |
+| Removals carried | 0 | 0 | **510** |
+| Document payload | 472 847 | 122 900 | **157 548** |
+| On the wire | 472 953 | 123 006 | **157 654** |
+| `discovery.Validate` | clean | clean | **clean** |
+| Per-entity configs superseded | 687 | 177 | **687** |
+
+The removals are carried on **one** connection: the document that went out
+is the memo, and a tombstone is not prior state, so the next pass declares
+177 and the document falls back to ~123 KB. The full document does not move
+at all, because a `full` render omits nothing.
+
+`discovery.Validate` accepts **687 of 687** in all four configurations,
+unchanged, and the tombstoned document validates clean rather than merely
+non-blocking.
+
+### The pins — nothing moved, and that is proved as OUTPUT
+
+**No golden was regenerated and no SHA-256 literal moved.** #48's stated
+reason for deferring — "510 extra keys in the curated document moves the
+curated golden and its digest" — turns out not to hold, and the reason is
+worth recording: the five files in `internal/hass/testdata/` pin the
+**per-entity** form, and a tombstone lives only in the bundle artefact,
+which this repository has no golden for.
+
+Proved as output rather than as files: `-update-discovery-golden` and
+`-update-topics-golden` were run in a worktree of `origin/main` and in a
+copy of this branch, and the six regenerated files are byte-identical across
+the two — and equal to the six literals already pinned:
+
+```
+f1bcd7c4…  discovery_curated_de.json
+ad39e602…  discovery_full_de.json
+248d2d26…  discovery_full_en.json
+9120a863…  discovery_plain_en.json
+a725b3b2…  identity_en.json
+37e5bc78…  topics.json
+```
+
+### #48's warning
+
+Kept, and its text corrected. The count is more consequential than it was,
+not less — flipping the option now **deletes** that many entities, with
+their recorder history and everything that references them — so the line
+stays at WARN. What was removed is the remedy it named: "restart Home
+Assistant, then delete them on the device page" is advice for a hazard that
+no longer exists, and following it now does nothing.
+`TestTheCuratedWarningDescribesTheBehaviourThisReleaseHas` pins the absence
+of the stale text as well as the presence of the new, because a warning is
+only worth what its text is worth (M12).
+
+### Mutation proof
+
+Sixteen mutations, applied one at a time to a `cp -a` copy of the committed
+tree and each run against the whole suite. **Thirteen caught on the first
+pass, three survived, and all three survivors were defects in a pin rather
+than gaps in coverage.**
+
+| # | Mutation | Runs | Result |
+| --- | --- | ---: | --- |
+| M1 | a tombstone may overwrite a LIVE component | 1 | caught |
+| M2 | the read-back does not check ownership (a sibling's document is tombstoned) | 8 | **survived the driven tests on the first pass**; caught 8/8 after the fixture was fixed |
+| M3 | a tombstone is carried forward as prior state (the platform filter) | 3 | **survived 1/1**, masked by M2's guard; caught 3/3 once isolated |
+| M4 | `LiveComponents` keeps tombstones | 1 | caught |
+| M5 | the empty gate counts entries again, not live components | 1 | caught |
+| M6 | the gates run on the document BEFORE the removals are written in | 6 | caught 6/6 |
+| M7 | the prior memo is cached across connections | 6 | caught 6/6 |
+| M8 | `record` does not check which connection produced the result | 8 | **survived 0/5**; caught 8/8 after the pin was rewritten |
+| M9 | a refused document is remembered as the previous one | 5 | caught 5/5 |
+| M10 | the read-back runs AFTER the migration | 8 | caught 8/8 |
+| M11 | the read-back shares the sweep's `<prefix>/#` filter | 1 | caught |
+| M12 | the curated warning keeps #48's remedy for a hazard that is gone | 1 | caught |
+| M13 | a tombstone carries the `unique_id` back into the payload | 1 | caught |
+| M14 | a document that proved nothing is reported as an empty map | 1 | caught |
+| M15 | the window never stops early and always pays its full budget | 5 | caught 5/5 |
+| M16 | the read-back stops at the FIRST document, whoever it belongs to | 6 | **survived 0/6**; caught 6/6 after the fixture gained a second appliance and an asynchronous replay |
+
+**M2 is the one to read twice.** It was caught 8/8 by the predicate table
+and **not at all** by either of the two tests that DRIVE a sibling's
+document through `publishDiscovery` — the exact inversion of the lesson this
+programme keeps learning. The cause was the fixture: `siblingConfig` carries
+no `platform`, because it was written for per-entity configs whose platform
+lives in the topic. Inside a document the platform is a key, so both sibling
+tests were declining their fixture for the wrong reason and would have
+passed with the ownership rule deleted. `siblingComponent` carries one, and
+the two driven tests now fail 8/8.
+
+**M8 was inert for an ordering reason.** The first version of
+`TestAPassThatStraddlesAReconnectDoesNotWriteTheNewConnectionsMemo` recorded
+the dead connection's result *before* the new connection had read anything,
+so the read simply overwrote it and the guard was never consulted. The
+hazard is the other order — a straddling pass that returns after the new
+connection has already loaded — and that is what the test now drives.
+
+**M16 needed two fixtures to become visible.** A window that stops at the
+first delivery is indistinguishable from a correct one over ONE appliance,
+and the cost of the defect is in the safe direction — the second appliance
+simply keeps its phantoms — so nothing else in the file noticed. Two things
+had to change: a second appliance, and a retained replay that is
+ASYNCHRONOUS. `subRecorder` replays its retained tree inline inside the
+SUBSCRIBE, which is what every other pin here needs (a window that opened
+after the replay sees nothing) and which also delivers everything before the
+first handler call returns — so "the window waited for the second message"
+was a property with no second message to wait for. It is now the third time
+in this programme that a pin was inert because of its FIXTURE rather than
+its assertion.
+
+**M3 is a masking pair with M2**, kept as two: `IsOwnConfig` rejects a
+platform-only entry anyway (no `unique_id`), so deleting the platform filter
+alone changed no verdict. The table row that isolates it now names a
+component that is ours by identity AND by every topic it carries, so the
+missing platform is the only thing that can refuse it.
+
 ---
 
 ## Sequencing — the rest of phase 7

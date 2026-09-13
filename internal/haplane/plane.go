@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/SukramJ/go-hamqtt/discovery"
 	"github.com/SukramJ/go-hamqtt/publisher"
@@ -112,6 +114,7 @@ type Config struct {
 // removed device's retained values are cleared from.
 type Plane struct {
 	cfg    Config
+	tr     publisher.Transport
 	newRT  func() *publisher.Runtime
 	rt     atomic.Pointer[publisher.Runtime]
 	state  *publisher.StatePublisher
@@ -130,6 +133,7 @@ func New(tr publisher.Transport, cfg Config) *Plane {
 	}
 	p := &Plane{
 		cfg: cfg,
+		tr:  tr,
 		newRT: func() *publisher.Runtime {
 			return publisher.New(tr, publisher.Config{
 				Prefix:      cfg.Prefix,
@@ -358,3 +362,94 @@ func (p *Plane) PublishState(ctx context.Context, topic string, payload []byte) 
 // the consumer, before the final offline marker: see
 // internal/bridge's Bridge.StopDiscovery.
 func (p *Plane) Close() { p.Runtime().Close() }
+
+// snapshotTeardown bounds the UNSUBSCRIBE that ends a [Plane.Snapshot]
+// window. It matches publisher.Runtime's own, for the same reason: the
+// window is the one thing that must come down even when the caller's
+// context is already dead.
+const snapshotTeardown = 5 * time.Second
+
+// Snapshot installs filter for at most window, hands every retained
+// delivery to visit, and takes the subscription down again on every exit
+// path — a cancelled context and a broker that refuses the UNSUBSCRIBE
+// included.
+//
+// It is publisher.Runtime.Sweep's snapshot half without the sweep, and it
+// exists because the sweep's window cannot be narrowed: it is hard-wired to
+// `<prefix>/#`, which is the right filter for finding orphaned per-entity
+// configs and the wrong one for reading back ONE artefact. The difference
+// is not cosmetic on this bridge:
+//
+//   - A `<prefix>/#` window before the migration replays all 687 retained
+//     per-entity configs AND the ~473 KB document, per appliance, on the
+//     one path this release cannot undo. `<prefix>/device/+/config`
+//     replays one message per appliance.
+//   - Two windows on the same filter are indistinguishable to anything
+//     watching the SUBSCRIBE list, and that list is what pins the
+//     post-publish sweep as "did not run"
+//     (TestTheSweepIsSkippedWhenTheDocumentWasNotPublished). A read-back
+//     sharing the sweep's filter would silently make that pin unable to
+//     fail.
+//
+// visit runs on the transport's read loop: it must be cheap and must not
+// publish. Empty payloads are dropped, because a retained topic the broker
+// is already clearing carries nothing to read. It reports whether the
+// caller has everything it came for, and the window closes the moment it
+// does — a caller that knows how many retained messages it expects should
+// not pay the whole window for the ones it already has. A window that is
+// never satisfied runs out its time, which is the only answer available
+// when the broker has nothing to send: MQTT has no end-of-retained signal.
+//
+// The error is the caller's context ending, which is reported rather than
+// swallowed — and the deliveries the window DID collect are kept, because a
+// caller that acts on a partial read is choosing to, with the error in hand
+// to say so.
+func (p *Plane) Snapshot(
+	ctx context.Context,
+	filter string,
+	window time.Duration,
+	visit func(topic string, payload []byte) (done bool),
+) error {
+	if p.tr == nil {
+		return errors.New("haplane: snapshot without a transport")
+	}
+	var (
+		closed   atomic.Bool
+		complete = make(chan struct{})
+		once     sync.Once
+	)
+	gated := func(topic string, payload []byte, _ bool) {
+		if closed.Load() || len(payload) == 0 {
+			return
+		}
+		if visit(topic, payload) {
+			once.Do(func() { close(complete) })
+		}
+	}
+	// The same level the sweep window subscribes at: publisher.Runtime
+	// resolves its own QoS through Or, so a plane configured MQTT_QOS 0
+	// does not silently read this one window at QoS 1.
+	qos, _ := p.cfg.QoS.Or(publisher.QoSAtLeastOnce).Wire()
+	if err := p.tr.Subscribe(ctx, filter, qos, gated); err != nil {
+		return fmt.Errorf("haplane: snapshot subscribe %s: %w", filter, err)
+	}
+	timer := time.NewTimer(window)
+	defer timer.Stop()
+	select {
+	case <-complete:
+	case <-timer.C:
+	case <-ctx.Done():
+	}
+	closed.Store(true)
+
+	// On a context of its own: the caller's may already be cancelled, and
+	// that is precisely the case where leaving the subscription installed
+	// does the most damage.
+	teardown, cancel := context.WithTimeout(context.WithoutCancel(ctx), snapshotTeardown)
+	defer cancel()
+	if err := p.tr.Unsubscribe(teardown, filter); err != nil {
+		p.logger.Warn("haplane.snapshot_unsubscribe",
+			slog.String("filter", filter), slog.String("err", err.Error()))
+	}
+	return ctx.Err()
+}

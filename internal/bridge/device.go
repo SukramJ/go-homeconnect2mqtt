@@ -346,7 +346,19 @@ func (b *Bridge) publishDiscovery(parent context.Context, d *Device) {
 		return
 	}
 	ctx, cancel := context.WithTimeout(parent, bundlePublishTimeout)
-	topic, err := b.hass.PublishDeviceBundle(ctx, d.name, d.app.Info(), d.app.Entities())
+	// The runtime is read ONCE and carried through, because the memo below
+	// is a statement about the connection this pass ran on. A pass that
+	// straddles a reconnect must not write its result into the new
+	// connection's memory, and re-reading Plane.Runtime() afterwards is how
+	// it would.
+	rt := b.plane.Runtime()
+	node := b.hass.BundleNodeID(d.name)
+	// Before the one publish that cannot be undone, and that is the only
+	// moment it can be read: the publish below overwrites the very document
+	// this asks about. Every failure direction of the read produces fewer
+	// tombstones and never different ones — see internal/hass/tombstone.go.
+	prior := b.prior.forConnection(ctx, rt, node, b.readPriorDocuments)
+	topic, live, err := b.hass.PublishDeviceBundle(ctx, d.name, d.app.Info(), d.app.Entities(), prior)
 	cancel()
 	if err != nil {
 		// Every failure path in PublishDeviceBundle has already logged what
@@ -363,6 +375,11 @@ func (b *Bridge) publishDiscovery(parent context.Context, d *Device) {
 			slog.String("reason", "the device document was built but the runtime does not claim it"))
 		return
 	}
+	// What went out is now the previous document, so a second pass on this
+	// connection does not re-mark what this one removed. Recorded only
+	// after both gates, for the same reason they exist: a document that was
+	// not published did not become anybody's previous document.
+	b.prior.record(rt, node, live)
 	b.reconcileOrphans(parent, d.name, map[string]bool{topic: true})
 }
 

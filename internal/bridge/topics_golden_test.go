@@ -18,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/SukramJ/go-hamqtt/discovery"
 	hagomqtt "github.com/SukramJ/go-hamqtt/publisher/gomqtt"
@@ -169,6 +170,10 @@ type subRecorder struct {
 	// this stub deliberately does NOT add this daemon's own publishes to
 	// it, so a sweep pin says exactly what it was given.
 	retained map[string][]byte
+	// staggerReplay delivers the retained replay asynchronously, one
+	// message per millisecond, instead of inline inside the SUBSCRIBE.
+	// See the note in Subscribe.
+	staggerReplay bool
 	// fail names one topic this stub refuses, so a test can drive the
 	// difference between a document that was BUILT and one that was
 	// PUBLISHED. A refused publish is recorded nowhere: the broker did not
@@ -225,16 +230,35 @@ func (s *subRecorder) publishedTopics() []string {
 	return out
 }
 
-// discoveryWindows is every snapshot subscription the sweep opened. The
-// SUBSCRIBE list is read rather than the live handler map, because the
+// discoveryWindows is every snapshot subscription the ORPHAN SWEEP opened.
+// The SUBSCRIBE list is read rather than the live handler map, because the
 // window unsubscribes on the way out: a pin that read the map could not
 // tell a sweep that ran from one that never started.
+//
+// It matches the sweep's own filter exactly rather than the prefix, and
+// that is what makes it able to fail. Two other subscriptions live under
+// the discovery prefix — the Home Assistant birth topic, and the tombstone
+// read-back's `<prefix>/device/+/config` — and a prefix match would count
+// both, so "the sweep did not run" would be asserted by a list that is
+// never empty. See [subRecorder.bundleWindows] for the read-back's.
 func (s *subRecorder) discoveryWindows(prefix string) []string {
+	return s.windowsMatching(func(f string) bool { return f == prefix+"/#" })
+}
+
+// bundleWindows is every snapshot subscription the tombstone read-back
+// opened: the narrow filter over the device documents, which is a
+// DIFFERENT filter from the sweep's on purpose — see
+// haplane.Plane.Snapshot.
+func (s *subRecorder) bundleWindows(prefix string) []string {
+	return s.windowsMatching(func(f string) bool { return f == prefix+"/device/+/config" })
+}
+
+func (s *subRecorder) windowsMatching(want func(string) bool) []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var out []string
 	for _, f := range s.filters {
-		if strings.HasPrefix(f.Filter, prefix) {
+		if want(f.Filter) {
 			out = append(out, f.Filter)
 		}
 	}
@@ -294,7 +318,27 @@ func (s *subRecorder) Subscribe(_ context.Context, filter string, qos mqtt.QoS, 
 			replay = append(replay, &mqtt.Message{Topic: topic, Payload: payload, Retain: true})
 		}
 	}
+	stagger := s.staggerReplay
 	s.mu.Unlock()
+	if stagger {
+		// A real broker replays its retained tree as separate PUBLISHes
+		// on the read loop, not synchronously inside the SUBSCRIBE. The
+		// inline form is what every other pin here needs — a window that
+		// opened after the replay sees nothing — but it also makes a
+		// window that closes EARLY indistinguishable from one that waits,
+		// because everything has already been delivered by the time the
+		// first handler call returns. A test whose property is "the
+		// window waited for the second message" has to be given a second
+		// message that is not already there.
+		go func() {
+			for _, msg := range replay {
+				time.Sleep(time.Millisecond)
+				h(msg)
+			}
+		}()
+		s.mu.Lock()
+		return mqtt.SubscribeResult{}, nil
+	}
 	for _, msg := range replay {
 		h(msg)
 	}
@@ -310,13 +354,23 @@ func (s *subRecorder) Unsubscribe(context.Context, string) error { return nil }
 // assertion about the shipped composition root.
 func planeFor(t *testing.T, rec *subRecorder, qos int, retain bool) *haplane.Plane {
 	t.Helper()
+	return planeWithLimit(t, rec, qos, retain, nil)
+}
+
+// planeWithLimit is planeFor with the broker's advertised Maximum Packet
+// Size supplied. A nil hook means UNKNOWN, which publishes.
+func planeWithLimit(
+	t *testing.T, rec *subRecorder, qos int, retain bool, maxPacket func() (uint32, bool),
+) *haplane.Plane {
+	t.Helper()
 	return haplane.New(hagomqtt.Transport(rec), haplane.Config{
-		Prefix:      pinPrefix,
-		StatusTopic: layout.Bridge(pinRoot),
-		Layout:      hass.NewLayout(pinRoot),
-		QoS:         haplane.QoS(qos),
-		Retain:      retain,
-		Logger:      slog.New(slog.DiscardHandler),
+		Prefix:              pinPrefix,
+		StatusTopic:         layout.Bridge(pinRoot),
+		Layout:              hass.NewLayout(pinRoot),
+		QoS:                 haplane.QoS(qos),
+		Retain:              retain,
+		BrokerMaxPacketSize: maxPacket,
+		Logger:              slog.New(slog.DiscardHandler),
 	})
 }
 
