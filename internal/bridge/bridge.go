@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -67,6 +68,19 @@ type Bridge struct {
 	// Per-device discovery orphan-cleanup gate (skips a re-entrant reconcile).
 	reconcileMu sync.Mutex
 	reconciling map[string]bool
+
+	// started is closed by Run once the one-shot HASS_DISCOVERY_REFRESH
+	// migration has finished. The (re)connect republish waits on it, so the
+	// first connect's republish cannot race the flag that exists to clear
+	// what it is about to write.
+	started  chan struct{}
+	startOne sync.Once
+
+	// republishing serialises the (re)connect republish passes. A flapping
+	// link fires OnConnect repeatedly, and two passes over the same fleet
+	// buy nothing: the second is deduplicated against the first by the
+	// runtime, having first waited out a snapshot window per device.
+	republishing atomic.Bool
 }
 
 // New builds the bridge and all device workers. It fails fast on a
@@ -96,6 +110,7 @@ func New(deps Deps) (*Bridge, error) {
 		cmdRetries:    3,
 		cmdRetryDelay: time.Second,
 		reconciling:   map[string]bool{},
+		started:       make(chan struct{}),
 	}
 	for _, spec := range deps.Devices {
 		dev, err := buildDevice(b, spec)
@@ -132,6 +147,10 @@ func (b *Bridge) Run(ctx context.Context) error {
 	// blocks on whatever a handler is doing.
 	defer b.stopCommands()      //nolint:contextcheck // the drain is deliberately bounded independently of ctx: Run's ctx is cancelled by the time this fires, and a handler mid-write still has to finish
 	b.refreshDiscoveryOnce(ctx) // one-shot HASS_DISCOVERY_REFRESH migration
+	// Released only now: PublishOnline's republish waits here, so the very
+	// first connect's republish cannot publish a device document into the
+	// window HASS_DISCOVERY_REFRESH is about to clear.
+	b.startOne.Do(func() { close(b.started) })
 	g, gctx := errgroup.WithContext(ctx)
 	for _, d := range b.devices {
 		// One drain goroutine per device: entity-state publishes are
@@ -164,6 +183,55 @@ func (b *Bridge) PublishOnline(ctx context.Context) {
 	b.plane.Reconnect()
 	if err := b.plane.AnnounceOnline(ctx); err != nil {
 		b.logger.Warn("bridge.online_failed", slog.String("err", err.Error()))
+	}
+	// Off the hook's goroutine: mqtt.Lifecycle runs OnConnect callbacks
+	// inline on the reconnect loop, and a callback that blocks stalls every
+	// later reconnect attempt. The republish is a snapshot window and a
+	// ~460 KB document per appliance.
+	go b.republishDiscovery(ctx)
+}
+
+// republishDiscovery re-publishes every appliance's device document on a
+// new broker connection.
+//
+// This is the other half of the dedup-gate question, and it is the half
+// that is easy to answer wrongly by doing nothing. Plane.Reconnect throws
+// the discovery runtime away, so the gate that would suppress a repeat
+// publish is OPEN on the new connection — but an open gate that nothing
+// walks through publishes exactly as little as a closed one. Nothing else
+// re-drives discovery on a reconnect: onState publishes when an APPLIANCE
+// connects, which a broker reconnect does not disturb, and the Home
+// Assistant birth handler fires when HOME ASSISTANT restarts, which it also
+// does not. So a broker that came back without its retained store — a
+// restart without persistence, a failover to a fresh node — kept every
+// appliance's entities missing until the daemon itself was restarted. That
+// is go-mtec2mqtt's finding F2, and with one document per appliance instead
+// of 687 topics it costs the whole fleet at once rather than piecemeal.
+//
+// publisher.Runtime.Republish is deliberately NOT the mechanism. It re-sends
+// the bytes the runtime cached, which is the wrong half: the runtime here is
+// brand new and has cached nothing, and more importantly a cached replay
+// would skip the supersede step that retracts the per-entity configs — the
+// step whose completeness on THIS connection is the entire point of
+// rebuilding the runtime. Re-running the publish re-runs both.
+func (b *Bridge) republishDiscovery(ctx context.Context) {
+	if b.hass == nil {
+		return
+	}
+	select {
+	case <-b.started:
+	case <-ctx.Done():
+		return
+	}
+	if !b.republishing.CompareAndSwap(false, true) {
+		return
+	}
+	defer b.republishing.Store(false)
+	for _, d := range b.devices {
+		if ctx.Err() != nil {
+			return
+		}
+		b.publishDiscovery(ctx, d)
 	}
 }
 

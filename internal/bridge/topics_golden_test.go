@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"log/slog"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/SukramJ/go-hamqtt/discovery"
 	hagomqtt "github.com/SukramJ/go-hamqtt/publisher/gomqtt"
 
 	"github.com/SukramJ/go-mqtt"
@@ -341,6 +343,12 @@ func renderPayloads(t *testing.T, dev *Device) map[string]map[string]any {
 type payloadRecorder struct {
 	mu       sync.Mutex
 	payloads map[string]map[string]any
+}
+
+// PublishBundle satisfies hass.ConfigWriter. The topic pin drives the
+// per-entity builder, which is the form the pinned tree records.
+func (p *payloadRecorder) PublishBundle(context.Context, *discovery.Bundle) (bool, error) {
+	return false, errors.New("payloadRecorder: the device document path is not driven here")
 }
 
 func (p *payloadRecorder) Publish(_ context.Context, topic string, payload []byte) (bool, error) {

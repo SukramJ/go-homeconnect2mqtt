@@ -6,8 +6,11 @@ package hass
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync"
 	"testing"
+
+	"github.com/SukramJ/go-hamqtt/discovery"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
@@ -19,6 +22,13 @@ type stubPub struct {
 }
 
 func newStubPub() *stubPub { return &stubPub{pubs: map[string]string{}} }
+
+// PublishBundle satisfies ConfigWriter. This stub drives the per-entity
+// builder only; a test that wants the device-document path uses the
+// recorder in hamqtt_test.go.
+func (s *stubPub) PublishBundle(context.Context, *discovery.Bundle) (bool, error) {
+	return false, errors.New("stubPub: the device document path is not driven here")
+}
 
 func (s *stubPub) Publish(_ context.Context, topic string, payload []byte) (bool, error) {
 	s.mu.Lock()

@@ -872,9 +872,9 @@ func TestHamqttBundleValidates(t *testing.T) {
 			if tc.enriched {
 				d.SetEnricher(pinEnricher(t))
 			}
-			b, err := d.hamqttBundle(tc.device, pincatalog.Info, pinEntities(t))
+			b, err := d.BundleFor(tc.device, pincatalog.Info, pinEntities(t))
 			if err != nil {
-				t.Fatalf("hamqttBundle: %v", err)
+				t.Fatalf("BundleFor: %v", err)
 			}
 			if got, want := b.Topic(goldenPrefix), goldenPrefix+"/device/"+slugify(tc.device)+"/config"; got != want {
 				t.Errorf("bundle topic = %q, want %q", got, want)
@@ -1033,17 +1033,26 @@ func TestButtonDeviceClassFilterIsInertOverThisCatalogue(t *testing.T) {
 type refusingPublisher struct{ t *testing.T }
 
 func (p refusingPublisher) Publish(_ context.Context, topic string, _ []byte) (bool, error) {
-	p.t.Errorf("the go-hamqtt rendering path published to %s — it publishes NOTHING", topic)
+	p.t.Errorf("a rendering call published to %s — rendering publishes NOTHING", topic)
 	return false, nil
 }
 
-// TestHamqttRenderPathPublishesNothing is the step-4 constraint as an
-// assertion rather than as a promise in a doc comment.
+func (p refusingPublisher) PublishBundle(_ context.Context, b *discovery.Bundle) (bool, error) {
+	p.t.Errorf("a rendering call published the device document for %s — rendering publishes NOTHING", b.NodeID)
+	return false, nil
+}
+
+// TestHamqttRenderPathPublishesNothing keeps rendering and publishing
+// separable now that one of these entry points HAS a production caller.
 //
-// The whole experiment is arranged so that a failure costs nothing: no
-// change to the publish path, to the coordinator or to the MQTT bootstrap,
-// and no byte on a broker. This drives every rendering entry point with a
-// Publisher that fails the test on contact.
+// Step 4's version of this assertion said the whole go-hamqtt path touched
+// no broker. Step 6 gives BundleFor a caller — Discovery.PublishDeviceBundle
+// — and the property that has to survive is the narrower and more useful
+// one: RENDERING a document must still be free of side effects, so every
+// gate PublishDeviceBundle runs between the render and the write (an empty
+// component set, a blocking discovery.Validate, the broker's maximum packet
+// size) is reached with nothing yet on the wire. A renderer that published
+// as it went would make each of those refusals a partial migration.
 func TestHamqttRenderPathPublishesNothing(t *testing.T) {
 	for _, tc := range goldenCases {
 		d := New(refusingPublisher{t}, goldenPrefix, goldenRoot, tc.lang, tc.curated, slog.New(slog.DiscardHandler))
@@ -1053,8 +1062,8 @@ func TestHamqttRenderPathPublishesNothing(t *testing.T) {
 		if _, err := d.hamqttComponents(tc.device, pincatalog.Info, pinEntities(t)); err != nil {
 			t.Fatalf("hamqttComponents: %v", err)
 		}
-		if _, err := d.hamqttBundle(tc.device, pincatalog.Info, pinEntities(t)); err != nil {
-			t.Fatalf("hamqttBundle: %v", err)
+		if _, err := d.BundleFor(tc.device, pincatalog.Info, pinEntities(t)); err != nil {
+			t.Fatalf("BundleFor: %v", err)
 		}
 	}
 }

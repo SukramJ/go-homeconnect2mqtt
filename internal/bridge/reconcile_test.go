@@ -5,6 +5,7 @@ package bridge
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -354,9 +355,17 @@ func TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished(t *test
 	// fixture and leave half an installed base standing.
 	b.devices = append(b.devices, &Device{name: "Backofen", topics: newDeviceTopics(pinRoot, "Backofen")})
 
+	// The two device documents are in the wanted set and the sweep cannot
+	// find them: OwnsConfigTopic declines the device-document form, so they
+	// are named explicitly from the configured device list. A refresh that
+	// cleared only the per-entity leftovers would leave the one retained
+	// topic that actually holds this fleet's entities — which is the config
+	// the flag exists to make Home Assistant re-read.
 	ours := []string{
 		"homeassistant/sensor/geschirrspuler/anything/config",
 		"homeassistant/sensor/backofen/anything/config",
+		"homeassistant/device/geschirrspuler/config",
+		"homeassistant/device/backofen/config",
 	}
 	seedRetained(rec, map[string]string{
 		ours[0]: ourConfig("anything"),
@@ -369,9 +378,10 @@ func TestRefreshDiscoveryOnceIsFleetWideAndOnlyBeforeAnythingIsPublished(t *test
 
 	got := retractedTopics(rec)
 	sort.Strings(ours)
-	if len(got) != len(ours) || got[0] != ours[0] || got[1] != ours[1] {
-		t.Errorf("refresh cleared %v, want %v — every appliance of ours, and neither the "+
-			"sibling instance's nor the foreign integration's configs", got, ours)
+	if !slices.Equal(got, ours) {
+		t.Errorf("refresh cleared %v, want %v — every appliance of ours, its device document "+
+			"included, and neither the sibling instance's nor the foreign integration's configs",
+			got, ours)
 	}
 }
 

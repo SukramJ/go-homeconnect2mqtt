@@ -6,9 +6,12 @@ package hass
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 
+	"github.com/SukramJ/go-hamqtt/discovery"
 	"github.com/SukramJ/go-hamqtt/publisher"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
@@ -36,6 +39,13 @@ import (
 // comparison each.
 type ConfigWriter interface {
 	Publish(ctx context.Context, topic string, payload []byte) (bool, error)
+
+	// PublishBundle writes one appliance's retained device document,
+	// retracting the per-entity configs it supersedes first and refusing
+	// the whole migration if the broker would not accept a packet that
+	// size. Both halves are haplane.Plane's; see there for why the refusal
+	// has to happen before the retraction rather than after it.
+	PublishBundle(ctx context.Context, b *discovery.Bundle) (bool, error)
 }
 
 // Enricher supplies operator-configured per-feature overrides (implemented by
@@ -346,6 +356,122 @@ func (d *Discovery) publishProgramControls(ctx context.Context, device string, e
 			d.logger.Warn("hass.publish", slog.String("topic", topic), slog.String("err", err.Error()))
 		}
 	}
+}
+
+// BundleTopic is where this appliance's device document is retained:
+// <HASS_BASE_TOPIC>/device/<slugify(device name)>/config.
+//
+// Exported because three readers outside the publish path need the exact
+// string and a second derivation of it is how they drift. The
+// HASS_DISCOVERY_REFRESH migration clears it; the operator documentation
+// for a DOWNGRADE names it in a `mosquitto_pub -r -n` the user runs by
+// hand; and a test compares both against the node id the renderer actually
+// produces. go-mtec2mqtt documented the topic in five places and got it
+// wrong in three, because the node id is the SLUG of the device name and
+// not the name — here "Geschirrspüler" is addressed as `geschirrspuler`,
+// which is neither the raw name nor merely its lower case.
+func (d *Discovery) BundleTopic(device string) string {
+	return publisher.BundleConfigTopic(d.baseTopic, sanitize(device))
+}
+
+// PublishDeviceBundle renders one appliance's device document and publishes
+// it, retracting the per-entity configs it supersedes first.
+//
+// It returns the config topic it addressed and the error that stopped it,
+// if any. The topic is returned even on a failure, because the caller has
+// to be able to name what it did NOT publish.
+//
+// # Why every refusal here is a refusal to write anything at all
+//
+// The document and the retraction of the 687 per-entity configs it replaces
+// are one migration, and Home Assistant forces their order: a retained
+// per-entity config and a document carrying the same `unique_id` cannot
+// coexist, and whichever arrives second is refused with a single
+// `WARNING [mqtt.entity] Received a conflicting MQTT discovery message` and
+// no entities. publisher.Runtime.PublishBundle therefore retracts first and
+// publishes second, which means every failure mode between the two leaves
+// the appliance with NO discovery config rather than with its old one.
+//
+// So each of the four gates below fails before the retraction:
+//
+//   - A render error. Nothing to publish, and a half-rendered document is
+//     not a smaller fleet, it is a wrong one.
+//   - An empty component set. A document with no components supersedes
+//     nothing and declares nothing, so publishing it would retract nothing
+//     and leave 687 orphans; but the state it describes — an appliance that
+//     classified to zero entities — is a fault somewhere upstream, and
+//     writing it to the broker turns that fault into a fleet-wide deletion
+//     the moment the sweep runs.
+//   - A BLOCKING discovery.Validate. Home Assistant validates a document as
+//     one unit and drops the whole thing, so a single refused component
+//     costs the appliance all of its entities — which is exactly why F13
+//     had to be fixed before this step (#43). An advisory ValidationError
+//     is logged and published, because advisory means Home Assistant
+//     accepts it.
+//   - A packet the broker will not take. That refusal lives in
+//     haplane.Plane.PublishBundle, before the retraction, and is reported
+//     here as haplane.ErrDocumentTooLarge.
+func (d *Discovery) PublishDeviceBundle(ctx context.Context, device string, info profile.DeviceInfo, entities []*homeconnect.Entity) (string, error) {
+	b, err := d.BundleFor(device, info, entities)
+	if err != nil {
+		d.logger.Error("hass.bundle_render", slog.String("device", device), slog.String("err", err.Error()))
+		return "", err
+	}
+	topic := publisher.BundleConfigTopic(d.baseTopic, b.NodeID)
+	if len(b.Components) == 0 {
+		err := fmt.Errorf("hass: device document for %q has no components", device)
+		d.logger.Error("hass.bundle_empty",
+			slog.String("device", device), slog.String("topic", topic),
+			slog.String("consequence", "withheld; the per-entity configs are left in place"))
+		return topic, err
+	}
+	if err := d.validateBundle(device, topic, b); err != nil {
+		return topic, err
+	}
+	sent, err := d.mqtt.PublishBundle(ctx, b)
+	if err != nil {
+		d.logger.Error("hass.bundle_publish",
+			slog.String("device", device), slog.String("topic", topic),
+			slog.Int("components", len(b.Components)),
+			slog.String("err", err.Error()))
+		return topic, err
+	}
+	d.logger.Info("hass.bundle_published",
+		slog.String("device", device), slog.String("topic", topic),
+		slog.Int("components", len(b.Components)), slog.Bool("written", sent))
+	return topic, nil
+}
+
+// validateBundle runs discovery.Validate and decides what a finding costs.
+//
+// Blocking refuses the publish; advisory logs and continues. The split
+// matters because the two are not degrees of the same thing: Home Assistant
+// drops a document it cannot validate in its entirety, so "blocking" means
+// zero entities for the appliance, while "advisory" means Home Assistant
+// accepts the document as it is.
+func (d *Discovery) validateBundle(device, topic string, b *discovery.Bundle) error {
+	err := discovery.Validate(b)
+	if err == nil {
+		return nil
+	}
+	var ve *discovery.ValidationError
+	if !errors.As(err, &ve) {
+		d.logger.Error("hass.bundle_invalid",
+			slog.String("device", device), slog.String("topic", topic), slog.String("err", err.Error()))
+		return err
+	}
+	if ve.Blocking() {
+		d.logger.Error("hass.bundle_invalid",
+			slog.String("device", device), slog.String("topic", topic),
+			slog.Int("components", len(b.Components)),
+			slog.String("err", err.Error()),
+			slog.String("consequence",
+				"withheld; Home Assistant drops a device document whole, so publishing it would cost the appliance every entity"))
+		return err
+	}
+	d.logger.Warn("hass.bundle_advisory",
+		slog.String("device", device), slog.String("topic", topic), slog.String("err", err.Error()))
+	return nil
 }
 
 // publishedPlatforms is the set of Home Assistant platforms this daemon

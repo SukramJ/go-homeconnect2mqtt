@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
 	"time"
 
@@ -18,6 +19,23 @@ import (
 // publishTimeout bounds a single MQTT publish, independent of the worker
 // context so the final offline publish still goes out during shutdown.
 const publishTimeout = 5 * time.Second
+
+// bundlePublishTimeout bounds one whole device-document migration: the
+// retraction of every per-entity config the document supersedes, and then
+// the document itself.
+//
+// It is an order of magnitude above publishTimeout because it bounds an
+// order of magnitude more round trips. On the migrating connection the
+// retraction is 687 retained publishes for this fixture's appliance, each
+// waiting on its own acknowledgement at MQTT_QOS 1, and only then does the
+// ~460 KB document go out. Cutting that off halfway is the one outcome the
+// ordering exists to avoid — the per-entity configs gone, the document not
+// written, and the appliance with no discovery config at all — so the
+// budget is set to tolerate a slow broker rather than to keep a worker
+// responsive. It costs nothing on every later connection, where the
+// retractions are a no-op the library skips and the document is
+// deduplicated against what it already published.
+const bundlePublishTimeout = 60 * time.Second
 
 // Panic-restart backoff for a device worker (docs/05-resilience.md: only
 // ctx cancel stops a worker).
@@ -300,17 +318,57 @@ func (b *Bridge) onState(d *Device, s homeconnect.ConnectionState) {
 	}
 }
 
-// publishDiscovery emits Home Assistant discovery configs for a device, if
-// discovery is enabled.
+// publishDiscovery emits one retained Home Assistant device document for a
+// device, if discovery is enabled, and then clears this daemon's own
+// retained per-entity configs that nothing claims any more.
+//
+// The sweep is gated on the document having been PUBLISHED, not on its
+// having been BUILT, and the difference is the whole reason the two steps
+// are written apart. A build that succeeds and a publish that fails is a
+// completely ordinary outcome — an open circuit breaker, a broker that
+// refuses the packet size, a context that expired mid-retraction — and a
+// sweep that ran there would clear every per-entity config the previous
+// release published and put nothing in their place. go-mtec2mqtt shipped
+// exactly that guard testing the wrong value, logging "no device document
+// was published" while asking whether one had been built (its PR #54,
+// finding F3).
+//
+// The test is publisher.Runtime's own claim set rather than a bool this
+// package keeps, because that is the record the retraction pass already
+// subtracts against: if the runtime does not name the document among its
+// declared topics, the document is not on the broker as far as anything
+// else in this daemon is concerned either.
 func (b *Bridge) publishDiscovery(parent context.Context, d *Device) {
 	if b.hass == nil {
 		return
 	}
-	ctx, cancel := context.WithTimeout(parent, publishTimeout)
-	defer cancel()
-	published := b.hass.PublishDevice(ctx, d.name, d.app.Info(), d.app.Entities())
-	// Clear our own retained configs for this device that we no longer publish.
-	b.reconcileOrphans(parent, d.name, published)
+	ctx, cancel := context.WithTimeout(parent, bundlePublishTimeout)
+	topic, err := b.hass.PublishDeviceBundle(ctx, d.name, d.app.Info(), d.app.Entities())
+	cancel()
+	if err != nil {
+		// Every failure path in PublishDeviceBundle has already logged what
+		// it refused and why. What matters here is only that the sweep must
+		// not run: see the doc comment.
+		b.logger.Warn("bridge.discovery_sweep_skipped",
+			slog.String("device", d.name),
+			slog.String("reason", "the device document was not published"))
+		return
+	}
+	if !b.documentIsDeclared(topic) {
+		b.logger.Warn("bridge.discovery_sweep_skipped",
+			slog.String("device", d.name), slog.String("topic", topic),
+			slog.String("reason", "the device document was built but the runtime does not claim it"))
+		return
+	}
+	b.reconcileOrphans(parent, d.name, map[string]bool{topic: true})
+}
+
+// documentIsDeclared reports whether the publish plane claims topic — i.e.
+// whether the document reached the broker on THIS connection. The plane's
+// runtime is rebuilt on every (re)connect, so a claim is a statement about
+// the live connection rather than about the life of the process.
+func (b *Bridge) documentIsDeclared(topic string) bool {
+	return slices.Contains(b.plane.Declared(), topic)
 }
 
 // safePublish is publish with panic isolation: a panic in the MQTT client

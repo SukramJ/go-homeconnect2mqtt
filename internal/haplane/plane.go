@@ -5,6 +5,9 @@ package haplane
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
 	"sync/atomic"
 
@@ -12,6 +15,29 @@ import (
 	"github.com/SukramJ/go-hamqtt/publisher"
 	hatopic "github.com/SukramJ/go-hamqtt/topic"
 )
+
+// ErrDocumentTooLarge is reported by [Plane.PublishBundle] when the device
+// document would not fit inside the largest packet the broker said it
+// accepts.
+//
+// It is a refusal BEFORE anything is written, and that is the whole of its
+// value. publisher.Runtime.PublishBundle retracts every superseded
+// per-entity config first and publishes the document second, so a document
+// the broker refuses at the second step has already destroyed the fleet the
+// first step cleared: go-mqtt reports mqtt.ErrPacketTooLarge from inside the
+// PUBLISH, after the retractions are on the wire, and the appliance is left
+// with no discovery config at all. Refusing here leaves the installed fleet
+// exactly where it was.
+var ErrDocumentTooLarge = errors.New("haplane: device document exceeds the broker's maximum packet size")
+
+// publishOverhead is what a PUBLISH costs beyond its topic and its payload:
+// the fixed header byte, the remaining-length varint, the two-byte topic
+// length prefix, the packet identifier at QoS > 0 and the MQTT 5.0 property
+// block. Sixty-four bytes is generous for all of it by an order of
+// magnitude, and generous is the correct direction — being wrong here
+// withholds a migration that would have fitted, which is loud and
+// recoverable, rather than starting one that cannot finish.
+const publishOverhead = 64
 
 // Config parameterises a [Plane]. Every field is required; there is no
 // usable zero value, because each omission is a silent one.
@@ -41,6 +67,25 @@ type Config struct {
 	// Retain is MQTT_RETAIN, which this daemon applies to the state
 	// plane. See [Plane.PublishState] for what it selects between.
 	Retain bool
+
+	// BrokerMaxPacketSize reports the largest packet the broker said it
+	// would accept, and whether that answer is known at all.
+	//
+	// It is the broker's OUTBOUND limit — MQTT 5.0's Maximum Packet Size
+	// property (0x27) off the CONNACK, reachable as
+	// go-mqtt's mqtt.ConnectResult.MaximumPacketSize — and it must not be
+	// confused with mqtt.TCPConfig.MaximumPacketSize, which is the largest
+	// packet this CLIENT will accept inbound and has a 1 MiB default that
+	// says nothing about what the broker will take. go-mtec2mqtt's notes
+	// conflated the two; the number that refuses a device document is this
+	// one.
+	//
+	// The second return separates "the broker set no limit" from "nobody has
+	// asked yet": a nil hook, a false second return and a zero limit all
+	// mean the same thing here — UNKNOWN, which is published, not withheld.
+	// Treating an unknown limit as a small one would refuse the migration on
+	// every MQTT 3.1.1 link, where there is no property to read at all.
+	BrokerMaxPacketSize func() (uint32, bool)
 
 	// Logger receives the library's diagnostics.
 	Logger *slog.Logger
@@ -166,6 +211,89 @@ func (p *Plane) AnnounceOffline(ctx context.Context) error { return p.Runtime().
 func (p *Plane) Publish(ctx context.Context, topic string, payload []byte) (bool, error) {
 	return p.Runtime().Publish(ctx, topic, payload)
 }
+
+// PublishBundle writes one appliance's retained device document, having
+// first refused it if the broker said it would not accept a packet that
+// size.
+//
+// The preflight is the whole reason this method exists rather than a direct
+// call on the runtime. publisher.Runtime.PublishBundle retracts every
+// per-entity config the document supersedes BEFORE it publishes the
+// document — the order Home Assistant forces, because a retained per-entity
+// config and a document carrying the same unique id cannot coexist — so the
+// two publishes are one migration with a window in between where the
+// appliance has no discovery config at all. A document refused at the
+// second step is that window made permanent. go-mqtt reports
+// mqtt.ErrPacketTooLarge from inside the PUBLISH, with the retractions
+// already gone, and no error anywhere says that 687 entities were deleted
+// rather than moved.
+//
+// So: measure first, and fail CLOSED. An unknown limit is published (see
+// [Config.BrokerMaxPacketSize]); a known limit the document does not fit
+// under withholds the whole migration and leaves the installed fleet
+// standing.
+//
+// The bool is publisher.Runtime.PublishBundle's: false with a nil error
+// means the document was already declared on this connection, byte for
+// byte, and nothing was written — which still means the broker holds it.
+func (p *Plane) PublishBundle(ctx context.Context, b *discovery.Bundle) (bool, error) {
+	if b == nil {
+		return false, errors.New("haplane: nil device document")
+	}
+	if err := p.preflight(b); err != nil {
+		return false, err
+	}
+	return p.Runtime().PublishBundle(ctx, b)
+}
+
+// preflight measures the document against the broker's advertised Maximum
+// Packet Size. See [ErrDocumentTooLarge].
+func (p *Plane) preflight(b *discovery.Bundle) error {
+	if p.cfg.BrokerMaxPacketSize == nil {
+		return nil
+	}
+	limit, known := p.cfg.BrokerMaxPacketSize()
+	// Three spellings of the same answer, and none of them is "small":
+	// no hook, no connection result yet, and a broker that named no limit.
+	if !known || limit == 0 {
+		return nil
+	}
+	payload, err := json.Marshal(b)
+	if err != nil {
+		return fmt.Errorf("haplane: marshal device document %s: %w", b.NodeID, err)
+	}
+	topic := publisher.BundleConfigTopic(p.cfg.Prefix, b.NodeID)
+	size := PacketSize(topic, len(payload))
+	if size <= uint64(limit) {
+		return nil
+	}
+	return fmt.Errorf("%w: %s is %d bytes against the broker's %d",
+		ErrDocumentTooLarge, topic, size, limit)
+}
+
+// PacketSize is what one retained PUBLISH of payloadLen bytes to topic
+// costs on the wire, overhead included.
+//
+// Exported so the refusal can be asserted against the same arithmetic that
+// performs it rather than against a second copy of it, which is how the two
+// end up disagreeing about whether a document fits.
+func PacketSize(topic string, payloadLen int) uint64 {
+	return uint64(payloadLen) + uint64(len(topic)) + publishOverhead //nolint:gosec // both lengths are non-negative
+}
+
+// LegacyForms names the per-entity config topic shapes
+// publisher.Runtime.PublishBundle retracts under.
+//
+// Exported so a test can assert what the composition root actually stated,
+// because [Config] cannot state it: publisher.Config.LegacyEntityTopics is
+// deliberately left nil here, which means the five-segment
+// publisher.LegacyTopicWithNodeID form alone — measured against this
+// daemon's fleet at 687 of 687 (ADR 0070 phase 7, step 4). Naming any form
+// REPLACES that default rather than extending it, so a well-meant addition
+// would silently stop retracting the shape this bridge is actually on, and
+// the failure looks entirely clean: the document publishes, nothing logs,
+// and Home Assistant refuses every entity with one WARNING line.
+func (p *Plane) LegacyForms() []string { return p.Runtime().LegacyForms() }
 
 // Retract clears retained discovery configs this daemon no longer
 // publishes.

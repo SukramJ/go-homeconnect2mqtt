@@ -72,6 +72,18 @@ func (b *Bridge) refreshDiscoveryOnce(ctx context.Context) {
 	if err != nil {
 		b.logger.Warn("bridge.refresh_sweep", slog.String("err", err.Error()))
 	}
+	// The device documents are named explicitly rather than found by the
+	// sweep, and they have to be: OwnsConfigTopic declines the
+	// device-document form outright (see there), so a window that judged
+	// ownership by topic alone would clear every per-entity leftover and
+	// leave the one retained document that actually holds this fleet's
+	// entities — which is precisely the config this flag exists to force
+	// Home Assistant to re-read. Naming them is safe where widening the
+	// predicate is not: these are the topics this process is about to
+	// publish, derived from its own configured device names.
+	for _, name := range names {
+		orphans = append(orphans, b.hass.BundleTopic(name))
+	}
 	cleared := b.retract(ctx, orphans)
 	b.logger.Info("bridge.discovery_refresh",
 		slog.Int("inspected", res.Inspected), slog.Int("cleared", cleared))
