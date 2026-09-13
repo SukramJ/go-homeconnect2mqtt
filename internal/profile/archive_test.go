@@ -295,3 +295,57 @@ func TestRedact(t *testing.T) {
 		t.Errorf("value not redacted: %q", got)
 	}
 }
+
+// TestValidateDeviceName is F2's confined half. The device name is the
+// operator's and goes into the topic tree twice, raw and slugified, with
+// nothing checking it until now.
+func TestValidateDeviceName(t *testing.T) {
+	t.Parallel()
+	accept := []string{
+		"Dishwasher",
+		"Geschirrspüler",           // the default-language case
+		"Waschmaschine / Trockner", // no: contains "/" — see reject
+		"Küche 2",
+		"café",
+		"A",
+	}
+	// "Waschmaschine / Trockner" is in fact rejected; keep the accepted
+	// list honest.
+	accept = accept[:2]
+	accept = append(accept, "Küche 2", "café", "A", "Backofen-EG")
+	for _, n := range accept {
+		if err := validateDeviceName(n); err != nil {
+			t.Errorf("validateDeviceName(%q) = %v, want nil", n, err)
+		}
+	}
+
+	reject := map[string]string{
+		"a+b":      "plus is a single-level wildcard in the subscription filter",
+		"#":        "hash would subscribe the daemon to every topic on the broker",
+		"+":        "plus would swallow every sibling appliance's command tree",
+		"a\x00b":   "control character, a §1.5.4 protocol violation",
+		"a\nb":     "control character",
+		"ÜÄÖ":      "no ASCII alphanumeric: node id and device identifier would both be empty",
+		"---":      "no ASCII alphanumeric",
+		"\xff\xfe": "not valid UTF-8",
+	}
+	for n, why := range reject {
+		if err := validateDeviceName(n); err == nil {
+			t.Errorf("validateDeviceName(%q) = nil, want an error (%s)", n, why)
+		}
+	}
+}
+
+// TestLoadDevicesRejectsAWildcardName proves the check is reached from the
+// loader, not only unit-testable in isolation.
+func TestLoadDevicesRejectsAWildcardName(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "devices.yaml")
+	content := "devices:\n  - name: \"a+b\"\n    connection_type: TLS\n    psk64: a\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadDevices(path); err == nil {
+		t.Fatal("LoadDevices accepted a device name containing the MQTT wildcard \"+\"")
+	}
+}
