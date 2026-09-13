@@ -14,8 +14,8 @@ import (
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 )
 
 // availability payload values. Spelled once in internal/hass, because the
@@ -32,15 +32,15 @@ const (
 const payloadNone = "None"
 
 // deviceTopics is this package's view of the shared topic layout in
-// internal/topic. It adds only the entity-typed convenience the workers
+// internal/layout. It adds only the entity-typed convenience the workers
 // use; the strings themselves are composed in exactly one place, which is
-// the point of the topic package (F3).
+// the point of the layout package (F3).
 type deviceTopics struct {
-	topic.Device
+	layout.Device
 }
 
 func newDeviceTopics(rootTopic, device string) deviceTopics {
-	return deviceTopics{Device: topic.NewDevice(rootTopic, device)}
+	return deviceTopics{Device: layout.NewDevice(rootTopic, device)}
 }
 
 func (t deviceTopics) state(e *homeconnect.Entity) string {

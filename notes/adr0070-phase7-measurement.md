@@ -918,7 +918,7 @@ that separate step.
 | Finding | Fix | Bytes moved |
 | --- | --- | --- |
 | **F1** | both availability levels, mode `all`, attached in the one funnel both payload builders pass through; will QoS matched to the birth publish | all 1 728 payload rows: `availability_topic` → `availability` + `availability_mode`. Identity untouched |
-| **F3** | new `internal/topic` package; every topic composed once | none |
+| **F3** | new `internal/layout` package; every topic composed once | none |
 | **F4** | `mqtt.WithNoLocal()` + a `Relative()` check before dispatch | `topics.json`: one filter gains `options` |
 | **F6** | both button builders share `basePayload` and `sanitizeForPlatform` | none |
 | **F2** (the defect half) | `validateDeviceName` rejects `+`, `#`, control characters, invalid UTF-8 and a name that slugifies to empty | none |

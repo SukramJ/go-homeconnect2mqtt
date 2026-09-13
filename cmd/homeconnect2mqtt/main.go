@@ -25,10 +25,10 @@ import (
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/bridge"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mapping"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/state"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/version"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/web"
 )
@@ -104,7 +104,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	// retained copy to retract; an operator automation watching it keeps
 	// working. It is bridge-level and not under a device because this
 	// daemon mirrors several appliances over one broker connection.
-	statusTopic := topic.Bridge(cfg.MQTTTopic)
+	statusTopic := layout.Bridge(cfg.MQTTTopic)
 	client := mqtt.NewTCPClient(mqttClientConfig(cfg, logger))
 	lc := mqtt.NewLifecycle(mqtt.LifecycleConfig{
 		InitialBackoff: cfg.ReconnectInitialDuration(),
@@ -198,7 +198,7 @@ func mqttClientConfig(cfg *config.Config, logger *slog.Logger) mqtt.TCPConfig {
 		Will: &mqtt.Will{
 			// The same topic every discovery payload declares as its
 			// bridge-level availability source (F1).
-			Topic:   topic.Bridge(cfg.MQTTTopic),
+			Topic:   layout.Bridge(cfg.MQTTTopic),
 			Payload: []byte(hass.PayloadNotAvailable),
 			// Matched to the birth and shutdown publishes. It was left at
 			// the zero value (QoS 0) while those went out at MQTT_QOS,

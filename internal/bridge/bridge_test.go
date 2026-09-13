@@ -14,8 +14,8 @@ import (
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 )
 
 // stubMQTT records publishes and subscriptions for assertions.
@@ -139,10 +139,10 @@ func waitFor(t *testing.T, stub *stubMQTT, topic, want string) {
 }
 
 func TestFeaturePath(t *testing.T) {
-	if got := topic.FeaturePath("BSH.Common.Status.OperationState", 0x1002); got != "BSH/Common/Status/OperationState" {
+	if got := layout.FeaturePath("BSH.Common.Status.OperationState", 0x1002); got != "BSH/Common/Status/OperationState" {
 		t.Errorf("featurePath = %q", got)
 	}
-	if got := topic.FeaturePath("", 0x1234); got != "_uid/4660" {
+	if got := layout.FeaturePath("", 0x1234); got != "_uid/4660" {
 		t.Errorf("unnamed featurePath = %q", got)
 	}
 }

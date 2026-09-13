@@ -15,7 +15,7 @@ import (
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 )
 
 func TestRunVersion(t *testing.T) {
@@ -145,7 +145,7 @@ func TestWillIsTheAvailabilitySourceEveryEntityReads(t *testing.T) {
 	if will == nil {
 		t.Fatal("no Last Will configured: a killed daemon would leave every entity available forever")
 	}
-	if want := topic.Bridge(cfg.MQTTTopic); will.Topic != want {
+	if want := layout.Bridge(cfg.MQTTTopic); will.Topic != want {
 		t.Errorf("will topic = %q, want %q", will.Topic, want)
 	}
 	if strings.HasPrefix(will.Topic, cfg.HASSBaseTopic+"/") {

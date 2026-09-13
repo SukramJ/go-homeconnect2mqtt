@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2026 SukramJ
 
-// Package topic is the single source of this daemon's MQTT topic layout.
+// Package layout is the single source of this daemon's MQTT topic layout.
 //
 // It exists because the layout used to be composed in six places across
 // three packages, from two separate featurePath implementations and two
@@ -33,7 +33,7 @@
 //
 // At ADR 0070 phase 7 step 4 this package is what a go-hamqtt topic.Layout
 // will be written against.
-package topic
+package layout
 
 import (
 	"strconv"

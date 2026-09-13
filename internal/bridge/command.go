@@ -15,8 +15,8 @@ import (
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 )
 
 // subscribeCommands subscribes each device to its command sub-tree. The
@@ -132,7 +132,7 @@ func (b *Bridge) handleSet(parent context.Context, d *Device, msgTopic string, p
 // resolveEntity maps a relative topic path back to an entity, handling both
 // the dotted feature name and the _uid/<n> fallback path.
 func (b *Bridge) resolveEntity(d *Device, rel string) (*homeconnect.Entity, bool) {
-	name, uid, byUID := topic.FeatureName(rel)
+	name, uid, byUID := layout.FeatureName(rel)
 	if byUID {
 		return d.app.Entity(uid)
 	}
@@ -177,9 +177,9 @@ func (b *Bridge) writeWithWindow(ctx context.Context, d *Device, e *homeconnect.
 // rel was one (so the caller skips the feature-write path).
 func (b *Bridge) handleProgramControl(parent context.Context, d *Device, rel string) bool {
 	// The relative paths the discovery layer advertises as the two
-	// synthetic buttons' command_topic. Both sides read topic.ControlPath,
+	// synthetic buttons' command_topic. Both sides read layout.ControlPath,
 	// so a press can never land on a path nothing handles (F3).
-	start, stop := topic.ControlPath(topic.ControlStartProgram), topic.ControlPath(topic.ControlStopProgram)
+	start, stop := layout.ControlPath(layout.ControlStartProgram), layout.ControlPath(layout.ControlStopProgram)
 	if rel != start && rel != stop {
 		return false
 	}

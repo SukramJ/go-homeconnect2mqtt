@@ -21,10 +21,10 @@ import (
 	"github.com/SukramJ/go-mqtt"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mapping"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/pincatalog"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 )
 
 // This file pins the other half of the wire: the state, command and
@@ -363,7 +363,7 @@ func TestTopicGolden(t *testing.T) {
 		}
 	}
 	unreferenced := []string{}
-	for _, at := range append([]string{topic.Bridge(pinRoot)}, availTopics...) {
+	for _, at := range append([]string{layout.Bridge(pinRoot)}, availTopics...) {
 		if !referenced[at] {
 			unreferenced = append(unreferenced, at)
 		}
@@ -371,7 +371,7 @@ func TestTopicGolden(t *testing.T) {
 	sort.Strings(unreferenced)
 
 	got := topicGolden{
-		BridgeStatusTopic:               topic.Bridge(pinRoot),
+		BridgeStatusTopic:               layout.Bridge(pinRoot),
 		DeviceAvailabilityTopics:        availTopics,
 		AvailabilityTopicsNoEntityReads: unreferenced,
 		StateTopics:                     realStateTopics(dev),
@@ -559,7 +559,7 @@ func TestAdvertisedCommandTopicsResolveToSomethingThatHandlesThem(t *testing.T) 
 			continue
 		}
 		switch rel {
-		case topic.ControlPath(topic.ControlStartProgram), topic.ControlPath(topic.ControlStopProgram):
+		case layout.ControlPath(layout.ControlStartProgram), layout.ControlPath(layout.ControlStopProgram):
 			controls++
 			continue
 		}

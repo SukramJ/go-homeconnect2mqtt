@@ -19,10 +19,10 @@ import (
 	"github.com/SukramJ/go-mqtt"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/mapping"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/pincatalog"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 )
 
 // The golden files in testdata/ pin every byte this daemon publishes to
@@ -493,16 +493,16 @@ func TestEveryPayloadDeclaresBothAvailabilityLevels(t *testing.T) {
 
 // TestBridgeAvailabilityTopicIsTheOneTheWillWrites is F1's other half:
 // the topic every payload declares is the one the daemon's own Last Will,
-// birth and shutdown publishes write. Both sides read topic.Bridge, so
+// birth and shutdown publishes write. Both sides read layout.Bridge, so
 // they cannot drift; this asserts the string that reaches the payload.
 //
 // It also asserts the topic is in the daemon's own publish root and not in
 // Home Assistant's discovery tree, which is why F1 needed no topic move
 // and no retraction of a retained copy at an old location.
 func TestBridgeAvailabilityTopicIsTheOneTheWillWrites(t *testing.T) {
-	want := topic.Bridge(goldenRoot)
+	want := layout.Bridge(goldenRoot)
 	if want != goldenRoot+"/status" {
-		t.Fatalf("topic.Bridge(%q) = %q, want %q", goldenRoot, want, goldenRoot+"/status")
+		t.Fatalf("layout.Bridge(%q) = %q, want %q", goldenRoot, want, goldenRoot+"/status")
 	}
 	if strings.HasPrefix(want, goldenPrefix+"/") {
 		t.Errorf("%q is inside Home Assistant's discovery tree", want)

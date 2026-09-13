@@ -13,8 +13,8 @@ import (
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/topic"
 )
 
 // Publisher is the subset of the MQTT client the discovery path needs.
@@ -87,12 +87,12 @@ type deviceBlock struct {
 }
 
 func (d *Discovery) topicsFor(device string, e *homeconnect.Entity) entityTopics {
-	dt := topic.NewDevice(d.rootTopic, device)
+	dt := layout.NewDevice(d.rootTopic, device)
 	return entityTopics{
 		state:        dt.State(e.Name(), e.UID()),
 		command:      dt.Command(e.Name(), e.UID()),
 		availability: dt.Availability(),
-		bridge:       topic.Bridge(d.rootTopic),
+		bridge:       layout.Bridge(d.rootTopic),
 	}
 }
 
@@ -251,15 +251,15 @@ func (d *Discovery) publishProgramControls(ctx context.Context, device string, e
 	if !hasProgram {
 		return
 	}
-	dt := topic.NewDevice(d.rootTopic, device)
+	dt := layout.NewDevice(d.rootTopic, device)
 	controls := []struct{ key, nameEN, nameDE string }{
-		{topic.ControlStartProgram, "Start program", "Programm starten"},
-		{topic.ControlStopProgram, "Stop program", "Programm stoppen"},
+		{layout.ControlStartProgram, "Start program", "Programm starten"},
+		{layout.ControlStopProgram, "Stop program", "Programm stoppen"},
 	}
 	t := entityTopics{
 		command:      "", // no feature behind it; the control topic is its own
 		availability: dt.Availability(),
-		bridge:       topic.Bridge(d.rootTopic),
+		bridge:       layout.Bridge(d.rootTopic),
 	}
 	for _, c := range controls {
 		name := c.nameEN
