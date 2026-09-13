@@ -1490,7 +1490,10 @@
     },
     {
       "filter": "homeconnect/Geschirrspüler/#",
-      "qos": 1
+      "qos": 1,
+      "options": [
+        "WithNoLocal"
+      ]
     }
   ],
   "publish_qos_retain": {

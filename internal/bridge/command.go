@@ -26,6 +26,17 @@ func (b *Bridge) subscribeCommands(ctx context.Context) error {
 	for _, d := range b.devices {
 		dev := d
 		filter := dev.topics.CommandFilter()
+		// The feature path is variable-depth, so no fixed-arity filter
+		// covers the command tree: the subscription is the whole device
+		// sub-tree and therefore also matches all 689 of this daemon's own
+		// state, availability and connection-state publishes (F4).
+		//
+		// Two guards, because neither alone is enough. MQTT 5.0 No Local
+		// tells the broker not to forward a message back to the connection
+		// that published it, which removes the echo at the source — but it
+		// does not cover the retained replay the broker delivers on
+		// (re)subscribe, which is not a forward, and it is a no-op on a
+		// 3.1.1 link. The retained check below covers that half.
 		if _, err := b.mqtt.Subscribe(ctx, filter, b.qos, func(msg *mqtt.Message) {
 			if msg.Retain {
 				// Drop the broker's replay of the last retained command on
@@ -34,13 +45,20 @@ func (b *Bridge) subscribeCommands(ctx context.Context) error {
 				// reconnect. See [mqtt.MessageHandler] for the retained bit.
 				return
 			}
+			// Decide whether this is a command topic at all BEFORE spawning
+			// anything. Under MQTT_RETAIN: false the retained check above
+			// never fires, and every state publish this daemon makes used to
+			// spawn a goroutine whose only job was to return.
+			if _, ok := dev.topics.Relative(msg.Topic); !ok {
+				return
+			}
 			// handleSet makes blocking Home Connect cloud HTTP calls with
 			// retry/backoff loops; the adapter calls this handler
 			// synchronously inline in its read loop, so a blocking call here
 			// would stall PUBACK/PINGRESP processing and could trip a
 			// spurious ping_timeout. See [mqtt.MessageHandler].
 			go b.handleSet(ctx, dev, msg.Topic, msg.Payload)
-		}); err != nil {
+		}, mqtt.WithNoLocal()); err != nil {
 			return err
 		}
 	}

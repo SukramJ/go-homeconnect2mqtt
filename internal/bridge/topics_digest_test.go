@@ -10,11 +10,14 @@ import (
 	"testing"
 )
 
+// Moved once since #40, by F4: the device sub-tree subscription gained
+// "options": ["WithNoLocal"].
+//
 // topicsGoldenDigest is the SHA-256 of internal/bridge/testdata/topics.json,
 // held outside the file so a regeneration cannot pass unnoticed. See the
 // long note in internal/hass/golden_digest_test.go — same reasoning, same
 // standard: updating this literal is a declaration that names a finding.
-const topicsGoldenDigest = "23000ab0bf34943e513a69e6f488e92bd62178eb1a0a249ebf712ace6fba8c86"
+const topicsGoldenDigest = "e9052c1d2e7bd734e9d7d04f05ece315d04d8a12f7e805ea17dfe162e8b11173"
 
 // TestTopicsGoldenMatchesItsPinnedDigest fails when topics.json was
 // regenerated without the accompanying declaration of intent.
