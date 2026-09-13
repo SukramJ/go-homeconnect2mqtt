@@ -59,7 +59,7 @@ const hamqttOriginName = "go-homeconnect2mqtt"
 // the layout
 // ---------------------------------------------------------------------------
 
-// hamqttLayout is this daemon's MQTT topic schema expressed as a
+// Layout is this daemon's MQTT topic schema expressed as a
 // go-hamqtt topic.Layout. Every method delegates to internal/layout, so the
 // library path and the daemon's own publish path cannot disagree about a
 // topic — that is F3's fix carried forward rather than re-implemented, and
@@ -97,15 +97,24 @@ const hamqttOriginName = "go-homeconnect2mqtt"
 // TestHamqttLayoutIgnoresAddressChannelAndBucket asserts the inertness
 // explicitly, which is the only way to tell "deliberately ignored" from
 // "silently dropped".
-type hamqttLayout struct{ root string }
+type Layout struct{ root string }
 
-var _ hatopic.Layout = hamqttLayout{}
+var _ hatopic.Layout = Layout{}
+
+// NewLayout is the layout under the bridge root, e.g. "homeconnect".
+//
+// Exported because three call sites need the SAME value and a second
+// construction is how they drift: the discovery renderer hands it to
+// discovery.StdContext, publisher.Config takes it so the daemon's status
+// topic is checkable against Layout.Bridge rather than free-form, and
+// cmd/homeconnect2mqtt builds both.
+func NewLayout(root string) Layout { return Layout{root: strings.TrimRight(root, "/")} }
 
 // device resolves the appliance a slot belongs to. The raw operator device
 // name travels in Scope[0]: it is the topic segment, not the identity, and
 // model.Slot has no other field that means "the container this datapoint
 // sits in".
-func (l hamqttLayout) device(s model.Slot) layout.Device {
+func (l Layout) device(s model.Slot) layout.Device {
 	name := ""
 	if len(s.Scope) > 0 {
 		name = s.Scope[0]
@@ -114,20 +123,20 @@ func (l hamqttLayout) device(s model.Slot) layout.Device {
 }
 
 // State implements topic.Layout.
-func (l hamqttLayout) State(s model.Slot) string {
+func (l Layout) State(s model.Slot) string {
 	return l.device(s).Base() + "/" + strings.Join(s.Path, "/") + "/state"
 }
 
 // Command implements topic.Layout.
-func (l hamqttLayout) Command(s model.Slot) string {
+func (l Layout) Command(s model.Slot) string {
 	return l.device(s).Base() + "/" + strings.Join(s.Path, "/") + "/set"
 }
 
 // Availability implements topic.Layout.
-func (l hamqttLayout) Availability(s model.Slot) string { return l.device(s).Availability() }
+func (l Layout) Availability(s model.Slot) string { return l.device(s).Availability() }
 
 // Bridge implements topic.Layout.
-func (l hamqttLayout) Bridge() string { return layout.Bridge(l.root) }
+func (l Layout) Bridge() string { return layout.Bridge(l.root) }
 
 // ---------------------------------------------------------------------------
 // the context
@@ -179,7 +188,7 @@ func (c hamqttContext) ObjectID(dev *model.Device, e model.Entity) string {
 // zero Encoding would attach one to all 667 entities that have a state topic.
 func (d *Discovery) hamqttContext() hamqttContext {
 	return hamqttContext{StdContext: discovery.StdContext{
-		Layout: hamqttLayout{root: d.rootTopic},
+		Layout: NewLayout(d.rootTopic),
 		Lang:   d.lang,
 		Enc:    discovery.RawEncoding,
 	}}

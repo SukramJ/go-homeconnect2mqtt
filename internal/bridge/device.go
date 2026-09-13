@@ -325,12 +325,21 @@ func (b *Bridge) safePublish(topic string, payload []byte) {
 	b.publish(topic, payload)
 }
 
-// publish performs a single retained publish, logging (never failing) on
-// error so a transient MQTT issue can't crash a worker.
+// publish writes one state-plane payload through publisher.StatePublisher,
+// logging (never failing) on error so a transient MQTT issue can't crash a
+// worker.
+//
+// The QoS and the retain flag are no longer arguments: they are the
+// plane's stated policy, MQTT_QOS and MQTT_RETAIN, resolved once in
+// internal/haplane. What the plane adds over the bare client call it
+// replaces is the dedup gate — an appliance re-reporting an unchanged
+// value costs one byte comparison instead of one retained broker write
+// and one Home Assistant state evaluation, and this daemon's appliances
+// re-report on every NOTIFY whether or not anything moved.
 func (b *Bridge) publish(topic string, payload []byte) {
 	ctx, cancel := context.WithTimeout(context.Background(), publishTimeout)
 	defer cancel()
-	if err := b.mqtt.Publish(ctx, topic, payload, b.qos, b.retain); err != nil {
+	if err := b.plane.PublishState(ctx, topic, payload); err != nil {
 		b.logger.Warn("bridge.publish", slog.String("topic", topic), slog.String("err", err.Error()))
 	}
 }

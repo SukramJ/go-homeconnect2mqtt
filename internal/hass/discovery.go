@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/SukramJ/go-mqtt"
+	"github.com/SukramJ/go-hamqtt/publisher"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
@@ -17,9 +17,25 @@ import (
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
 
-// Publisher is the subset of the MQTT client the discovery path needs.
-type Publisher interface {
-	Publish(ctx context.Context, topic string, payload []byte, qos mqtt.QoS, retain bool, opts ...mqtt.PublishOption) error
+// ConfigWriter is the narrow slice of publisher.Runtime this package
+// publishes retained discovery configs through.
+//
+// It is an interface declared here rather than the concrete type for two
+// reasons. It keeps internal/hass — which renders — from importing the
+// package that publishes, so the daemon can hold one runtime and hand the
+// same one to the renderer, the state plane and the Last Will. And it
+// takes no QoS and no retain flag, because neither is this package's to
+// decide any more: a retained discovery config at the operator's MQTT_QOS
+// is the runtime's policy, stated once in internal/haplane, rather than
+// an argument every call site could get wrong.
+//
+// The bool reports whether the payload actually reached the broker. The
+// runtime deduplicates against what it has already published, so a
+// re-publish of an unchanged config writes nothing — on this bridge that
+// is 687 retained writes per appliance per (re)connect that now cost one
+// comparison each.
+type ConfigWriter interface {
+	Publish(ctx context.Context, topic string, payload []byte) (bool, error)
 }
 
 // Enricher supplies operator-configured per-feature overrides (implemented by
@@ -37,10 +53,9 @@ type Enricher interface {
 
 // Discovery publishes Home Assistant MQTT discovery config payloads.
 type Discovery struct {
-	mqtt      Publisher
+	mqtt      ConfigWriter
 	baseTopic string // discovery prefix, e.g. "homeassistant"
 	rootTopic string // bridge MQTT root, e.g. "homeconnect"
-	qos       mqtt.QoS
 	lang      string // display language for friendly names ("de"/"en")
 	curated   bool   // publish only the enabled-by-default (primary) set
 	logger    *slog.Logger
@@ -52,7 +67,7 @@ func (d *Discovery) SetEnricher(e Enricher) { d.enrich = e }
 
 // New builds a Discovery publisher. lang selects the friendly-name language;
 // curated restricts discovery to the enabled-by-default (primary) entities.
-func New(pub Publisher, baseTopic, rootTopic string, qos mqtt.QoS, lang string, curated bool, logger *slog.Logger) *Discovery {
+func New(pub ConfigWriter, baseTopic, rootTopic, lang string, curated bool, logger *slog.Logger) *Discovery {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -60,7 +75,6 @@ func New(pub Publisher, baseTopic, rootTopic string, qos mqtt.QoS, lang string, 
 		mqtt:      pub,
 		baseTopic: strings.TrimRight(baseTopic, "/"),
 		rootTopic: strings.TrimRight(rootTopic, "/"),
-		qos:       qos,
 		lang:      lang,
 		curated:   curated,
 		logger:    logger,
@@ -69,7 +83,16 @@ func New(pub Publisher, baseTopic, rootTopic string, qos mqtt.QoS, lang string, 
 
 // BirthTopic is the Home Assistant status topic to watch; a payload of
 // "online" means HA (re)started and discovery must be re-published.
-func (d *Discovery) BirthTopic() string { return d.baseTopic + "/status" }
+//
+// It is publisher.BirthTopic rather than a local concatenation on
+// purpose. go-mtec2mqtt shipped `prefix + "/status"` against an operator
+// prefix of "homeassistant/", which subscribes "homeassistant//status" —
+// an empty MQTT level is legal and a DIFFERENT topic from the one Home
+// Assistant announces on, so after every Home Assistant restart its
+// entities were gone until the daemon itself restarted, with nothing in
+// either log (its PR #54, finding F10). This daemon trims the prefix at
+// construction too; the library call is the second lock.
+func (d *Discovery) BirthTopic() string { return publisher.BirthTopic(d.baseTopic) }
 
 type entityTopics struct {
 	state        string
@@ -245,7 +268,7 @@ func (d *Discovery) PublishDevice(ctx context.Context, device string, info profi
 		}
 		topic := d.configTopic(platform, device, e)
 		published[topic] = true
-		if err := d.mqtt.Publish(ctx, topic, b, d.qos, true); err != nil {
+		if _, err := d.mqtt.Publish(ctx, topic, b); err != nil {
 			d.logger.Warn("hass.publish", slog.String("topic", topic), slog.String("err", err.Error()))
 		}
 	}
@@ -319,23 +342,81 @@ func (d *Discovery) publishProgramControls(ctx context.Context, device string, e
 		}
 		topic := d.baseTopic + "/button/" + sanitize(device) + "/" + c.key + "/config"
 		published[topic] = true
-		if err := d.mqtt.Publish(ctx, topic, b, d.qos, true); err != nil {
+		if _, err := d.mqtt.Publish(ctx, topic, b); err != nil {
 			d.logger.Warn("hass.publish", slog.String("topic", topic), slog.String("err", err.Error()))
 		}
 	}
 }
 
-// DeviceConfigFilter is the MQTT filter matching a device's discovery config
-// topics (homeassistant/+/<device>/+/config), for collecting retained configs
-// to reconcile against the published set.
-func (d *Discovery) DeviceConfigFilter(device string) string {
-	return d.baseTopic + "/+/" + sanitize(device) + "/+/config"
+// publishedPlatforms is the set of Home Assistant platforms this daemon
+// emits. Home Assistant declares 32; six of them are reachable from
+// classify, and a retained config on any of the other 26 belongs to
+// somebody else however its topic is shaped.
+var publishedPlatforms = map[string]bool{
+	platformSensor:       true,
+	platformBinarySensor: true,
+	platformSwitch:       true,
+	platformSelect:       true,
+	platformNumber:       true,
+	platformButton:       true,
 }
 
-// ConfigFilter matches every discovery config topic the daemon may own
-// (homeassistant/+/+/+/config), for a global refresh that clears them all.
-func (d *Discovery) ConfigFilter() string {
-	return d.baseTopic + "/+/+/+/config"
+// OwnsConfigTopic builds the ownership predicate publisher.SweepRequest
+// takes: does this retained discovery config TOPIC fall inside the
+// namespace this daemon publishes for devices?
+//
+// It is a namespace test and nothing more, because a topic is all the
+// broker offers the sweep — the payload reaches the caller through
+// publisher.SweepRequest.Inspect, and [Discovery.IsOwnConfig] is the
+// second, stronger test that runs there. Both are needed and neither is
+// redundant: this one keeps a foreign integration's configs out of the
+// window's judgement at all, and that one keeps a SIBLING INSTANCE of
+// this same daemon out of it (F8) — two instances with different
+// MQTT_TOPIC roots publish identical config topics for an appliance they
+// both call "Geschirrspüler", so no predicate that sees only the topic
+// can tell them apart. The state topic inside the payload can.
+//
+// Four narrowings, each one refusing a class this daemon does not publish:
+//
+//   - The device-document form (<prefix>/device/<node>/config). Nothing
+//     here publishes one yet; step 6 of the ADR 0070 rollout does, and it
+//     will have to revisit this line rather than inherit it.
+//   - Any form without a node id. publisher.ParseConfigTopic accepts the
+//     four-segment (<prefix>/<platform>/<object>/config) and three-segment
+//     forms as well, which is what both sibling bridges and Tasmota
+//     publish into a shared discovery tree. This daemon's fleet is
+//     five-segment — measured, 687 of 687 — so a topic with no node id is
+//     never ours.
+//   - A platform this daemon never emits.
+//   - A node id that is not one of the device names this process is
+//     configured for. devices is the caller's scope, and it is
+//     deliberately a parameter rather than the whole fleet: a per-device
+//     reconcile that judged the whole fleet would call a second
+//     appliance's configs orphans during the window in which only the
+//     first has published, and retract them.
+func (d *Discovery) OwnsConfigTopic(devices ...string) func(publisher.ConfigTopic) bool {
+	nodes := make(map[string]bool, len(devices))
+	for _, dev := range devices {
+		if node := sanitize(dev); node != "" {
+			nodes[node] = true
+		}
+	}
+	return func(t publisher.ConfigTopic) bool {
+		if t.Bundle || t.Platform == "" || t.NodeID == "" || t.ObjectID == "" {
+			return false
+		}
+		if !publishedPlatforms[t.Platform] {
+			return false
+		}
+		return nodes[t.NodeID]
+	}
+}
+
+// ConfigTopicFor rebuilds the retained config topic a parsed ConfigTopic
+// came from, so the sweep's Inspect callback can hand the caller a topic
+// to retract rather than re-deriving one.
+func (d *Discovery) ConfigTopicFor(t publisher.ConfigTopic) string {
+	return publisher.EntityConfigTopic(d.baseTopic, t.Platform, t.NodeID, t.ObjectID)
 }
 
 // IsOwnConfig reports whether a retained HA discovery config payload was

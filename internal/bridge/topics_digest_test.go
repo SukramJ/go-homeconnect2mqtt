@@ -18,11 +18,35 @@ import (
 // selected-program entity became a read-only sensor, so it no longer
 // advertises a command topic.
 //
+// Moved a third time by ADR 0070 phase 7 step 5, in exactly two rows,
+// both hand-edited and neither regenerated:
+//
+//   - `subscribe_filters` loses "homeassistant/+/+/+/config" and
+//     "homeassistant/+/geschirrspuler/+/config", both hard-wired to
+//     QoS 0, and gains "homeassistant/#" at MQTT_QOS. That is
+//     publisher.Runtime.Sweep's snapshot window replacing the two
+//     hand-rolled reconcile subscriptions: the library parses all three
+//     Home Assistant discovery topic forms out of ONE window rather than
+//     encoding one of them in a filter, so the narrower pair cannot be
+//     expressed. Everything the window then does is narrower than
+//     before, not wider — see internal/bridge/reconcile.go. This is the
+//     same single pinned value go-mtec2mqtt's equivalent step moved, for
+//     the same reason.
+//   - `publish_qos_retain.bridge_will` said "qos=0 retain=true" and the
+//     will has gone out at MQTT_QOS since #41 fixed F1
+//     (cmd/homeconnect2mqtt/main.go, asserted by
+//     TestWillIsTheAvailabilitySourceEveryEntityReads). The row was
+//     prose that nothing measured, so it went stale in the commit that
+//     changed the thing it describes. It is corrected here and
+//     TestWillRowMatchesTheWillTheRuntimeStates now measures it.
+//
+// No published topic, no QoS of any PUBLISH, and no retain flag moved.
+//
 // topicsGoldenDigest is the SHA-256 of internal/bridge/testdata/topics.json,
 // held outside the file so a regeneration cannot pass unnoticed. See the
 // long note in internal/hass/golden_digest_test.go — same reasoning, same
 // standard: updating this literal is a declaration that names a finding.
-const topicsGoldenDigest = "a6806d0b94287efc7c1d4e6b60dc1c544b1c11d96a5a6992a23d80d3bb397719"
+const topicsGoldenDigest = "37e5bc781d7f754c08d274361470bd00a04d96227af8c1762f6a4ef8a318fa97"
 
 // TestTopicsGoldenMatchesItsPinnedDigest fails when topics.json was
 // regenerated without the accompanying declaration of intent.

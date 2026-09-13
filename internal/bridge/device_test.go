@@ -92,6 +92,7 @@ func buildGatedBridge(t *testing.T) (*Bridge, *gatedMQTT) {
 	b, err := New(Deps{
 		Config: testCfg(),
 		MQTT:   g,
+		Plane:  testPlane(g),
 		Devices: []DeviceSpec{{
 			Config: profile.DeviceConfig{
 				Name: "dishwasher", Host: "192.168.1.50",

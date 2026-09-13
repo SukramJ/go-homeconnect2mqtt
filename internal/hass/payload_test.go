@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
-
-	"github.com/SukramJ/go-mqtt"
 )
 
 func TestSlugify(t *testing.T) {
@@ -80,7 +78,7 @@ func TestCurationHeuristics(t *testing.T) {
 func TestDefaultEntityIDSlug(t *testing.T) {
 	app, entities := buildEntities(t)
 	pub := newStubPub()
-	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
+	d := New(pub, "homeassistant", "homeconnect", "en", false, nil)
 	d.PublishDevice(context.Background(), "Geschirrspüler", app.Info(), entities)
 
 	var payload map[string]any
@@ -124,7 +122,7 @@ func TestLocalizedName(t *testing.T) {
 	for _, tc := range []struct{ lang, want string }{{"de", "Betriebszustand"}, {"en", "Operation state"}} {
 		app, entities := buildEntities(t)
 		pub := newStubPub()
-		d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), tc.lang, false, nil)
+		d := New(pub, "homeassistant", "homeconnect", tc.lang, false, nil)
 		d.SetEnricher(langEnricher{})
 		d.PublishDevice(context.Background(), "dw", app.Info(), entities)
 		raw := pub.pubs["homeassistant/sensor/dw/bsh_common_status_operationstate/config"]
@@ -146,7 +144,7 @@ func TestLocalizedName(t *testing.T) {
 func TestCuratedModeSkipsDisabled(t *testing.T) {
 	app, entities := buildEntities(t)
 	pub := newStubPub()
-	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", true /* curated */, nil)
+	d := New(pub, "homeassistant", "homeconnect", "en", true /* curated */, nil)
 	d.PublishDevice(context.Background(), "dw", app.Info(), entities)
 	// ChildLock is disabled-by-default -> skipped in curated mode.
 	if _, ok := pub.pubs["homeassistant/switch/dw/bsh_common_setting_childlock/config"]; ok {

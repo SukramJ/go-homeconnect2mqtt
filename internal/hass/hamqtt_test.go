@@ -18,8 +18,6 @@ import (
 	"github.com/SukramJ/go-hamqtt/discovery"
 	"github.com/SukramJ/go-hamqtt/model"
 	"github.com/SukramJ/go-hamqtt/publisher"
-	"github.com/SukramJ/go-mqtt"
-
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/pincatalog"
 )
@@ -27,7 +25,7 @@ import (
 // hamqttPin renders one pinned configuration through go-hamqtt.
 func hamqttPin(t *testing.T, tc goldenCase) []goldenRow {
 	t.Helper()
-	d := New(nil, goldenPrefix, goldenRoot, goldenQoS, tc.lang, tc.curated, slog.New(slog.DiscardHandler))
+	d := New(nil, goldenPrefix, goldenRoot, tc.lang, tc.curated, slog.New(slog.DiscardHandler))
 	if tc.enriched {
 		d.SetEnricher(pinEnricher(t))
 	}
@@ -135,7 +133,7 @@ func TestHamqttReproducesTheIdentityPlane(t *testing.T) {
 // either side alone.
 func TestHamqttLayoutAgreesWithTheDaemonsOwnBuilders(t *testing.T) {
 	const device = goldenDeviceDE
-	l := hamqttLayout{root: goldenRoot}
+	l := NewLayout(goldenRoot)
 	dt := layout.NewDevice(goldenRoot, device)
 	dev := hamqttDevice(device, pincatalog.Info)
 
@@ -179,7 +177,7 @@ func TestHamqttLayoutAgreesWithTheDaemonsOwnBuilders(t *testing.T) {
 // segment here — it is the slug-derived identity — and a layout that started
 // reading it would move every state topic of a non-ASCII device name.
 func TestHamqttLayoutIgnoresAddressChannelAndBucket(t *testing.T) {
-	l := hamqttLayout{root: goldenRoot}
+	l := NewLayout(goldenRoot)
 	base := model.Slot{
 		Scope:   []string{goldenDeviceDE},
 		Address: "homeconnect_geschirrspuler",
@@ -357,7 +355,7 @@ var f13RefusedOverrides = map[string]string{
 func TestHamqttPayloadsPassDiscoveryValidate(t *testing.T) {
 	for _, tc := range goldenCases {
 		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
-			d := New(nil, goldenPrefix, goldenRoot, goldenQoS, tc.lang, tc.curated, slog.New(slog.DiscardHandler))
+			d := New(nil, goldenPrefix, goldenRoot, tc.lang, tc.curated, slog.New(slog.DiscardHandler))
 			if tc.enriched {
 				d.SetEnricher(pinEnricher(t))
 			}
@@ -787,7 +785,7 @@ var f13AlreadyStrippedDownstream = map[string]string{
 // has to come here and say which.
 func TestRefusedOverrideIsLogged(t *testing.T) {
 	var buf bytes.Buffer
-	d := New(nil, goldenPrefix, goldenRoot, goldenQoS, "en", false,
+	d := New(nil, goldenPrefix, goldenRoot, "en", false,
 		slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))
 	d.SetEnricher(pinEnricher(t))
 	dev := d.deviceBlockFor(goldenDeviceEN, pincatalog.Info)
@@ -869,7 +867,7 @@ func TestRefusedOverrideIsLogged(t *testing.T) {
 func TestHamqttBundleValidates(t *testing.T) {
 	for _, tc := range goldenCases {
 		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
-			d := New(nil, goldenPrefix, goldenRoot, goldenQoS, tc.lang, tc.curated, slog.New(slog.DiscardHandler))
+			d := New(nil, goldenPrefix, goldenRoot, tc.lang, tc.curated, slog.New(slog.DiscardHandler))
 			if tc.enriched {
 				d.SetEnricher(pinEnricher(t))
 			}
@@ -1030,12 +1028,12 @@ func TestButtonDeviceClassFilterIsInertOverThisCatalogue(t *testing.T) {
 	}
 }
 
-// refusingPublisher fails the test if anything reaches the MQTT client.
+// refusingPublisher fails the test if anything reaches the broker.
 type refusingPublisher struct{ t *testing.T }
 
-func (p refusingPublisher) Publish(_ context.Context, topic string, _ []byte, _ mqtt.QoS, _ bool, _ ...mqtt.PublishOption) error {
-	p.t.Errorf("the go-hamqtt rendering path published to %s — step 4 publishes NOTHING", topic)
-	return nil
+func (p refusingPublisher) Publish(_ context.Context, topic string, _ []byte) (bool, error) {
+	p.t.Errorf("the go-hamqtt rendering path published to %s — it publishes NOTHING", topic)
+	return false, nil
 }
 
 // TestHamqttRenderPathPublishesNothing is the step-4 constraint as an
@@ -1047,7 +1045,7 @@ func (p refusingPublisher) Publish(_ context.Context, topic string, _ []byte, _ 
 // Publisher that fails the test on contact.
 func TestHamqttRenderPathPublishesNothing(t *testing.T) {
 	for _, tc := range goldenCases {
-		d := New(refusingPublisher{t}, goldenPrefix, goldenRoot, goldenQoS, tc.lang, tc.curated, slog.New(slog.DiscardHandler))
+		d := New(refusingPublisher{t}, goldenPrefix, goldenRoot, tc.lang, tc.curated, slog.New(slog.DiscardHandler))
 		if tc.enriched {
 			d.SetEnricher(pinEnricher(t))
 		}
@@ -1118,7 +1116,7 @@ func TestObjectIDCompositionIsAnEquivalentMutant(t *testing.T) {
 // readable state binding, which the old hand-built path would have happily
 // given a state_topic (payloadFor branches on the platform, not on a schema).
 func TestGoHamqttRefusesAStateTopicOnAWriteOnlyPlatform(t *testing.T) {
-	d := New(nil, goldenPrefix, goldenRoot, goldenQoS, "en", false, slog.New(slog.DiscardHandler))
+	d := New(nil, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
 	dev := hamqttDevice(goldenDeviceEN, pincatalog.Info)
 	slot := hamqttSlot(dev, goldenDeviceEN, "BSH", "Common", "Command", "AcknowledgeEvent")
 

@@ -16,7 +16,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/SukramJ/go-mqtt"
+	"github.com/SukramJ/go-hamqtt/publisher"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
@@ -88,7 +88,10 @@ var updateDiscoveryGolden = flag.Bool("update-discovery-golden", false,
 const (
 	goldenPrefix = "homeassistant"
 	goldenRoot   = "homeconnect"
-	goldenQoS    = mqtt.QoS1
+	// goldenQoS is MQTT_QOS's shipped default in the publisher
+	// vocabulary. QoSAtLeastOnce is the wire's own 1, so the pinned rows
+	// are unchanged by the move onto publisher.Runtime.
+	goldenQoS = publisher.QoSAtLeastOnce
 )
 
 // Two device names, chosen once and never changed. "Dishwasher" is the
@@ -102,15 +105,23 @@ const (
 )
 
 // recorder is the publish sink. It is not a stub of the builder: the
-// builder is Discovery.PublishDevice, which runs unmodified. This only
-// captures what it hands to the MQTT client, including the two arguments
-// no other test in this repository has ever looked at — qos and retain.
+// builder is Discovery.PublishDevice, which runs unmodified, and since
+// ADR 0070 phase 7 step 5 it publishes through a real publisher.Runtime.
+// This sits one layer further down than it used to — at the TRANSPORT,
+// where the QoS byte and the retain flag actually cross — so the two
+// arguments no other test in this repository has ever looked at are now
+// read off the call the broker would have seen rather than off the one
+// the builder made. The discovery plane's delivery guarantee is no longer
+// the builder's argument to get wrong; it is the runtime's policy, and
+// this is where that policy becomes observable.
 type recorder struct {
 	mu   sync.Mutex
 	rows []goldenRow
 }
 
-func (r *recorder) Publish(_ context.Context, topic string, payload []byte, qos mqtt.QoS, retain bool, _ ...mqtt.PublishOption) error {
+var _ publisher.Transport = (*recorder)(nil)
+
+func (r *recorder) Publish(_ context.Context, topic string, payload []byte, qos byte, retain bool) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	var decoded map[string]any
@@ -119,6 +130,22 @@ func (r *recorder) Publish(_ context.Context, topic string, payload []byte, qos 
 	}
 	r.rows = append(r.rows, goldenRow{Topic: topic, QoS: int(qos), Retain: retain, Payload: decoded})
 	return nil
+}
+
+func (r *recorder) Subscribe(context.Context, string, byte, publisher.Handler) error { return nil }
+
+func (r *recorder) Unsubscribe(context.Context, string) error { return nil }
+
+// goldenRuntime is the discovery plane the pins publish through: the real
+// publisher.Runtime, at the shipped MQTT_QOS, over the recorder.
+func goldenRuntime(tr publisher.Transport) *publisher.Runtime {
+	return publisher.New(tr, publisher.Config{
+		Prefix:      goldenPrefix,
+		StatusTopic: layout.Bridge(goldenRoot),
+		Layout:      NewLayout(goldenRoot),
+		QoS:         goldenQoS,
+		Logger:      slog.New(slog.DiscardHandler),
+	})
 }
 
 // goldenRow is one pinned discovery publication: the retained config
@@ -183,7 +210,7 @@ func pinEnricher(t *testing.T) *mapping.Catalog {
 func publishPin(t *testing.T, lang, device string, curated, enriched bool) []goldenRow {
 	t.Helper()
 	rec := &recorder{}
-	d := New(rec, goldenPrefix, goldenRoot, goldenQoS, lang, curated, slog.New(slog.DiscardHandler))
+	d := New(goldenRuntime(rec), goldenPrefix, goldenRoot, lang, curated, slog.New(slog.DiscardHandler))
 	if enriched {
 		d.SetEnricher(pinEnricher(t))
 	}

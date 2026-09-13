@@ -9,8 +9,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/SukramJ/go-mqtt"
-
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
@@ -22,11 +20,11 @@ type stubPub struct {
 
 func newStubPub() *stubPub { return &stubPub{pubs: map[string]string{}} }
 
-func (s *stubPub) Publish(_ context.Context, topic string, payload []byte, _ mqtt.QoS, _ bool, _ ...mqtt.PublishOption) error {
+func (s *stubPub) Publish(_ context.Context, topic string, payload []byte) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.pubs[topic] = string(payload)
-	return nil
+	return true, nil
 }
 
 // buildEntities parses a rich description covering every platform and
@@ -114,7 +112,7 @@ func TestClassify(t *testing.T) {
 func TestPublishDevice(t *testing.T) {
 	app, entities := buildEntities(t)
 	pub := newStubPub()
-	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
+	d := New(pub, "homeassistant", "homeconnect", "en", false, nil)
 	d.PublishDevice(context.Background(), "dishwasher", app.Info(), entities)
 
 	// Switch config for ChildLock.
@@ -228,7 +226,7 @@ func (fakeEnricher) Excluded(string) bool                     { return false }
 func TestEnrichmentOverride(t *testing.T) {
 	app, entities := buildEntities(t)
 	pub := newStubPub()
-	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
+	d := New(pub, "homeassistant", "homeconnect", "en", false, nil)
 	d.SetEnricher(fakeEnricher{})
 	d.PublishDevice(context.Background(), "dw", app.Info(), entities)
 	raw := pub.pubs["homeassistant/sensor/dw/bsh_common_status_temp/config"]
@@ -250,7 +248,7 @@ func TestEnrichmentOverride(t *testing.T) {
 func TestEnrichmentOverrideIsRefusedWhenThePlatformDoesNotDeclareIt(t *testing.T) {
 	app, entities := buildEntities(t)
 	pub := newStubPub()
-	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
+	d := New(pub, "homeassistant", "homeconnect", "en", false, nil)
 	d.SetEnricher(fakeEnricher{})
 	d.PublishDevice(context.Background(), "dw", app.Info(), entities)
 
@@ -281,7 +279,7 @@ func TestEnrichmentOverrideIsRefusedWhenThePlatformDoesNotDeclareIt(t *testing.T
 }
 
 func TestBirthTopic(t *testing.T) {
-	d := New(newStubPub(), "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
+	d := New(newStubPub(), "homeassistant", "homeconnect", "en", false, nil)
 	if d.BirthTopic() != "homeassistant/status" {
 		t.Errorf("BirthTopic = %q", d.BirthTopic())
 	}
@@ -290,7 +288,7 @@ func TestBirthTopic(t *testing.T) {
 func TestBinarySensorPayload(t *testing.T) {
 	app, entities := buildEntities(t)
 	pub := newStubPub()
-	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
+	d := New(pub, "homeassistant", "homeconnect", "en", false, nil)
 	d.PublishDevice(context.Background(), "dw", app.Info(), entities)
 	raw := pub.pubs["homeassistant/binary_sensor/dw/bsh_common_event_problem/config"]
 	if raw == "" {
@@ -314,7 +312,7 @@ func TestBinarySensorPayload(t *testing.T) {
 func TestButtonPayload(t *testing.T) {
 	app, entities := buildEntities(t)
 	pub := newStubPub()
-	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
+	d := New(pub, "homeassistant", "homeconnect", "en", false, nil)
 	d.PublishDevice(context.Background(), "dw", app.Info(), entities)
 	raw := pub.pubs["homeassistant/button/dw/bsh_common_command_abortprogram/config"]
 	if raw == "" {
@@ -347,7 +345,7 @@ func (enumEnricher) DeviceClass(feature string) (string, bool) {
 func TestEnrichmentDeviceClassFilteredPerPlatform(t *testing.T) {
 	app, entities := buildEntities(t)
 	pub := newStubPub()
-	d := New(pub, "homeassistant", "homeconnect", mqtt.QoS(1), "en", false, nil)
+	d := New(pub, "homeassistant", "homeconnect", "en", false, nil)
 	d.SetEnricher(enumEnricher{})
 	d.PublishDevice(context.Background(), "dw", app.Info(), entities)
 	var p map[string]any
