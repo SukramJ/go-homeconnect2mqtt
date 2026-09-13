@@ -4,6 +4,7 @@
 package hass
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -199,7 +200,7 @@ func compareJSON(t *testing.T, what string, want, got map[string]any) {
 	t.Helper()
 	wj, _ := json.Marshal(canonicalJSON(want))
 	gj, _ := json.Marshal(canonicalJSON(got))
-	if string(wj) != string(gj) {
+	if !bytes.Equal(wj, gj) {
 		t.Errorf("%s:\n  pinned: %s\n  document: %s", what, wj, gj)
 	}
 }

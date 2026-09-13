@@ -189,7 +189,8 @@ func TestTheSweepRunsWhenTheDocumentWasPublished(t *testing.T) {
 	}
 }
 
-// TestTheSweepNeverOffersTheDocumentItJustPublished.
+// TestTheSweepNeverOffersTheDocumentItJustPublished keeps the one retained
+// topic that now holds a whole appliance out of the daemon's own delete pass.
 //
 // hass.Discovery.OwnsConfigTopic declines the device-document form. That
 // line was written when this daemon published no document at all and the
@@ -409,7 +410,8 @@ func TestTheDeviceAvailabilityPayloadsAreTheOnesEveryConfigDeclares(t *testing.T
 	}
 }
 
-// TestStopDiscoveryClosesTheShutdownWindow.
+// TestStopDiscoveryClosesTheShutdownWindow drives the gate that keeps a
+// discovery publish from landing after the daemon has said it is gone.
 //
 // The daemon's last act is a retained "offline" on its own status topic,
 // and it is the only one that goes out at all on a graceful stop — a clean
