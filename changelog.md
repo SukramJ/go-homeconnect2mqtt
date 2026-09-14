@@ -5,6 +5,8 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-09-14
+
 ### Changed
 - **Home Assistant discovery is now one retained *device document* per
   appliance instead of one retained config per entity.** Where this daemon
@@ -86,6 +88,62 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
   when an appliance reconnects or Home Assistant restarts. A broker that came
   back without its retained store previously left every entity missing until
   the daemon itself was restarted.
+- Every MQTT topic this daemon builds is now composed in one place
+  (`internal/layout`) instead of six across three packages. The state topic
+  was built twice and the two synthetic program buttons' command topic was
+  spelled twice — once by the discovery layer that advertises it, once by the
+  handler that acts on it, with nothing comparing them. Nothing on the wire
+  changes.
+- Both discovery payload builders (the feature-derived entities and the two
+  synthetic program buttons) now share one function for the keys every entity
+  carries, so a key added to one cannot be missing from the other. Nothing on
+  the wire changes.
+- `mqttSession` is replaced by `mqtt.SplitClient` from go-mqtt v1.4.0.
+- The daemon's publish and subscribe loops now run on the shared
+  [`go-hamqtt`](https://github.com/SukramJ/go-hamqtt) `publisher` package
+  instead of four hand-rolled copies of the same thing: entity state and
+  availability, the inbound command routing, the birth/Last-Will pair on
+  `<MQTT_TOPIC>/status`, and the sweep that clears retained discovery
+  configs this daemon no longer publishes. **Every published topic, every
+  QoS and every retain flag is unchanged** — that was measured against a
+  byte-level pin of the whole topic tree, not assumed. Four operator-visible
+  effects:
+  - **Far fewer broker messages.** An appliance re-reports every feature on
+    every notification whether or not anything moved, and each of those used
+    to cost one retained publish and one Home Assistant state evaluation.
+    An unchanged value is now compared and dropped. A changed one still goes
+    out, and a reconnect re-sends everything, so nothing can be left stale by
+    a broker that came back without its retained store.
+  - **Commands no longer run on the MQTT read loop.** Each one used to start
+    its own goroutine, unbounded and unordered, because a Home Connect write
+    blocks for seconds and would otherwise stall acknowledgement handling
+    into a spurious reconnect. There is now a worker pool that preserves the
+    order of two commands on the same topic.
+  - **The orphan sweep opens one snapshot subscription
+    (`<HASS_BASE_TOPIC>/#`) instead of two narrower ones.** What it is
+    willing to delete got *narrower*, not wider: a retained config must be
+    in the five-segment form this daemon publishes, on one of the six
+    platforms it emits, under the node id of a device in this instance's
+    configuration, and its payload must carry a `unique_id` in the
+    `homeconnect_` namespace *and* a state topic under this instance's own
+    `MQTT_TOPIC`. A second instance of this daemon on the same broker, with
+    a different `MQTT_TOPIC` and an appliance of the same name, is
+    untouchable by it.
+  - **A reconnect re-announces "online" and rebuilds what the daemon
+    believes the broker holds.** Previously only the first connect did, so a
+    reconnected daemon could sit "offline" in Home Assistant while happily
+    publishing state nobody displayed.
+- Bump [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt)
+  v1.3.0 -> v1.5.1. Two minors, both relevant. v1.4.0 adds
+  `mqtt.SplitClient`, which makes this daemon's hand-rolled `mqttSession`
+  redundant (not yet removed). v1.5.1 fixes a double-dispatch defect: through
+  v1.5.0 a delivery carrying no subscription identifier was matched by topic
+  against stamped subscriptions too, so a consumer with a broad subscription
+  overlapping its own command tree could run a handler twice per published
+  message. This bridge subscribes to the whole device sub-tree
+  (`<root>/<device>/#`), which makes it the most exposed of the sister
+  projects; its remaining filters do not overlap it, so no doubled write has
+  been observed. No source changes were needed.
 
 ### Fixed
 - **A second instance of this daemon whose `MQTT_TOPIC` sits *under* the
@@ -212,66 +270,6 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
   characters, invalid UTF-8, and a name with no ASCII letter or digit, which
   produced an empty Home Assistant node id. Non-ASCII names such as
   `Geschirrspüler` remain fully supported, and so does a name containing `/`.
-
-### Changed
-- Every MQTT topic this daemon builds is now composed in one place
-  (`internal/layout`) instead of six across three packages. The state topic
-  was built twice and the two synthetic program buttons' command topic was
-  spelled twice — once by the discovery layer that advertises it, once by the
-  handler that acts on it, with nothing comparing them. Nothing on the wire
-  changes.
-- Both discovery payload builders (the feature-derived entities and the two
-  synthetic program buttons) now share one function for the keys every entity
-  carries, so a key added to one cannot be missing from the other. Nothing on
-  the wire changes.
-- `mqttSession` is replaced by `mqtt.SplitClient` from go-mqtt v1.4.0.
-- The daemon's publish and subscribe loops now run on the shared
-  [`go-hamqtt`](https://github.com/SukramJ/go-hamqtt) `publisher` package
-  instead of four hand-rolled copies of the same thing: entity state and
-  availability, the inbound command routing, the birth/Last-Will pair on
-  `<MQTT_TOPIC>/status`, and the sweep that clears retained discovery
-  configs this daemon no longer publishes. **Every published topic, every
-  QoS and every retain flag is unchanged** — that was measured against a
-  byte-level pin of the whole topic tree, not assumed. Four operator-visible
-  effects:
-  - **Far fewer broker messages.** An appliance re-reports every feature on
-    every notification whether or not anything moved, and each of those used
-    to cost one retained publish and one Home Assistant state evaluation.
-    An unchanged value is now compared and dropped. A changed one still goes
-    out, and a reconnect re-sends everything, so nothing can be left stale by
-    a broker that came back without its retained store.
-  - **Commands no longer run on the MQTT read loop.** Each one used to start
-    its own goroutine, unbounded and unordered, because a Home Connect write
-    blocks for seconds and would otherwise stall acknowledgement handling
-    into a spurious reconnect. There is now a worker pool that preserves the
-    order of two commands on the same topic.
-  - **The orphan sweep opens one snapshot subscription
-    (`<HASS_BASE_TOPIC>/#`) instead of two narrower ones.** What it is
-    willing to delete got *narrower*, not wider: a retained config must be
-    in the five-segment form this daemon publishes, on one of the six
-    platforms it emits, under the node id of a device in this instance's
-    configuration, and its payload must carry a `unique_id` in the
-    `homeconnect_` namespace *and* a state topic under this instance's own
-    `MQTT_TOPIC`. A second instance of this daemon on the same broker, with
-    a different `MQTT_TOPIC` and an appliance of the same name, is
-    untouchable by it.
-  - **A reconnect re-announces "online" and rebuilds what the daemon
-    believes the broker holds.** Previously only the first connect did, so a
-    reconnected daemon could sit "offline" in Home Assistant while happily
-    publishing state nobody displayed.
-
-### Changed
-- Bump [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt)
-  v1.3.0 -> v1.5.1. Two minors, both relevant. v1.4.0 adds
-  `mqtt.SplitClient`, which makes this daemon's hand-rolled `mqttSession`
-  redundant (not yet removed). v1.5.1 fixes a double-dispatch defect: through
-  v1.5.0 a delivery carrying no subscription identifier was matched by topic
-  against stamped subscriptions too, so a consumer with a broad subscription
-  overlapping its own command tree could run a handler twice per published
-  message. This bridge subscribes to the whole device sub-tree
-  (`<root>/<device>/#`), which makes it the most exposed of the sister
-  projects; its remaining filters do not overlap it, so no doubled write has
-  been observed. No source changes were needed.
 
 ### Added
 - Golden-file pins for everything published to Home Assistant: all 687

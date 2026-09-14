@@ -33,6 +33,37 @@ jobs:
           echo "TAG_NAME=${TAG_NAME}" >> "$GITHUB_ENV"
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
+      # The release body is the changelog section for this tag, so an
+      # operator reading the release sees what changed and what it costs
+      # them, not a list of commit subjects. GitHub rejects a release body
+      # over 125,000 characters with a 422 — and by then the tag is already
+      # on the remote — so the section is trimmed to fit, leaving headroom
+      # for the auto-generated commit notes appended below it.
+      - name: Extract release notes from changelog.md
+        env:
+          BODY_LIMIT: "118000"
+        run: |
+          set -euo pipefail
+          awk -v v="## [${VERSION}] - " '
+            index($0, v) == 1 { f = 1; next }
+            f && /^## \[/      { exit }
+            f                  { print }
+          ' changelog.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::error::changelog.md has no '## [${VERSION}] - <date>' section"
+            exit 1
+          fi
+          size=$(wc -c < release-notes.md)
+          echo "changelog section: ${size} bytes (GitHub caps a release body at 125000)"
+          if [ "${size}" -gt "${BODY_LIMIT}" ]; then
+            echo "::warning::trimming the release body from ${size} to ${BODY_LIMIT} bytes"
+            head -c "${BODY_LIMIT}" release-notes.md > release-notes.trimmed
+            printf '\n\n---\n\n_Truncated to fit GitHub'"'"'s release-body limit. The full entry is in [changelog.md](%s)._\n' \
+              "https://github.com/${GITHUB_REPOSITORY}/blob/${TAG_NAME}/changelog.md" \
+              >> release-notes.trimmed
+            mv release-notes.trimmed release-notes.md
+          fi
+
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
@@ -49,6 +80,7 @@ jobs:
         with:
           tag_name: ${{ env.TAG_NAME }}
           name: ${{ env.TAG_NAME }}
+          body_path: release-notes.md
           generate_release_notes: true
           draft: false
           prerelease: false
