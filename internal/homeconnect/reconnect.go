@@ -43,8 +43,7 @@ type ReconnectConfig struct {
 	Logger         *slog.Logger
 	OnState        func(ConnectionState)
 
-	// Injectable for deterministic tests; default to the real clock/rng.
-	sleep   func(time.Duration) <-chan time.Time
+	// Injectable for deterministic tests; defaults to the real rng.
 	randInt func(int64) int64
 }
 
@@ -76,9 +75,6 @@ func NewManager(conn Connectable, cfg ReconnectConfig) *Manager {
 	}
 	if cfg.LogThrottle <= 0 {
 		cfg.LogThrottle = 30 * time.Second
-	}
-	if cfg.sleep == nil {
-		cfg.sleep = time.After
 	}
 	if cfg.randInt == nil {
 		cfg.randInt = rand.Int63n //nolint:gosec // jitter only, not security-sensitive
@@ -167,7 +163,7 @@ func (m *Manager) wait(ctx context.Context, d time.Duration) bool {
 	select {
 	case <-ctx.Done():
 		return false
-	case <-m.cfg.sleep(d):
+	case <-time.After(d):
 		return true
 	}
 }

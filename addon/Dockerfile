@@ -22,7 +22,7 @@
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 
 # ---------- Stage 1: build the Go binaries ----------
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27.1-alpine AS builder
 WORKDIR /src
 
 # TLS-PSK needs cgo + OpenSSL (Go's crypto/tls has no external-PSK ciphers).
@@ -78,7 +78,7 @@ EXPOSE 8080
 # Add-on image labels (BUILD_ARCH / BUILD_VERSION injected by the Supervisor
 # build; defaults keep manual builds from failing).
 ARG BUILD_ARCH=amd64
-ARG BUILD_VERSION=0.13.0
+ARG BUILD_VERSION=0.14.0
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
   io.hass.type="addon" \

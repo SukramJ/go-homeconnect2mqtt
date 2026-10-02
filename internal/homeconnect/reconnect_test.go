@@ -8,6 +8,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -61,150 +62,122 @@ func (c *fakeConn) triggerDrop() {
 	}
 }
 
-// readySleep returns a sleep func that records each requested duration and
-// completes immediately, so backoff timing is deterministic and fast.
-// readySleep records the requested backoff and returns a channel that is
-// already ready, so a test drives the reconnect loop at full speed.
-//
-// The record is a NON-BLOCKING send, and that is the whole point. Manager.wait
-// calls sleep(d) to obtain the channel it selects on, so the send happens
-// *before* the select can observe ctx.Done(). A blocking send therefore parks
-// the manager outside the select, where cancellation cannot reach it: once the
-// loop has outrun the reader by more than the buffer, the test's cancel() is
-// ignored and its <-done never returns.
-//
-// That is a deadlock waiting for a machine fast enough to let the producer get
-// ahead, which is what a loaded CI runner is. Dropping a duration nobody is
-// waiting for costs the tests nothing — each reads only the first few, and the
-// buffer is far larger than that.
-func readySleep(durs chan time.Duration) func(time.Duration) <-chan time.Time {
-	return func(d time.Duration) <-chan time.Time {
-		select {
-		case durs <- d:
-		default:
-		}
-		ch := make(chan time.Time, 1)
-		ch <- time.Time{}
-		return ch
-	}
-}
-
 // Every failed connect attempt must release whatever it left behind: the
 // manager closes the Connectable before backing off, so no half-open
 // socket or receive loop leaks per retry.
 func TestFailedConnectClosesConn(t *testing.T) {
-	conn := &fakeConn{connectFn: func() error { return errors.New("offline") }}
-	durs := make(chan time.Duration, 16)
-	m := NewManager(conn, ReconnectConfig{
-		InitialBackoff: time.Second,
-		MaxBackoff:     4 * time.Second,
-		sleep:          readySleep(durs),
+	synctest.Test(t, func(t *testing.T) {
+		conn := &fakeConn{connectFn: func() error { return errors.New("offline") }}
+		m := NewManager(conn, ReconnectConfig{
+			InitialBackoff: time.Second,
+			MaxBackoff:     4 * time.Second,
+		})
+
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() { _ = m.Run(ctx); close(done) }()
+		defer func() { cancel(); <-done }() // a failed assertion must not leak the run goroutine out of the bubble
+
+		// Attempts start at 0s, 1s and 3s; the next one is due at 7s.
+		time.Sleep(4 * time.Second)
+		synctest.Wait()
+		cancel()
+		<-done
+
+		conn.mu.Lock()
+		connects, closes := conn.connects, conn.closes
+		conn.mu.Unlock()
+		if connects != 3 {
+			t.Errorf("connects = %d, want 3", connects)
+		}
+		if closes < connects {
+			t.Errorf("closes = %d, want >= connects (%d): failed attempts must be cleaned up", closes, connects)
+		}
 	})
-
-	ctx, cancel := context.WithCancel(t.Context())
-	done := make(chan struct{})
-	go func() { _ = m.Run(ctx); close(done) }()
-
-	for range 3 {
-		<-durs
-	}
-	cancel()
-	<-done
-
-	conn.mu.Lock()
-	connects, closes := conn.connects, conn.closes
-	conn.mu.Unlock()
-	if closes < connects {
-		t.Errorf("closes = %d, want >= connects (%d): failed attempts must be cleaned up", closes, connects)
-	}
 }
 
 func TestReconnectBackoffExponential(t *testing.T) {
-	durs := make(chan time.Duration, 100)
-	conn := &fakeConn{connectFn: func() error { return errors.New("offline") }}
-	m := NewManager(conn, ReconnectConfig{
-		InitialBackoff: 100 * time.Millisecond,
-		MaxBackoff:     800 * time.Millisecond,
-		Jitter:         0,
-		LogThrottle:    time.Hour,
-		sleep:          readySleep(durs),
-	})
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-	go func() { _ = m.Run(ctx); close(done) }()
+	synctest.Test(t, func(t *testing.T) {
+		start := time.Now()
+		var attempts []time.Duration // offsets from start; only touched from the run goroutine and after synctest.Wait
+		conn := &fakeConn{connectFn: func() error {
+			attempts = append(attempts, time.Since(start))
+			return errors.New("offline")
+		}}
+		m := NewManager(conn, ReconnectConfig{
+			InitialBackoff: 100 * time.Millisecond,
+			MaxBackoff:     800 * time.Millisecond,
+			Jitter:         0,
+			LogThrottle:    time.Hour,
+		})
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() { _ = m.Run(ctx); close(done) }()
+		defer func() { cancel(); <-done }() // a failed assertion must not leak the run goroutine out of the bubble
 
-	want := []time.Duration{100, 200, 400, 800, 800}
-	for i, w := range want {
-		got := <-durs
-		if got != w*time.Millisecond {
-			t.Errorf("backoff[%d] = %v, want %v", i, got, w*time.Millisecond)
+		// Backoffs 100, 200, 400, 800, 800 ms put the attempts at these offsets.
+		want := []time.Duration{0, 100, 300, 700, 1500, 2300}
+		time.Sleep(2300 * time.Millisecond)
+		synctest.Wait()
+		if len(attempts) != len(want) {
+			t.Fatalf("attempts at %v, want %d of them", attempts, len(want))
 		}
-	}
-
-	// connectFn never succeeds, so Run keeps retrying and keeps calling the
-	// fake sleep after the five backoffs we assert above. That sleep func is a
-	// select operand in Manager.wait, so Go evaluates it — performing its send
-	// to durs — before the select can observe ctx.Done(). Once durs fills, Run
-	// wedges on that send and never sees the cancellation, hanging the test
-	// under scheduler pressure. Keep draining durs until Run exits so the send
-	// always has room and the loop can reach its ctx.Err() check.
-	drained := make(chan struct{})
-	go func() {
-		defer close(drained)
-		for {
-			select {
-			case <-durs:
-			case <-done:
-				return
+		for i, w := range want {
+			if attempts[i] != w*time.Millisecond {
+				t.Errorf("attempt[%d] at %v, want %v", i, attempts[i], w*time.Millisecond)
 			}
 		}
-	}()
 
-	cancel()
-	<-done
-	<-drained
-	if m.State() != StateClosed {
-		t.Errorf("final state = %q, want closed", m.State())
-	}
+		cancel()
+		<-done
+		if m.State() != StateClosed {
+			t.Errorf("final state = %q, want closed", m.State())
+		}
+	})
 }
 
 func TestReconnectSuccessThenDrop(t *testing.T) {
-	durs := make(chan time.Duration, 100)
-	states := make(chan ConnectionState, 64)
-	conn := &fakeConn{connectFn: func() error { return nil }}
-	m := NewManager(conn, ReconnectConfig{
-		InitialBackoff: 10 * time.Millisecond,
-		MaxBackoff:     time.Second,
-		LogThrottle:    time.Hour,
-		sleep:          readySleep(durs),
-		OnState:        func(s ConnectionState) { states <- s },
-	})
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = m.Run(ctx) }()
+	synctest.Test(t, func(t *testing.T) {
+		conn := &fakeConn{connectFn: func() error { return nil }}
+		m := NewManager(conn, ReconnectConfig{
+			InitialBackoff: 10 * time.Millisecond,
+			MaxBackoff:     time.Second,
+			LogThrottle:    time.Hour,
+		})
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() { _ = m.Run(ctx); close(done) }()
+		defer func() { cancel(); <-done }() // a failed assertion must not leak the run goroutine out of the bubble
 
-	waitFor := func(target ConnectionState) {
-		deadline := time.After(2 * time.Second)
-		for {
-			select {
-			case s := <-states:
-				if s == target {
-					return
-				}
-			case <-deadline:
-				t.Fatalf("timed out waiting for state %q", target)
-			}
+		synctest.Wait()
+		if got := m.State(); got != StateConnected {
+			t.Fatalf("state = %q, want connected", got)
 		}
-	}
-	waitFor(StateConnected)
-	conn.triggerDrop()
-	waitFor(StateReconnecting)
-	waitFor(StateConnected) // reconnected
 
-	cancel()
-	if conn.closesCount() == 0 {
-		t.Error("Close should have been called on drop/shutdown")
-	}
+		conn.triggerDrop()
+		synctest.Wait()
+		if got := m.State(); got != StateReconnecting {
+			t.Fatalf("state after drop = %q, want reconnecting", got)
+		}
+
+		// The reconnect waits out the initial backoff: not a nanosecond early.
+		time.Sleep(10*time.Millisecond - time.Nanosecond)
+		synctest.Wait()
+		if got := m.State(); got != StateReconnecting {
+			t.Fatalf("state 1ns before the backoff ends = %q, want reconnecting", got)
+		}
+		time.Sleep(time.Nanosecond)
+		synctest.Wait()
+		if got := m.State(); got != StateConnected {
+			t.Fatalf("state after the backoff = %q, want connected (reconnected)", got)
+		}
+
+		cancel()
+		<-done
+		if conn.closesCount() == 0 {
+			t.Error("Close should have been called on drop/shutdown")
+		}
+	})
 }
 
 func (c *fakeConn) closesCount() int {
@@ -261,23 +234,33 @@ func TestJitteredBounds(t *testing.T) {
 func TestConnectTimeoutApplied(t *testing.T) {
 	// Connect blocks until its context is cancelled; ConnectTimeout must
 	// cancel it so the loop progresses to Offline.
-	durs := make(chan time.Duration, 10)
-	conn := &fakeConn{connectFn: func() error { return nil }}
-	blocking := &blockingConn{inner: conn}
-	m := NewManager(blocking, ReconnectConfig{
-		ConnectTimeout: 50 * time.Millisecond,
-		InitialBackoff: time.Millisecond,
-		LogThrottle:    time.Hour,
-		sleep:          readySleep(durs),
+	synctest.Test(t, func(t *testing.T) {
+		conn := &fakeConn{connectFn: func() error { return nil }}
+		blocking := &blockingConn{inner: conn}
+		m := NewManager(blocking, ReconnectConfig{
+			ConnectTimeout: 50 * time.Millisecond,
+			InitialBackoff: time.Millisecond,
+			LogThrottle:    time.Hour,
+		})
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() { _ = m.Run(ctx); close(done) }()
+		defer func() { cancel(); <-done }() // a failed assertion must not leak the run goroutine out of the bubble
+
+		time.Sleep(50*time.Millisecond - time.Nanosecond)
+		synctest.Wait()
+		if got := m.State(); got != StateConnecting {
+			t.Fatalf("state 1ns before the timeout = %q, want connecting", got)
+		}
+		time.Sleep(time.Nanosecond)
+		synctest.Wait()
+		if got := m.State(); got != StateOffline {
+			t.Fatalf("state at the timeout = %q, want offline: the connect timeout was not applied", got)
+		}
+
+		cancel()
+		<-done
 	})
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = m.Run(ctx) }()
-	select {
-	case <-durs: // reached the offline backoff path => timeout fired
-	case <-time.After(2 * time.Second):
-		t.Fatal("connect timeout was not applied")
-	}
 }
 
 // blockingConn blocks in Connect until the supplied context is done.

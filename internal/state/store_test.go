@@ -5,17 +5,12 @@ package state
 
 import (
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
-func fixedClock(start time.Time) (func() time.Time, *time.Time) {
-	now := start
-	return func() time.Time { return now }, &now
-}
-
 func TestUpdateAndSnapshot(t *testing.T) {
-	clock, _ := fixedClock(time.Unix(1000, 0))
-	s := New(clock)
+	s := New()
 	s.RegisterDevice("dw", "ha1", "BOSCH", "Dishwasher", "SMV6", nil)
 	s.UpdateFeature("dw", Feature{Feature: "BSH.Common.Status.OperationState", UID: 1, Value: "Run"})
 
@@ -30,7 +25,7 @@ func TestUpdateAndSnapshot(t *testing.T) {
 }
 
 func TestDeviceLookupByNameAndHaID(t *testing.T) {
-	s := New(nil)
+	s := New()
 	s.RegisterDevice("dw", "HA-123", "BOSCH", "Dishwasher", "", nil)
 	if _, ok := s.Device("dw"); !ok {
 		t.Error("lookup by name failed")
@@ -44,32 +39,39 @@ func TestDeviceLookupByNameAndHaID(t *testing.T) {
 }
 
 func TestAgeAndHealthStale(t *testing.T) {
-	clock, now := fixedClock(time.Unix(1000, 0))
-	s := New(clock)
-	s.RegisterDevice("dw", "", "B", "T", "", nil)
-	s.SetConnectionState("dw", "connected", true)
-	s.UpdateFeature("dw", Feature{Feature: "x", UID: 1, Value: 1})
+	synctest.Test(t, func(t *testing.T) {
+		s := New()
+		s.RegisterDevice("dw", "", "B", "T", "", nil)
+		s.SetConnectionState("dw", "connected", true)
+		s.UpdateFeature("dw", Feature{Feature: "x", UID: 1, Value: 1})
 
-	// Advance 5s: fresh.
-	*now = time.Unix(1005, 0)
-	h := s.Health()
-	if h.Status != "ok" || h.Devices[0].Stale {
-		t.Errorf("should be fresh: %+v", h)
-	}
-	if h.Devices[0].AgeSeconds != 5 {
-		t.Errorf("age = %d, want 5", h.Devices[0].AgeSeconds)
-	}
+		// Advance 5s: fresh.
+		time.Sleep(5 * time.Second)
+		h := s.Health()
+		if h.Status != "ok" || h.Devices[0].Stale {
+			t.Errorf("should be fresh: %+v", h)
+		}
+		if h.Devices[0].AgeSeconds != 5 {
+			t.Errorf("age = %d, want 5", h.Devices[0].AgeSeconds)
+		}
 
-	// Advance past the stale threshold.
-	*now = time.Unix(1000, 0).Add(DefaultStaleThreshold + 5*time.Second)
-	h = s.Health()
-	if h.Status != "degraded" || !h.Devices[0].Stale {
-		t.Errorf("should be stale: %+v", h)
-	}
+		// Exactly the threshold is still fresh (isStale compares with >);
+		// one nanosecond more is stale.
+		time.Sleep(DefaultStaleThreshold - 5*time.Second)
+		h = s.Health()
+		if h.Status != "ok" || h.Devices[0].Stale {
+			t.Errorf("age == threshold should be fresh: %+v", h)
+		}
+		time.Sleep(time.Nanosecond)
+		h = s.Health()
+		if h.Status != "degraded" || !h.Devices[0].Stale {
+			t.Errorf("age > threshold should be stale: %+v", h)
+		}
+	})
 }
 
 func TestHealthOfflineIsStale(t *testing.T) {
-	s := New(nil)
+	s := New()
 	s.RegisterDevice("dw", "", "B", "T", "", nil)
 	s.SetConnectionState("dw", "offline", false)
 	h := s.Health()
@@ -79,7 +81,7 @@ func TestHealthOfflineIsStale(t *testing.T) {
 }
 
 func TestSubscribeReceivesEvents(t *testing.T) {
-	s := New(nil)
+	s := New()
 	ch, cancel := s.Subscribe()
 	defer cancel()
 	s.SetConnectionState("dw", "connected", true)
@@ -94,7 +96,7 @@ func TestSubscribeReceivesEvents(t *testing.T) {
 }
 
 func TestSubscribeLatestWins(t *testing.T) {
-	s := New(nil)
+	s := New()
 	ch, cancel := s.Subscribe()
 	defer cancel()
 	// Publish several without reading; buffer cap 1 keeps the latest.
@@ -109,7 +111,7 @@ func TestSubscribeLatestWins(t *testing.T) {
 }
 
 func TestCancelUnsubscribes(t *testing.T) {
-	s := New(nil)
+	s := New()
 	ch, cancel := s.Subscribe()
 	cancel()
 	if _, open := <-ch; open {
@@ -120,7 +122,7 @@ func TestCancelUnsubscribes(t *testing.T) {
 }
 
 func TestDeviceDetailFeaturesSorted(t *testing.T) {
-	s := New(nil)
+	s := New()
 	s.RegisterDevice("dw", "", "B", "T", "", map[string]any{"brand": "B"})
 	s.UpdateFeature("dw", Feature{Feature: "Zeta", UID: 2})
 	s.UpdateFeature("dw", Feature{Feature: "Alpha", UID: 1})

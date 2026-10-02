@@ -135,11 +135,10 @@ func Locate(env Env) (string, bool) {
 //  4. fallback → string
 func applyEnvOverrides(raw map[string]any, env Env) {
 	for _, kv := range env.Environ() {
-		eq := strings.IndexByte(kv, '=')
-		if eq < 0 {
+		key, val, ok := strings.Cut(kv, "=")
+		if !ok {
 			continue
 		}
-		key, val := kv[:eq], kv[eq+1:]
 		if !strings.HasPrefix(key, EnvPrefix) {
 			continue
 		}

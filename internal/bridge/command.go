@@ -390,8 +390,8 @@ func (b *Bridge) resolveProgramUID(d *Device, name string) (int, bool) {
 
 // progLeaf is the last dotted segment of a program feature name.
 func progLeaf(name string) string {
-	if i := strings.LastIndex(name, "."); i >= 0 {
-		return name[i+1:]
+	if _, after, ok := strings.CutLast(name, "."); ok {
+		return after
 	}
 	return name
 }

@@ -457,11 +457,9 @@ func TestTheReconnectRepublishDoesNotOverlapItself(t *testing.T) {
 
 	var wg sync.WaitGroup
 	for range 4 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			b.republishDiscovery(t.Context())
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -834,17 +832,13 @@ func TestTheBirthHandlerAndTheReconnectHookShareOnePass(t *testing.T) {
 
 	var wg sync.WaitGroup
 	for range 3 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			h(&mqtt.Message{Topic: b.hass.BirthTopic(), Payload: []byte("online"), Retain: true})
-		}()
+		})
 	}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		b.republishDiscovery(t.Context())
-	}()
+	})
 	wg.Wait()
 	waitUntil(t, "the birth passes to publish the device document", func() bool {
 		_, arrivals := w.read()

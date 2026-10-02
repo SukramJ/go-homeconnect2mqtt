@@ -40,7 +40,7 @@ P8–P11 are additive; P10/P11 are optional.
 skeleton. All reusable infrastructure adopted from the sister project
 `go-mtec2mqtt` and renamed to `homeconnect2mqtt`.
 
-- [x] `go mod init github.com/SukramJ/go-homeconnect2mqtt` (Go 1.26)
+- [x] `go mod init github.com/SukramJ/go-homeconnect2mqtt` (Go 1.27)
 - [x] Global rename (module, binary names, `HC2M_` prefix, ClientID, AppDir)
 - [x] Directory skeleton (`06` §2)
 - [x] `internal/version/version.go`

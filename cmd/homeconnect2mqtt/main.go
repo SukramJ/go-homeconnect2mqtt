@@ -176,7 +176,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 
 	var store *state.Store
 	if cfg.WebEnable {
-		store = state.New(nil)
+		store = state.New()
 	}
 
 	br, err := bridge.New(bridge.Deps{

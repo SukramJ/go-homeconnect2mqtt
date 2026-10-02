@@ -26,7 +26,7 @@ func (s stubDispatch) Dispatch(context.Context, string, string, any) error { ret
 
 func newTestServer(t *testing.T, disp Dispatcher, mqttUp bool) (ts *httptest.Server, store *state.Store) {
 	t.Helper()
-	store = state.New(nil)
+	store = state.New()
 	store.RegisterDevice("dw", "HA-1", "BOSCH", "Dishwasher", "SMV6", map[string]any{"brand": "BOSCH"})
 	store.SetConnectionState("dw", "connected", true)
 	store.UpdateFeature("dw", state.Feature{Feature: "BSH.Common.Status.OperationState", UID: 1, Value: "Run", Access: "read"})
@@ -183,7 +183,7 @@ func TestSetBodySizeLimit(t *testing.T) {
 // while an SSE client holds an open stream: BaseContext must cancel the
 // request context so handleSSE returns.
 func TestShutdownPromptWithSSEClient(t *testing.T) {
-	store := state.New(nil)
+	store := state.New()
 	logger := slog.New(slog.DiscardHandler)
 	srv := New(Config{}, store, stubDispatch{}, VersionInfo{}, nil, logger)
 
@@ -225,7 +225,7 @@ func TestShutdownPromptWithSSEClient(t *testing.T) {
 
 // TestRunListenError checks that Run wraps and returns a listen failure.
 func TestRunListenError(t *testing.T) {
-	store := state.New(nil)
+	store := state.New()
 	srv := New(Config{Bind: "127.0.0.1:-1"}, store, stubDispatch{}, VersionInfo{}, nil, slog.New(slog.DiscardHandler))
 	if err := srv.Run(context.Background()); err == nil {
 		t.Fatal("Run with invalid bind should return an error")
@@ -233,7 +233,7 @@ func TestRunListenError(t *testing.T) {
 }
 
 func TestBasicAuth(t *testing.T) {
-	st := state.New(nil)
+	st := state.New()
 	srv := New(Config{User: "u", Password: "p"}, st, stubDispatch{}, VersionInfo{}, nil, nil)
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()

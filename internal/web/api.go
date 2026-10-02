@@ -104,8 +104,7 @@ func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxSetBodyBytes)
 	var req setRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		var maxErr *http.MaxBytesError
-		if errors.As(err, &maxErr) {
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 			writeError(w, "payload_too_large", http.StatusRequestEntityTooLarge, "request body too large", nil)
 			return
 		}

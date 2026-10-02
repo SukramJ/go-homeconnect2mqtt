@@ -78,8 +78,7 @@ func (b *Bridge) Dispatch(ctx context.Context, device, feature string, value any
 // DeviceErrorCode extracts an appliance error code from err, if present
 // (docs/01 §9), so the HTTP layer can surface device_code.
 func DeviceErrorCode(err error) (int, bool) {
-	var ce *homeconnect.CodeResponseError
-	if errors.As(err, &ce) {
+	if ce, ok := errors.AsType[*homeconnect.CodeResponseError](err); ok {
 		return ce.Code, true
 	}
 	return 0, false

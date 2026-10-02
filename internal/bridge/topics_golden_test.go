@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -209,7 +210,7 @@ func (s *subRecorder) setFail(topic string) {
 func (s *subRecorder) lastPayload(topic string) ([]byte, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for i := len(s.pubs) - 1; i >= 0; i-- {
+	for i := range slices.Backward(s.pubs) {
 		if s.pubs[i].topic == topic {
 			return s.pubs[i].payload, true
 		}
@@ -403,7 +404,7 @@ func pinBridgeQoS(t *testing.T, qos int) (*Bridge, *Device, *hass.Discovery, *su
 	desc := &profile.Description{Info: pincatalog.Info, Entries: entries}
 
 	cfg := testCfg()
-	cfg.MQTTQoS = intPtr(qos)
+	cfg.MQTTQoS = new(qos)
 	cfg.MQTTTopic = pinRoot
 	cfg.Language = "de"
 	cfg.HASSEnable = true
@@ -920,6 +921,7 @@ func matchFilter(filter, topic string) bool {
 // plane being replaced: a step that re-routes these calls through another
 // library still has to hand the transport a 0.
 func TestQoSZeroReachesTheTransportAsQoSZero(t *testing.T) {
+	shortWindow(t)
 	b, dev, _, rec := pinBridgeQoS(t, 0)
 
 	if err := b.subscribeCommands(context.Background()); err != nil {

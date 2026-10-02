@@ -64,7 +64,7 @@ func (s *stubMQTT) get(topic string) string {
 
 func testCfg() *config.Config {
 	return &config.Config{
-		MQTTTopic: "homeconnect", MQTTQoS: intPtr(1), AppName: "test",
+		MQTTTopic: "homeconnect", MQTTQoS: new(1), AppName: "test",
 		ReconnectInitial: 1, ReconnectMax: 30, ReconnectJitter: 0,
 		HandshakeTimeout: 60, SendTimeout: 20, Heartbeat: 20, Language: "en",
 	}
@@ -325,7 +325,3 @@ func TestNewRejectsMissingHost(t *testing.T) {
 		t.Error("device without host should be rejected")
 	}
 }
-
-// intPtr builds config.Config.MQTTQoS, which is a pointer so an explicit
-// MQTT_QOS of 0 is distinguishable from an absent key.
-func intPtr(v int) *int { return &v }

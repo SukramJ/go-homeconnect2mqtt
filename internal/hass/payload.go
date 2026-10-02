@@ -189,8 +189,8 @@ var primarySuffixes = map[string]bool{
 
 func leafName(e *homeconnect.Entity) string {
 	n := e.Name()
-	if i := strings.LastIndex(n, "."); i >= 0 {
-		return n[i+1:]
+	if _, after, ok := strings.CutLast(n, "."); ok {
+		return after
 	}
 	return n
 }

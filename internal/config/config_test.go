@@ -149,9 +149,9 @@ func TestValidateMultipleIssues(t *testing.T) {
 	c := &Config{
 		MQTTServer:       "tcp://h:1883",
 		MQTTTopic:        "t",
-		MQTTQoS:          intPtr(5), // out of range
-		ReconnectInitial: 30,        // > max
-		ReconnectMax:     10,        // < initial
+		MQTTQoS:          new(5), // out of range
+		ReconnectInitial: 30,     // > max
+		ReconnectMax:     10,     // < initial
 		HandshakeTimeout: 60,
 		SendTimeout:      20,
 		Heartbeat:        20,
@@ -174,7 +174,7 @@ func TestValidateMultipleIssues(t *testing.T) {
 
 func TestValidateWebBind(t *testing.T) {
 	c := &Config{
-		MQTTServer: "tcp://h:1883", MQTTTopic: "t", MQTTQoS: intPtr(1),
+		MQTTServer: "tcp://h:1883", MQTTTopic: "t", MQTTQoS: new(1),
 		ReconnectInitial: 1, ReconnectMax: 30, HandshakeTimeout: 60,
 		SendTimeout: 20, Heartbeat: 20, Language: "en",
 		WebEnable: true, WebBind: "not-a-hostport",
@@ -196,7 +196,3 @@ func TestDurationHelpers(t *testing.T) {
 		t.Error("HeartbeatDuration")
 	}
 }
-
-// intPtr is MQTT_QOS's sentinel in a test literal. The field is a pointer
-// so an explicit `MQTT_QOS: 0` survives applyDefaults; see Config.MQTTQoS.
-func intPtr(v int) *int { return &v }
