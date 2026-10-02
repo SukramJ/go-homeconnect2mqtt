@@ -22,7 +22,6 @@ type deviceState struct {
 
 // Store is the thread-safe in-memory cache feeding the web UI.
 type Store struct {
-	now            func() time.Time
 	staleThreshold time.Duration
 	started        time.Time
 
@@ -34,15 +33,11 @@ type Store struct {
 	nextS int
 }
 
-// New builds a store. now is injectable for deterministic tests.
-func New(now func() time.Time) *Store {
-	if now == nil {
-		now = time.Now
-	}
+// New builds a store.
+func New() *Store {
 	return &Store{
-		now:            now,
 		staleThreshold: DefaultStaleThreshold,
-		started:        now(),
+		started:        time.Now(),
 		devices:        map[string]*deviceState{},
 		subs:           map[int]chan Event{},
 	}
@@ -87,13 +82,13 @@ func (s *Store) SetConnectionState(name, connState string, available bool) {
 	s.mu.Unlock()
 	s.publish(Event{Type: EventConnection, Data: map[string]any{
 		"device": name, "connection_state": connState, "available": available,
-		"updated_at": formatTime(s.now()),
+		"updated_at": formatTime(time.Now()),
 	}})
 }
 
 // UpdateFeature records a feature value change.
 func (s *Store) UpdateFeature(device string, f Feature) {
-	now := s.now()
+	now := time.Now()
 	f.UpdatedAt = formatTime(now)
 	s.mu.Lock()
 	d := s.device(device)
@@ -149,7 +144,7 @@ func (s *Store) Device(nameOrHaID string) (DeviceDetail, bool) {
 func (s *Store) summaryLocked(d *deviceState) DeviceSummary {
 	sum := d.summary
 	if !d.updatedAt.IsZero() {
-		sum.AgeSeconds = int64(s.now().Sub(d.updatedAt).Seconds())
+		sum.AgeSeconds = int64(time.Since(d.updatedAt).Seconds())
 	}
 	return sum
 }
@@ -181,7 +176,7 @@ func (s *Store) isStale(d *deviceState, sum DeviceSummary) bool {
 	if d.updatedAt.IsZero() {
 		return true
 	}
-	return s.now().Sub(d.updatedAt) > s.staleThreshold
+	return time.Since(d.updatedAt) > s.staleThreshold
 }
 
 // Subscribe registers an SSE subscriber. The returned channel is buffered

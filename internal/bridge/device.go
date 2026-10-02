@@ -55,11 +55,8 @@ type Device struct {
 	topics  deviceTopics
 	pub     *devicePublisher
 
-	// Injectable for deterministic tests; default to manager.Run and the
-	// real clock (mirrors homeconnect.ReconnectConfig's injection style).
+	// Injectable for deterministic tests; defaults to manager.Run.
 	runFn func(ctx context.Context) error
-	sleep func(time.Duration) <-chan time.Time
-	now   func() time.Time
 }
 
 // Name returns the logical device name.
@@ -107,8 +104,6 @@ func buildDevice(b *Bridge, spec DeviceSpec) (*Device, error) {
 		app:    app,
 		topics: newDeviceTopics(b.cfg.MQTTTopic, dc.Name),
 		pub:    newDevicePublisher(b.logger.With(slog.String("device", dc.Name))),
-		sleep:  time.After,
-		now:    time.Now,
 	}
 	app.OnUpdate(func(e *homeconnect.Entity) { b.onUpdate(dev, e) })
 	dev.manager = homeconnect.NewManager(app, homeconnect.ReconnectConfig{
@@ -131,19 +126,19 @@ func buildDevice(b *Bridge, spec DeviceSpec) (*Device, error) {
 func (d *Device) run(ctx context.Context, b *Bridge) error {
 	backoff := restartInitialBackoff
 	for {
-		started := d.now()
+		started := time.Now()
 		panicked, err := d.runOnce(ctx, b.logger)
 		if !panicked {
 			return err
 		}
 		b.onState(d, homeconnect.StateOffline) //nolint:contextcheck // publish is bounded by publishTimeout on purpose, independent of the worker ctx
-		if d.now().Sub(started) >= restartStableRun {
+		if time.Since(started) >= restartStableRun {
 			backoff = restartInitialBackoff
 		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-d.sleep(backoff):
+		case <-time.After(backoff):
 		}
 		backoff *= 2
 		if backoff > restartMaxBackoff {

@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/SukramJ/go-mqtt"
@@ -112,141 +113,129 @@ func buildGatedBridge(t *testing.T) (*Bridge, *gatedMQTT) {
 // that availability is forced offline between attempts so retained state
 // never advertises a dead device as online.
 func TestDeviceRunRestartsAfterPanic(t *testing.T) {
-	b, stub := buildTestBridge(t)
-	dev := b.devices[0]
-	// Pretend the device had connected: retained availability is "online".
-	b.onState(dev, homeconnect.StateConnected)
+	synctest.Test(t, func(t *testing.T) {
+		b, stub := buildTestBridge(t)
+		dev := b.devices[0]
+		// Pretend the device had connected: retained availability is "online".
+		b.onState(dev, homeconnect.StateConnected)
 
-	var mu sync.Mutex
-	attempts := 0
-	dev.runFn = func(ctx context.Context) error {
-		mu.Lock()
-		attempts++
-		n := attempts
-		mu.Unlock()
-		if n <= 2 {
-			panic("boom")
+		attempts := 0 // only touched from the run goroutine and after synctest.Wait
+		dev.runFn = func(ctx context.Context) error {
+			attempts++
+			if attempts <= 2 {
+				panic("boom")
+			}
+			<-ctx.Done()
+			return ctx.Err()
 		}
-		<-ctx.Done()
-		return ctx.Err()
-	}
-	// Injected sleep: fire immediately so the restart loop is fast.
-	dev.sleep = func(time.Duration) <-chan time.Time {
-		ch := make(chan time.Time, 1)
-		ch <- time.Time{}
-		return ch
-	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan error, 1)
-	go func() { done <- dev.run(ctx, b) }()
+		start := time.Now()
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan error, 1)
+		go func() { done <- dev.run(ctx, b) }()
 
-	deadline := time.After(5 * time.Second)
-	for {
-		mu.Lock()
-		n := attempts
-		mu.Unlock()
-		if n >= 3 {
-			break
+		// Two panics: the backoffs between the three attempts are 1s and 2s.
+		time.Sleep(3 * time.Second)
+		synctest.Wait()
+		if attempts != 3 {
+			t.Fatalf("worker not restarted after panic, attempts = %d, want 3", attempts)
 		}
+		if got, want := time.Since(start), 3*time.Second; got != want {
+			t.Errorf("third attempt started after %v, want %v of backoff", got, want)
+		}
+		if got := stub.get("homeconnect/dishwasher/availability"); got != availOffline {
+			t.Errorf("availability between attempts = %q, want %q", got, availOffline)
+		}
+		if got := stub.get("homeconnect/dishwasher/connection_state"); got != string(homeconnect.StateOffline) {
+			t.Errorf("connection_state between attempts = %q, want offline", got)
+		}
+
+		cancel()
+		synctest.Wait()
 		select {
-		case <-deadline:
-			t.Fatalf("worker not restarted after panic, attempts = %d", n)
-		case <-time.After(2 * time.Millisecond):
+		case err := <-done:
+			if !errors.Is(err, context.Canceled) {
+				t.Errorf("run returned %v, want context.Canceled", err)
+			}
+		default:
+			t.Fatal("run did not stop after cancel")
 		}
-	}
-	if got := stub.get("homeconnect/dishwasher/availability"); got != availOffline {
-		t.Errorf("availability between attempts = %q, want %q", got, availOffline)
-	}
-	if got := stub.get("homeconnect/dishwasher/connection_state"); got != string(homeconnect.StateOffline) {
-		t.Errorf("connection_state between attempts = %q, want offline", got)
-	}
-
-	cancel()
-	select {
-	case err := <-done:
-		if !errors.Is(err, context.Canceled) {
-			t.Errorf("run returned %v, want context.Canceled", err)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("run did not stop after cancel")
-	}
+	})
 }
 
 // TestDeviceRunPanicBackoff asserts the restart backoff doubles up to the
-// cap and resets after a run that survived long enough.
+// cap and resets after a run that survived long enough. The backoffs are
+// read off the clock: every attempt records when it started, and the gap
+// to the next start is the run's own length plus the backoff in between.
 func TestDeviceRunPanicBackoff(t *testing.T) {
 	sec := time.Second
 	cases := []struct {
-		name    string
-		advance time.Duration // fake clock step per now() call
-		want    []time.Duration
+		name   string
+		runFor time.Duration // how long each run lives before it panics
+		want   []time.Duration
 	}{
 		{
-			name:    "doubles to cap",
-			advance: 0, // every run "lasts" 0s: never stable, keep doubling
-			want:    []time.Duration{sec, 2 * sec, 4 * sec, 8 * sec, 16 * sec, 30 * sec, 30 * sec},
+			name:   "doubles to cap",
+			runFor: 0, // every run is short: never stable, keep doubling
+			want:   []time.Duration{sec, 2 * sec, 4 * sec, 8 * sec, 16 * sec, 30 * sec, 30 * sec},
 		},
 		{
-			name:    "resets after stable run",
-			advance: 2 * time.Minute, // every run "lasts" 2m: reset each time
-			want:    []time.Duration{sec, sec, sec},
+			name:   "resets after stable run",
+			runFor: 2 * time.Minute, // every run is stable: reset each time
+			want:   []time.Duration{sec, sec, sec},
+		},
+		{
+			name:   "run of exactly the stable length resets",
+			runFor: restartStableRun,
+			want:   []time.Duration{sec, sec, sec},
+		},
+		{
+			name:   "run one nanosecond short of stable keeps doubling",
+			runFor: restartStableRun - time.Nanosecond,
+			want:   []time.Duration{sec, 2 * sec, 4 * sec},
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			b, _ := buildTestBridge(t)
-			dev := b.devices[0]
-			dev.runFn = func(context.Context) error { panic("boom") }
+			synctest.Test(t, func(t *testing.T) {
+				b, _ := buildTestBridge(t)
+				dev := b.devices[0]
 
-			cur := time.Unix(0, 0) // only touched from the run goroutine
-			dev.now = func() time.Time {
-				cur = cur.Add(tc.advance)
-				return cur
-			}
-
-			var mu sync.Mutex
-			var got []time.Duration
-			collected := make(chan struct{})
-			dev.sleep = func(d time.Duration) <-chan time.Time {
-				mu.Lock()
-				got = append(got, d)
-				n := len(got)
-				mu.Unlock()
-				if n >= len(tc.want) {
-					close(collected)
-					return nil // block; the loop then ends via ctx cancel
+				var starts []time.Time // only touched from the run goroutine and after synctest.Wait
+				dev.runFn = func(ctx context.Context) error {
+					starts = append(starts, time.Now())
+					if len(starts) > len(tc.want) {
+						<-ctx.Done()
+						return ctx.Err()
+					}
+					time.Sleep(tc.runFor)
+					panic("boom")
 				}
-				ch := make(chan time.Time, 1)
-				ch <- time.Time{}
-				return ch
-			}
 
-			ctx, cancel := context.WithCancel(context.Background())
-			done := make(chan error, 1)
-			go func() { done <- dev.run(ctx, b) }()
-			select {
-			case <-collected:
-			case <-time.After(5 * time.Second):
-				t.Fatal("restart loop did not reach the expected attempt count")
-			}
-			cancel()
-			select {
-			case <-done:
-			case <-time.After(5 * time.Second):
-				t.Fatal("run did not stop after cancel")
-			}
-
-			mu.Lock()
-			defer mu.Unlock()
-			if len(got) != len(tc.want) {
-				t.Fatalf("backoffs = %v, want %v", got, tc.want)
-			}
-			for i := range tc.want {
-				if got[i] != tc.want[i] {
-					t.Errorf("backoff[%d] = %v, want %v", i, got[i], tc.want[i])
+				ctx, cancel := context.WithCancel(context.Background())
+				done := make(chan error, 1)
+				go func() { done <- dev.run(ctx, b) }()
+				var total time.Duration
+				for _, w := range tc.want {
+					total += w + tc.runFor
 				}
-			}
+				time.Sleep(total)
+				synctest.Wait()
+				cancel()
+				synctest.Wait()
+				if err := <-done; !errors.Is(err, context.Canceled) {
+					t.Fatalf("run returned %v, want context.Canceled", err)
+				}
+
+				if len(starts) != len(tc.want)+1 {
+					t.Fatalf("attempts = %d, want %d", len(starts), len(tc.want)+1)
+				}
+				for i, w := range tc.want {
+					if got := starts[i+1].Sub(starts[i]) - tc.runFor; got != w {
+						t.Errorf("backoff[%d] = %v, want %v", i, got, w)
+					}
+				}
+			})
 		})
 	}
 }
