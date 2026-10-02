@@ -921,6 +921,7 @@ func matchFilter(filter, topic string) bool {
 // plane being replaced: a step that re-routes these calls through another
 // library still has to hand the transport a 0.
 func TestQoSZeroReachesTheTransportAsQoSZero(t *testing.T) {
+	shortWindow(t)
 	b, dev, _, rec := pinBridgeQoS(t, 0)
 
 	if err := b.subscribeCommands(context.Background()); err != nil {
