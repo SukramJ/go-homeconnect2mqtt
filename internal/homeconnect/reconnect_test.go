@@ -270,8 +270,7 @@ func TestConnectTimeoutApplied(t *testing.T) {
 		LogThrottle:    time.Hour,
 		sleep:          readySleep(durs),
 	})
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	go func() { _ = m.Run(ctx) }()
 	select {
 	case <-durs: // reached the offline backoff path => timeout fired

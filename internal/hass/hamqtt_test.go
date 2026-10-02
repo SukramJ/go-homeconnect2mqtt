@@ -804,12 +804,12 @@ func TestRefusedOverrideIsLogged(t *testing.T) {
 	// substrings, so the assertion is over the refusal SET and not over the
 	// handler's formatting.
 	logged := map[string]string{}
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		if !strings.Contains(line, "hass.device_class_refused") {
 			continue
 		}
 		var feature, platform, dc string
-		for _, field := range strings.Fields(line) {
+		for field := range strings.FieldsSeq(line) {
 			k, v, ok := strings.Cut(field, "=")
 			if !ok {
 				continue

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -377,8 +378,7 @@ func TestAnEmptyDocumentIsWithheld(t *testing.T) {
 	// the gate would silently become the validator's: a different gate,
 	// with a different reason, under no obligation to keep saying no. The
 	// discriminator is the TYPE.
-	var ve *discovery.ValidationError
-	if errors.As(err, &ve) {
+	if _, ok := errors.AsType[*discovery.ValidationError](err); ok {
 		t.Errorf("err = %v, and it came from discovery.Validate — this guard is being masked "+
 			"by the validator rather than doing its own work", err)
 	}
@@ -500,9 +500,7 @@ func TestOmittingAComponentDoesNotRemoveIt(t *testing.T) {
 		NodeID: full.NodeID, Device: full.Device, Origin: full.Origin,
 		Components: map[string]discovery.Component{},
 	}
-	for k, c := range omitted.Components {
-		removed.Components[k] = c
-	}
+	maps.Copy(removed.Components, omitted.Components)
 	removed.RemoveComponents(full.Components, key)
 	entry, present := removed.Components[key]
 	if !present {

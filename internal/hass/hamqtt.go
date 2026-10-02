@@ -192,11 +192,11 @@ func (c hamqttContext) ObjectID(dev *model.Device, e model.Entity) string {
 // bare value on a state topic, so no entity carries a value_template. The
 // zero Encoding would attach one to all 667 entities that have a state topic.
 func (d *Discovery) hamqttContext() hamqttContext {
-	return hamqttContext{StdContext: discovery.StdContext{
+	return hamqttContext{
 		Layout: NewLayout(d.rootTopic),
 		Lang:   d.lang,
 		Enc:    discovery.RawEncoding,
-	}}
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -269,18 +269,18 @@ func (d *Discovery) describe(e *homeconnect.Entity, platform string) *model.Desc
 	case platformNumber:
 		b := e.Bounds()
 		if b.HasMin {
-			desc.Min = model.Ptr(b.Min)
+			desc.Min = new(b.Min)
 		}
 		if b.HasMax {
-			desc.Max = model.Ptr(b.Max)
+			desc.Max = new(b.Max)
 		}
 		if b.HasStep {
-			desc.Step = model.Ptr(b.Step)
+			desc.Step = new(b.Step)
 		}
 	}
 	// Home Assistant defaults to enabled; only the long tail says otherwise.
 	if !enabledByDefault(e) {
-		desc.Enabled = model.Ptr(false)
+		desc.Enabled = new(false)
 	}
 	return desc
 }
@@ -315,7 +315,7 @@ func (d *Discovery) enrichDescription(e *homeconnect.Entity, desc *model.Descrip
 		if val {
 			desc.Enabled = nil
 		} else {
-			desc.Enabled = model.Ptr(false)
+			desc.Enabled = new(false)
 		}
 	}
 }
