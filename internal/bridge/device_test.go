@@ -186,12 +186,12 @@ func TestDeviceRunPanicBackoff(t *testing.T) {
 		},
 		{
 			name:   "run of exactly the stable length resets",
-			runFor: restartStableRun,
+			runFor: time.Minute, // the documented stable length, not the constant: a test reading the constant follows it
 			want:   []time.Duration{sec, sec, sec},
 		},
 		{
 			name:   "run one nanosecond short of stable keeps doubling",
-			runFor: restartStableRun - time.Nanosecond,
+			runFor: time.Minute - time.Nanosecond,
 			want:   []time.Duration{sec, 2 * sec, 4 * sec},
 		},
 	}
