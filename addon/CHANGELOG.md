@@ -5,6 +5,10 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+### Changed
+- Built with Go 1.27 (the add-on image and CI move from Go 1.26). Nothing
+  changes in behaviour or configuration; building from source now needs Go 1.27.1 or newer.
+
 ## [0.13.0] - 2026-09-14
 
 ### Changed

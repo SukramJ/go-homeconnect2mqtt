@@ -22,7 +22,7 @@
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 
 # ---------- Stage 1: build the Go binaries ----------
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27.1-alpine AS builder
 WORKDIR /src
 
 # TLS-PSK needs cgo + OpenSSL (Go's crypto/tls has no external-PSK ciphers).

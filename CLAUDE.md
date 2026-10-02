@@ -23,7 +23,7 @@ API) and the phased implementation plan is `docs/09-implementation-plan.md`.
 
 ## Conventions
 
-- **Go 1.26+**, `CGO_ENABLED=0` for production builds (exception: a TLS-PSK
+- **Go 1.27+**, `CGO_ENABLED=0` for production builds (exception: a TLS-PSK
   cgo path, kept behind a separate build target). Tests run with
   `CGO_ENABLED=1 go test -race`.
 - **Do not `go:embed` operator assets** (`devices.yaml` / `mapping.yaml` are

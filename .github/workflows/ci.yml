@@ -21,7 +21,7 @@ concurrency:
 
 env:
   CGO_ENABLED: "0"
-  GO_VERSION: "1.26"
+  GO_VERSION: "1.27.1"
   # The tools below are pinned, not @latest. Dependabot tracks go.mod
   # requires, not go-install lines in a workflow, so these are bumped by
   # hand — deliberately: raise the version, run `make check`, and fix or
@@ -57,10 +57,13 @@ jobs:
             echo "$diff"
             exit 1
           fi
+      # Built from source with the job's Go: a prebuilt binary compiled with an
+      # older Go refuses a module that targets a newer one.
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
-        with:
-          version: ${{ env.GOLANGCI_LINT_VERSION }}
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${{ env.GOLANGCI_LINT_VERSION }}
+          golangci-lint config verify
+          golangci-lint run --timeout=5m ./...
 
   test:
     name: test (${{ matrix.os }})
