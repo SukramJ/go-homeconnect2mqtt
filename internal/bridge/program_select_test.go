@@ -18,6 +18,22 @@ func TestProgLeaf(t *testing.T) {
 	}
 }
 
+func TestProgLeafEdges(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"A.B.Eco50", "Eco50"},
+		{"Eco50", "Eco50"}, // no separator: the whole name
+		{"", ""},
+		{"A.", ""},          // empty last segment
+		{".Eco50", "Eco50"}, // empty first segment
+		{"A..B", "B"},
+	}
+	for _, c := range cases {
+		if got := progLeaf(c.in); got != c.want {
+			t.Errorf("progLeaf(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
 func TestProgNorm(t *testing.T) {
 	cases := map[string]string{"Eco 50 °C": "eco50c", "Eco50": "eco50", "Auto 2": "auto2"}
 	for in, want := range cases {

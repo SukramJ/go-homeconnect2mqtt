@@ -124,8 +124,8 @@ func segment(name string, i int) string {
 }
 
 func leaf(name string) string {
-	if i := strings.LastIndex(name, "."); i >= 0 {
-		return name[i+1:]
+	if _, after, ok := strings.CutLast(name, "."); ok {
+		return after
 	}
 	return name
 }

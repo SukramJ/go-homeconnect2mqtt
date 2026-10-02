@@ -341,8 +341,8 @@ func resolveProgramNames(d *Description) {
 // programLeaf is the last dotted segment of a feature name
 // ("…Program.Eco50" -> "Eco50"), matching the i18n enum-member key.
 func programLeaf(name string) string {
-	if i := strings.LastIndex(name, "."); i >= 0 {
-		return name[i+1:]
+	if _, after, ok := strings.CutLast(name, "."); ok {
+		return after
 	}
 	return name
 }
