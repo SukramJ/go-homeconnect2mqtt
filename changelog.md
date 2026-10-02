@@ -8,6 +8,8 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 ### Changed
 - Built with Go 1.27 (the add-on image and CI move from Go 1.26). Nothing
   changes in behaviour or configuration; building from source now needs Go 1.27.1 or newer.
+- Updated the shared libraries to their Go 1.27 releases: go-mqtt 1.6.0,
+  go-ha-catalog 0.3.0 and go-hamqtt 0.35.0.
 
 ## [0.13.0] - 2026-09-14
 
