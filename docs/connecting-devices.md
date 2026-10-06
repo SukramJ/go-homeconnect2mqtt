@@ -61,6 +61,7 @@ snippet to stdout, for example:
 # Add these entries to devices.yaml (secrets included — keep local):
 devices:
   - name: 0102030405
+    haid: 0102030405           # device segment of every MQTT topic
     host: ""            # 0102030405 (mDNS) or set a manual IP
     connection_type: AES
     psk64: "…"
@@ -108,7 +109,7 @@ $EDITOR config.yaml devices.yaml
 MQTT_SERVER: "tcp://192.168.1.10:1883"
 MQTT_LOGIN: ""          # set both if your broker needs auth
 MQTT_PASSWORD: ""
-MQTT_TOPIC: "homeconnect"
+MQTT_TOPIC: "homeconnect"  # instance name; give a second instance on the same broker its own
 HASS_ENABLE: true       # publish Home Assistant discovery
 WEB_ENABLE: false       # optional diagnostics UI (Step 7)
 ```
@@ -118,7 +119,8 @@ fill `name`/`host`):
 
 ```yaml
 devices:
-  - name: dishwasher                 # logical name; used in MQTT topics
+  - name: dishwasher                 # name in Home Assistant
+    haid: "0102030405"               # appliance haId: the device segment of every MQTT topic
     host: 192.168.1.50               # IP or mDNS name; "" = default host from profile
     manual_host: true                # suppress mDNS host updates when you set a fixed IP
     connection_type: AES             # AES | TLS
@@ -185,15 +187,18 @@ What to expect:
 **Over MQTT** (e.g. `mosquitto_sub -h <broker> -t 'homeconnect/#' -v`):
 
 ```
-homeconnect/<device>/availability          online        # LWT-backed
-homeconnect/<device>/connection_state      connected
-homeconnect/<device>/BSH/Common/Status/OperationState/state   Run
-homeconnect/status                         online         # daemon-level status
+homeconnect/connected                                      2       # 0 stopped, 1 no appliance, 2 operational
+homeconnect/info                                           {"name":"go-homeconnect2mqtt","version":…}
+homeconnect/status/<haId>/online                           {"val":true,"ts":…,"lc":…}
+homeconnect/status/<haId>/connection_state                 {"val":"connected",…}
+homeconnect/status/<haId>/BSH/Common/Status/OperationState {"val":"Run",…}
 ```
 
 Every feature is exposed generically under
-`homeconnect/<device>/<Feature/Path>/state` (dotted feature names map to slash
-paths). Writable features additionally get a `…/set` command topic.
+`homeconnect/status/<haId>/<Feature/Path>` (dotted feature names map to slash
+paths) as an mqtt-smarthome status object; writable features listen on the same
+path under `homeconnect/set/…`. See the README's *MQTT topics* section for the
+full layout.
 
 **In Home Assistant** (if `HASS_ENABLE: true`): the appliance and its
 entities appear automatically via MQTT discovery — no manual YAML. Discovery is
@@ -207,25 +212,28 @@ last-update age and feature values. It is off by default and never required.
 
 ## Sending commands
 
-Publish to a feature's `…/set` topic; values may be enum names, numbers or
-booleans (normalised automatically):
+Publish to a feature's `homeconnect/set/<haId>/…` topic; a plain value or
+`{"val": …}`, enum tokens (or their labels), numbers or booleans
+(`true`/`false`, `on`/`off`, `1`/`0`, `yes`/`no`) are normalised automatically:
 
 ```sh
-mosquitto_pub -h <broker> -t 'homeconnect/dishwasher/BSH/Common/Setting/PowerState/set' -m 'On'
+mosquitto_pub -h <broker> -t 'homeconnect/set/0102030405/BSH/Common/Setting/PowerState' -m 'On'
 ```
 
-**The device segment is the name from `devices.yaml`, verbatim.** The state and
-command tree uses the RAW name — an appliance called `Geschirrspüler` publishes
-under `homeconnect/Geschirrspüler/…`, umlaut and capital included — while Home
-Assistant's discovery topic uses the slug of the same name
-(`homeassistant/device/geschirrspuler/config`). The two are different strings on
-purpose and neither is derived from the other at the broker, so a command topic
-copied from the discovery tree addresses nothing. Copy the device segment from
-`devices.yaml`, or read it off the appliance's own `state_topic`.
+**The device segment is the appliance's haId**, not its name in `devices.yaml`:
+the `haid` key, else the haId the cached description records, else the
+description's file name (`<haId>.json`, logged at `warn`) — so an installation
+set up before 0.15.0 keeps working without edits.
+The name is what Home Assistant shows, and the slug of the name addresses the
+discovery document (`homeassistant/device/geschirrspuler/config`); neither
+appears in a state or command topic. A rejected command is logged at `warn`
+with its topic and payload.
 
-Programs are controlled via the `…/Root/SelectedProgram/set` (select) and
-`…/Root/ActiveProgram/set` (start; send `off` to stop) topics, using the program
-feature name as the value. The bridge picks the device-appropriate start path
+Programs are controlled via the `…/Root/SelectedProgram` (select) and
+`…/Root/ActiveProgram` (start; send `off` to stop) command topics, using the
+program feature name as the value, or via the action items
+`homeconnect/set/<haId>/_control/start_program` and `…/stop_program` (any
+non-empty payload). The bridge picks the device-appropriate start path
 automatically (FK-4) and gates writes on the appliance's current write window
 (FK-5).
 

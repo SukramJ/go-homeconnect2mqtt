@@ -96,7 +96,7 @@ func buildGatedBridge(t *testing.T) (*Bridge, *gatedMQTT) {
 		Plane:  testPlane(g),
 		Devices: []DeviceSpec{{
 			Config: profile.DeviceConfig{
-				Name: "dishwasher", Host: "192.168.1.50",
+				Name: "dishwasher", HaID: haIDFor("dishwasher"), Host: "192.168.1.50",
 				ConnectionType: profile.ConnectionAES, PSK64: b64(32), IV64: b64(16),
 			},
 			Description: smallDescription(t),
@@ -143,11 +143,14 @@ func TestDeviceRunRestartsAfterPanic(t *testing.T) {
 		if got, want := time.Since(start), 3*time.Second; got != want {
 			t.Errorf("third attempt started after %v, want %v of backoff", got, want)
 		}
-		if got := stub.get("homeconnect/dishwasher/availability"); got != availOffline {
-			t.Errorf("availability between attempts = %q, want %q", got, availOffline)
+		if got := statusVal(stub.get(testStatus + "/online")); got != false {
+			t.Errorf("online between attempts = %v, want false", got)
 		}
-		if got := stub.get("homeconnect/dishwasher/connection_state"); got != string(homeconnect.StateOffline) {
-			t.Errorf("connection_state between attempts = %q, want offline", got)
+		if got := statusVal(stub.get(testStatus + "/connection_state")); got != string(homeconnect.StateOffline) {
+			t.Errorf("connection_state between attempts = %v, want offline", got)
+		}
+		if got := stub.get("homeconnect/connected"); got != "1" {
+			t.Errorf("connected between attempts = %q, want 1", got)
 		}
 
 		cancel()
@@ -269,7 +272,7 @@ func TestOnUpdateDoesNotBlockOnSlowPublish(t *testing.T) {
 		t.Fatal("onUpdate blocked behind a stalled publish")
 	}
 	close(g.gate) // release the wedged publish so cleanup is prompt
-	waitFor(t, g.stubMQTT, "homeconnect/dishwasher/BSH/Common/Setting/PowerState/state", "false")
+	waitForVal(t, g.stubMQTT, testStatus+"/BSH/Common/Setting/PowerState", false)
 }
 
 // TestPublisherPreservesEveryUpdate asserts updates queued while the
@@ -279,7 +282,7 @@ func TestOnUpdateDoesNotBlockOnSlowPublish(t *testing.T) {
 func TestPublisherPreservesEveryUpdate(t *testing.T) {
 	b, g := buildGatedBridge(t)
 	dev := b.devices[0]
-	topic := "homeconnect/dishwasher/BSH/Common/Setting/PowerState/state"
+	topic := testStatus + "/BSH/Common/Setting/PowerState"
 	startPublisher(t, b, dev)
 
 	// Stall the drain goroutine inside its first Publish.
@@ -310,7 +313,7 @@ func TestPublisherPreservesEveryUpdate(t *testing.T) {
 	// Then the payload: all four have also *completed*. callCount is raised
 	// on entry to Publish, so the count reaching four says the fourth was
 	// started, not that the broker has it.
-	waitFor(t, g.stubMQTT, topic, "false")
+	waitForVal(t, g.stubMQTT, topic, false)
 }
 
 // TestPublisherDropsOldestWhenFull asserts the backlog cap drops the oldest
@@ -319,17 +322,17 @@ func TestPublisherPreservesEveryUpdate(t *testing.T) {
 func TestPublisherDropsOldestWhenFull(t *testing.T) {
 	p := newDevicePublisher(slog.New(slog.DiscardHandler))
 	for i := range maxQueuedPublishes + 10 {
-		p.enqueue("t", []byte(strconv.Itoa(i)))
+		p.enqueue("t", strconv.Itoa(i))
 	}
 	p.mu.Lock()
 	n := len(p.queue)
-	first, last := string(p.queue[0].payload), string(p.queue[n-1].payload)
+	first, last := p.queue[0].value, p.queue[n-1].value
 	p.mu.Unlock()
 	if n != maxQueuedPublishes {
 		t.Fatalf("queue length = %d, want %d", n, maxQueuedPublishes)
 	}
 	if first != "10" || last != strconv.Itoa(maxQueuedPublishes+9) {
-		t.Errorf("queue window = [%s..%s], want oldest dropped [10..%d]", first, last, maxQueuedPublishes+9)
+		t.Errorf("queue window = [%v..%v], want oldest dropped [10..%d]", first, last, maxQueuedPublishes+9)
 	}
 }
 
@@ -339,12 +342,12 @@ func TestDevicePublisherFlushesNothingAfterCancel(t *testing.T) {
 	p := newDevicePublisher(slog.New(slog.DiscardHandler))
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	p.enqueue("t", []byte("v"))
+	p.enqueue("t", "v")
 	var published int
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		p.run(ctx, func(string, []byte) { published++ })
+		p.run(ctx, func(string, any) { published++ })
 	}()
 	select {
 	case <-done:

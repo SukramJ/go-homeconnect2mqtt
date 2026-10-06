@@ -4,8 +4,11 @@
 package bridge
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -15,7 +18,7 @@ import (
 
 	"github.com/SukramJ/go-mqtt"
 
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 )
 
 // The pins for the planes that moved onto go-hamqtt at ADR 0070 phase 7
@@ -54,85 +57,67 @@ func (s *logSink) sawMessage(msg string) bool {
 	return false
 }
 
-// TestStatePublishesCarryMQTTQoSAndMQTTRetain drives the real state plane
-// and reads both flags off the transport.
+// TestStatusItemsAreRetainedAtQoSZero drives the real state plane and
+// reads both flags off the transport.
 //
-// The state plane is where entity values, device availability and
-// connection_state go, and it is the plane an operator's MQTT_RETAIN
-// governs. publisher.StatePublisher.Publish is unconditionally retained
-// and Pulse unconditionally not, so a plane that reached for either alone
-// would silently change one of the two shipped configurations.
-func TestStatePublishesCarryMQTTQoSAndMQTTRetain(t *testing.T) {
+// The state plane is where entity values, an appliance's `online` item and
+// its connection_state go. Since 0.15.0 every one of them is a retained
+// status item at QoS 0 (mqtt-smarthome 2.0 §3.2, §4): MQTT_RETAIN is gone
+// and MQTT_QOS no longer reaches this plane, so both operator settings are
+// driven here to show they change nothing.
+func TestStatusItemsAreRetainedAtQoSZero(t *testing.T) {
 	for _, mqttQoS := range []int{0, 1} {
-		for _, retain := range []bool{true, false} {
-			b, dev, _, rec := pinBridgeQoS(t, mqttQoS)
-			b.cfg.MQTTRetain = &retain
-			// Rebuild the plane with the retain flag under test; pinBridgeQoS
-			// builds it from testCfg's default.
-			b.plane = planeFor(t, rec, mqttQoS, retain)
+		b, dev, _, rec := pinBridgeQoS(t, mqttQoS)
 
-			b.publish(dev.topics.Availability(), []byte(availOnline))
-			b.publish(dev.topics.ConnectionState(), []byte("connected"))
-			e := dev.app.Entities()[0]
-			b.publish(dev.topics.state(e), []byte("value"))
+		b.publish(dev.topics.Online(), true)
+		b.publish(dev.topics.ConnectionState(), "connected")
+		e := dev.app.Entities()[0]
+		b.publish(dev.topics.state(e), "value")
 
-			rec.mu.Lock()
-			pubs := append([]pubCall(nil), rec.pubs...)
-			rec.mu.Unlock()
-			if len(pubs) != 3 {
-				t.Fatalf("MQTT_QOS %d retain %v: %d publishes, want 3", mqttQoS, retain, len(pubs))
+		rec.mu.Lock()
+		pubs := append([]pubCall(nil), rec.pubs...)
+		rec.mu.Unlock()
+		if len(pubs) != 3 {
+			t.Fatalf("MQTT_QOS %d: %d publishes, want 3", mqttQoS, len(pubs))
+		}
+		for _, p := range pubs {
+			if p.qos != mqtt.QoS0 {
+				t.Errorf("MQTT_QOS %d: %s reached the transport at QoS %v, want 0", mqttQoS, p.topic, p.qos)
 			}
-			for _, p := range pubs {
-				if int(p.qos) != mqttQoS {
-					t.Errorf("MQTT_QOS %d: %s reached the transport at QoS %v", mqttQoS, p.topic, p.qos)
-				}
-				if p.retain != retain {
-					t.Errorf("MQTT_RETAIN %v: %s reached the transport with retain=%v", retain, p.topic, p.retain)
-				}
+			if !p.retain {
+				t.Errorf("%s reached the transport unretained", p.topic)
+			}
+			if !strings.HasPrefix(string(p.payload), `{"val":`) {
+				t.Errorf("%s carried %q, want a status object", p.topic, p.payload)
 			}
 		}
 	}
 }
 
-// TestCommandFilterCannotBeStatedToTheStatePlane is a finding written as
-// an assertion, and the reason this daemon uses neither
-// publisher.CommandRouter.CheckDisjoint nor
-// publisher.StateConfig.CommandFilters.
+// TestCommandFilterIsDisjointFromTheStateTree is F4's resolution written as
+// an assertion.
 //
-// Both guards decide by matching a topic against a command FILTER. This
-// daemon's command filter is the whole device sub-tree — the feature path
-// is variable-depth, so no fixed-arity filter covers the command tree —
-// and it therefore matches every state topic of the device by
-// construction. Stating it to the state plane would refuse all 687 state
-// publishes per appliance with ErrStateCommandCollision, and
-// CheckDisjoint would fail the boot.
-//
-// The disjointness this daemon actually has is by SUFFIX: a command topic
-// ends in "/set" and a state topic in "/state". MQTT filters cannot
-// express that, which is why layout.Device.Relative is the guard and
-// MQTT 5.0 No Local is the second lock.
-func TestCommandFilterCannotBeStatedToTheStatePlane(t *testing.T) {
+// Before 0.15.0 this file held the opposite: the command filter was the
+// whole device sub-tree, "<root>/<device>/#", which matched every state
+// topic by construction, so neither publisher.StateConfig.CommandFilters
+// nor a disjointness check could be used — only the "/set" SUFFIX
+// separated a command from a state, and no MQTT filter can say that. The
+// function now sits at the second level: the filter matches no state
+// topic, every command topic, and the state plane is TOLD `<name>/set/#`
+// and refuses a publish into it.
+func TestCommandFilterIsDisjointFromTheStateTree(t *testing.T) {
 	t.Parallel()
-	_, dev, _, _ := pinBridge(t)
+	b, dev, _, rec := pinBridge(t)
 	filter := dev.topics.CommandFilter()
 
-	states := realStateTopics(dev)
-	matched := 0
-	for _, st := range states {
+	for _, st := range append(realStateTopics(dev), dev.topics.Online(), dev.topics.ConnectionState()) {
 		if publisher.MatchFilter(filter, st) {
-			matched++
+			t.Errorf("the command filter %s matches the status item %s", filter, st)
 		}
-		// The suffix rule, which is the one that is actually right.
 		if _, ok := dev.topics.Relative(st); ok {
-			t.Errorf("%s is a state topic and Relative accepted it as a command", st)
+			t.Errorf("%s is a status item and Relative accepted it as a command", st)
 		}
 	}
-	if matched != len(states) {
-		t.Fatalf("the command filter matched %d of %d state topics; if it now matches none, "+
-			"publisher.StateConfig.CommandFilters and CommandRouter.CheckDisjoint have become "+
-			"usable here and this daemon should state them", matched, len(states))
-	}
-	// And the converse: every advertised command topic is claimed.
 	_, commands := advertised(t, dev)
 	for cfgTopic, ct := range commands {
 		if !publisher.MatchFilter(filter, ct) {
@@ -142,9 +127,18 @@ func TestCommandFilterCannotBeStatedToTheStatePlane(t *testing.T) {
 			t.Errorf("%s advertises %s, which Relative does not accept as a command", cfgTopic, ct)
 		}
 	}
-	t.Logf("F4: %s matches all %d state topics and all %d command topics; only the "+
-		"/set suffix separates them, and no MQTT filter can say so",
-		filter, matched, len(commands))
+	// The guard the old filter made unusable.
+	for _, ct := range commands {
+		if err := b.plane.PublishStatus(t.Context(), ct, 1); err == nil {
+			t.Errorf("the state plane accepted a status publish into the command tree (%s)", ct)
+		}
+		break
+	}
+	rec.mu.Lock()
+	defer rec.mu.Unlock()
+	if len(rec.pubs) != 0 {
+		t.Errorf("%d publishes reached the transport", len(rec.pubs))
+	}
 }
 
 // TestCommandRouterRoutesEveryAdvertisedCommandTopic proves the router
@@ -166,12 +160,11 @@ func TestCommandRouterRoutesEveryAdvertisedCommandTopic(t *testing.T) {
 			t.Errorf("%s advertises %s, which no route claims", cfgTopic, ct)
 		}
 	}
-	// And the daemon's own state tree still arrives on the route — that is
-	// F4, unchanged and unfixable at the filter — so the guard before
-	// dispatch is what must stop it.
+	// And the daemon's own state tree no longer arrives on the route —
+	// F4, resolved by the layout — while the guard before dispatch stays.
 	own := realStateTopics(dev)[0]
-	if !b.commands.Claims(own) {
-		t.Fatalf("%s is not claimed by the route; the filter narrowed and this test is stale", own)
+	if b.commands.Claims(own) {
+		t.Errorf("%s is claimed by a command route (F4)", own)
 	}
 	if shouldDispatch(dev, own, false) {
 		t.Errorf("%s is one of this daemon's own publishes and the handler would dispatch it (F4)", own)
@@ -205,7 +198,7 @@ func TestARoutedCommandReachesTheHandlerOffTheReadLoop(t *testing.T) {
 	// A command topic no feature backs: the handler resolves it, fails to
 	// find a feature and logs, which is an observable effect that costs no
 	// appliance connection.
-	handler(&mqtt.Message{Topic: dev.topics.Base() + "/No/Such/Feature/set", Payload: []byte("1")})
+	handler(&mqtt.Message{Topic: dev.topics.Set("No", "Such", "Feature"), Payload: []byte("1")})
 	b.commands.WaitIdle()
 	if !sink.sawMessage("bridge.command_unknown_feature") {
 		t.Error("a routed command did not reach handleSet")
@@ -229,7 +222,7 @@ func TestTheDaemonsOwnStateEchoIsNotDispatched(t *testing.T) {
 
 	for _, own := range []string{
 		realStateTopics(dev)[0],
-		dev.topics.Availability(),
+		dev.topics.Online(),
 		dev.topics.ConnectionState(),
 	} {
 		handler(&mqtt.Message{Topic: own, Payload: []byte("online")})
@@ -302,9 +295,9 @@ func TestCommandRoutesAreUnambiguous(t *testing.T) {
 	}
 }
 
-// TestPerDeviceRoutesCannotOverlap: the routes are "<root>/<name>/#" per
-// configured device and internal/profile refuses a duplicate device name,
-// so any two differ in a literal level. This asserts it over the shape
+// TestPerDeviceRoutesCannotOverlap: the routes are "<name>/set/<haId>/#"
+// per configured device and bridge.New refuses a duplicate haId, so any two
+// differ in a literal level. This asserts it over the shape
 // rather than over one fixture's names, and asserts the router refuses a
 // pair no specificity rule can order, which is the case attribution does
 // NOT rescue.
@@ -314,7 +307,7 @@ func TestPerDeviceRoutesCannotOverlap(t *testing.T) {
 		publisher.CommandConfig{Logger: slog.New(slog.DiscardHandler)})
 	noop := func(context.Context, publisher.Command) {}
 	for _, name := range []string{"Geschirrspüler", "Kühlschrank", "Backofen"} {
-		f := layout.NewDevice(pinRoot, name).CommandFilter()
+		f := testLayout(pinRoot).Device(haIDFor(name)).CommandFilter()
 		if err := router.Handle(f, noop); err != nil {
 			t.Fatalf("route %s: %v", f, err)
 		}
@@ -341,7 +334,7 @@ func TestWillRowMatchesTheWillTheRuntimeStates(t *testing.T) {
 	t.Parallel()
 	for _, mqttQoS := range []int{0, 1} {
 		_, _, _, rec := pinBridgeQoS(t, mqttQoS)
-		will, err := planeFor(t, rec, mqttQoS, true).Will()
+		will, err := planeFor(t, rec, mqttQoS).Will()
 		if err != nil {
 			t.Fatalf("will: %v", err)
 		}
@@ -351,8 +344,8 @@ func TestWillRowMatchesTheWillTheRuntimeStates(t *testing.T) {
 		if !will.Retain {
 			t.Error("the will is not retained, and topics.json claims retain=true")
 		}
-		if will.Topic != layout.Bridge(pinRoot) {
-			t.Errorf("will topic = %q, want %q", will.Topic, layout.Bridge(pinRoot))
+		if want := testLayout(pinRoot).Connected(); will.Topic != want || string(will.Payload) != "0" {
+			t.Errorf("will = %s %q, want %s 0", will.Topic, will.Payload, want)
 		}
 		if strings.HasPrefix(will.Topic, pinPrefix+"/") {
 			t.Errorf("will topic %q is inside Home Assistant's discovery tree", will.Topic)
@@ -365,7 +358,8 @@ func TestWillRowMatchesTheWillTheRuntimeStates(t *testing.T) {
 // Announcing on every reconnect and not only at boot is load-bearing: the
 // broker publishes the will on the drop, so a reconnected daemon that
 // does not re-announce stays offline in Home Assistant while happily
-// publishing state nobody displays.
+// publishing state nobody displays. With no appliance connected yet, the
+// level is 1: the broker is up, the upstream is not.
 func TestPublishOnlineRebuildsThePlaneAndAnnounces(t *testing.T) {
 	b, _, _, rec := pinBridge(t)
 	before := b.plane.Runtime()
@@ -379,13 +373,14 @@ func TestPublishOnlineRebuildsThePlaneAndAnnounces(t *testing.T) {
 	pubs := append([]pubCall(nil), rec.pubs...)
 	rec.mu.Unlock()
 	found := false
+	connected := testLayout(pinRoot).Connected()
 	for _, p := range pubs {
-		if p.topic == layout.Bridge(pinRoot) && p.retain && p.qos == pinQoS {
+		if p.topic == connected && p.retain && p.qos == pinQoS && string(p.payload) == "1" {
 			found = true
 		}
 	}
 	if !found {
-		t.Errorf("no retained online marker on %s at MQTT_QOS: %v", layout.Bridge(pinRoot), pubs)
+		t.Errorf("no retained `1` on %s at MQTT_QOS: %v", connected, pubs)
 	}
 }
 
@@ -507,5 +502,91 @@ func TestTheSweepWindowOverlapsTheBirthSubscriptionHarmlessly(t *testing.T) {
 		if strings.HasPrefix(f, pinRoot) {
 			t.Errorf("%s is under this daemon's own publish root", f)
 		}
+	}
+}
+
+// pinInstance is the `<name>/info` and maintenance publisher over the
+// recorder, as cmd/homeconnect2mqtt builds it.
+func pinInstance(rec *subRecorder, level *slog.LevelVar) *publisher.Instance {
+	return publisher.NewInstance(hagomqtt.Transport(rec), publisher.InstanceConfig{
+		Layout:      hass.NewLayout(testLayout(pinRoot)),
+		Name:        "go-homeconnect2mqtt",
+		Version:     "0.0.0-test",
+		SetLogLevel: publisher.LevelVarSetter(level),
+		Logger:      slog.New(slog.DiscardHandler),
+	})
+}
+
+// TestPublishOnlineReplaysStatusAndAnnouncesInfo is the rest of the
+// (re)connect hook since 0.15.0: `<name>/info` on every broker connect
+// (spec §6), and every status item re-sent with the bytes the broker last
+// accepted, original `ts` included (spec §3.2) — a broker that came back
+// without its retained store would otherwise hold a static feature's value
+// never again.
+func TestPublishOnlineReplaysStatusAndAnnouncesInfo(t *testing.T) {
+	b, dev, _, rec := pinBridge(t)
+	var level slog.LevelVar
+	b.instance = pinInstance(rec, &level)
+	item := dev.topics.state(dev.app.Entities()[0])
+	b.publish(item, "value")
+	first, ok := rec.lastPayload(item)
+	if !ok {
+		t.Fatal("the status item was not published")
+	}
+
+	b.PublishOnline(t.Context())
+
+	waitUntil(t, "the status replay", func() bool {
+		n := 0
+		for _, topic := range rec.publishedTopics() {
+			if topic == item {
+				n++
+			}
+		}
+		return n == 2
+	})
+	if got, _ := rec.lastPayload(item); !bytes.Equal(got, first) {
+		t.Errorf("the replay sent %q, want the cached %q", got, first)
+	}
+	info, ok := rec.lastPayload(pinRoot + "/info")
+	if !ok {
+		t.Fatal("no <name>/info on connect")
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(info, &doc); err != nil {
+		t.Fatalf("info: %v", err)
+	}
+	if doc["name"] != "go-homeconnect2mqtt" || doc["spec"] != "2.0" {
+		t.Errorf("info = %s, want name go-homeconnect2mqtt and spec 2.0", info)
+	}
+}
+
+// TestMaintenanceIsRoutedBesideTheDeviceRoutes: `<name>/maintenance/set/#`
+// shares the router — its QoS 1 and its workers — without overlapping a
+// device route, and a log level sent there reaches the daemon's real
+// slog level.
+func TestMaintenanceIsRoutedBesideTheDeviceRoutes(t *testing.T) {
+	b, _, _, rec := pinBridge(t)
+	var level slog.LevelVar
+	b.instance = pinInstance(rec, &level)
+	if err := b.subscribeCommands(t.Context()); err != nil {
+		t.Fatalf("subscribeCommands: %v", err)
+	}
+	t.Cleanup(b.stopCommands)
+
+	const filter = pinRoot + "/maintenance/set/#"
+	if !slices.Contains(b.commands.Filters(), filter) {
+		t.Fatalf("no maintenance route among %v", b.commands.Filters())
+	}
+	if b.commands.Attributed() {
+		t.Error("the maintenance route overlaps a device route")
+	}
+	rec.mu.Lock()
+	handler := rec.handlers[filter]
+	rec.mu.Unlock()
+	handler(&mqtt.Message{Topic: pinRoot + "/maintenance/set/loglevel", Payload: []byte("debug")})
+	b.commands.WaitIdle()
+	if level.Level() != slog.LevelDebug {
+		t.Errorf("log level = %v after maintenance/set/loglevel debug, want DEBUG", level.Level())
 	}
 }

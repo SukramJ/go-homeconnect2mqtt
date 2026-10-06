@@ -91,29 +91,37 @@ func discoveryAt(t *testing.T, tc goldenCase, root string) *Discovery {
 // TestAReRootedPayloadIsWhatASiblingReallyPublishes is what makes the
 // re-rooting above evidence rather than an assumption.
 //
+// The pins are the pre-0.15.0 rendering, and so are the siblings they stand
+// for: a release from before the move, still running on the same broker
+// during a staggered upgrade, is the one configuration in which a NESTED
+// root can exist at all — 0.15.0 refuses an MQTT_TOPIC with a `/`. So the
+// real sibling rendered here is the pre-0.15.0 builder (the per-entity
+// oracle) at the nested root.
+//
 // One configuration is enough — the question is whether a payload's root is
 // the only thing an instance's MQTT_TOPIC changes, which is a property of
 // the renderer, not of the language or the curated filter — and one is what
-// the render budget allows: this is the only real render in this file.
+// the render budget allows: this is the only real render of the old form in
+// this file.
 func TestAReRootedPayloadIsWhatASiblingReallyPublishes(t *testing.T) {
 	tc := goldenCases[0]
-	sibling := discoveryAt(t, tc, nestedSiblingRoot)
-	rows, err := sibling.hamqttComponents(tc.device, pincatalog.Info, pinEntities(t))
-	if err != nil {
-		t.Fatalf("hamqttComponents at %q: %v", nestedSiblingRoot, err)
+	rec := &recorder{}
+	sibling := New(goldenRuntime(rec), goldenPrefix, nestedSiblingRoot, tc.lang, tc.curated, slog.New(slog.DiscardHandler))
+	if tc.enriched {
+		sibling.SetEnricher(pinEnricher(t))
 	}
+	sibling.PublishDevice(t.Context(), tc.device, pincatalog.Info, pinEntities(t))
+	rec.mu.Lock()
+	rows := append([]goldenRow(nil), rec.rows...)
+	rec.mu.Unlock()
 	want := readGoldenRows(t, tc.file)
 	if len(rows) != len(want) {
 		t.Fatalf("the sibling rendered %d components, the pin holds %d", len(rows), len(want))
 	}
 	byKey := map[string]map[string]any{}
 	for i := range rows {
-		var body map[string]any
-		if err := json.Unmarshal(rows[i].Payload, &body); err != nil {
-			t.Fatalf("%s: %v", rows[i].Topic, err)
-		}
 		_, key := platformAndKeyOf(t, rows[i].Topic)
-		byKey[key] = body
+		byKey[key] = rows[i].Payload
 	}
 	for _, row := range want {
 		_, key := platformAndKeyOf(t, row.Topic)
@@ -129,6 +137,47 @@ func TestAReRootedPayloadIsWhatASiblingReallyPublishes(t *testing.T) {
 	}
 	t.Logf("%d components: re-rooting the pinned payload reproduces a real instance rooted at %q",
 		len(want), nestedSiblingRoot)
+}
+
+// TestTheReadBackClaimsTheConventionsDocument is attribution for the
+// document 0.15.0 publishes. Its components name `<name>/connected` and
+// `<name>/status/<haId>/online` and nothing of the old layout, so without
+// the two new anchors the tombstone read-back would stop recognising this
+// instance's own document on the second start after the upgrade — fewer
+// tombstones, never wrong ones, but a curated flip would silently stop
+// removing anything.
+//
+// The sibling is a real render at a disjoint name, the configuration two
+// 0.15.0 instances on one broker must have.
+func TestTheReadBackClaimsTheConventionsDocument(t *testing.T) {
+	tc := goldenCases[0]
+	render := func(root string) []byte {
+		t.Helper()
+		b, err := discoveryAt(t, tc, root).BundleFor(tc.device, goldenHaID, pincatalog.Info, pinEntities(t))
+		if err != nil {
+			t.Fatalf("BundleFor at %q: %v", root, err)
+		}
+		raw, err := json.Marshal(b)
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		return raw
+	}
+	ours := discoveryAt(t, tc, goldenRoot)
+	doc := render(goldenRoot)
+	var parsed struct {
+		Components map[string]json.RawMessage `json:"components"`
+	}
+	if err := json.Unmarshal(doc, &parsed); err != nil {
+		t.Fatalf("document: %v", err)
+	}
+	if got := ours.BundleComponents(doc); len(got) != len(parsed.Components) {
+		t.Errorf("the read-back kept %d of our own %d components", len(got), len(parsed.Components))
+	}
+	// "homeconnect2" is the sibling a STRING prefix would get wrong.
+	if got := ours.BundleComponents(render("homeconnect2")); len(got) != 0 {
+		t.Errorf("sibling homeconnect2: the read-back kept %d of its components, want 0", len(got))
+	}
 }
 
 // TestAttributionOverTheWholeCatalogue is the pin for the nested-sibling

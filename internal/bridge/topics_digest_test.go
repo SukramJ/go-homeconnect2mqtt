@@ -52,11 +52,29 @@ import (
 //
 // No published topic, no QoS of any PUBLISH, and no retain flag moved.
 //
+// Moved a fifth time, deliberately and in every topic row, by 0.15.0's move
+// onto mqtt-smarthome 2.0 (openccu-loom ADR 0083), and REGENERATED rather
+// than hand-edited, because every row moved:
+//
+//   - every state, command and availability topic re-shaped from
+//     `<root>/<device name>/<Path>/{state,set}` to
+//     `<name>/{status,set}/<haId>/<Path>`, `<root>/<device>/availability`
+//     to `<name>/status/<haId>/online`, and `<root>/status` to
+//     `<name>/connected` — with the COUNTS of every list unchanged (687
+//     state topics, 667 advertised, 85 commands, 19 without an entity, one
+//     unreferenced connection_state), which is the evidence that the move
+//     re-pointed the tree rather than re-cut it;
+//   - the command subscription narrowed to `<name>/set/<haId>/#` at QoS 1
+//     (no longer MQTT_QOS), and the migration sweep's three transient
+//     windows are stated beside the two discovery windows;
+//   - `publish_qos_retain` records status items at QoS 0, always retained,
+//     MQTT_RETAIN having been removed.
+//
 // topicsGoldenDigest is the SHA-256 of internal/bridge/testdata/topics.json,
 // held outside the file so a regeneration cannot pass unnoticed. See the
 // long note in internal/hass/golden_digest_test.go — same reasoning, same
 // standard: updating this literal is a declaration that names a finding.
-const topicsGoldenDigest = "f99630e4c65625625aa9753eb89dc49011663ffaaf613177d7fcb778169b72f5"
+const topicsGoldenDigest = "1a1ef35de306b54dd0339bcb16851b87489305e29af654191a33ccb08eabf287"
 
 // TestTopicsGoldenMatchesItsPinnedDigest fails when topics.json was
 // regenerated without the accompanying declaration of intent.

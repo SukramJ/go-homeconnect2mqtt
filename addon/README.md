@@ -51,7 +51,7 @@ description are auto-filled from the matching ZIP (set any explicitly to overrid
 devices:
   - name: dishwasher
     host: 192.168.1.50
-    haid: "0102030405"     # auto-fills connection_type, psk64/iv64, description
+    haid: "0102030405"     # the topics' device segment; auto-fills connection_type, psk64/iv64, description
 mqtt_server: ""             # empty = use the Home Assistant MQTT broker
 hass_enable: true
 web_enable: true

@@ -43,10 +43,21 @@ type Config struct {
 	// fixed at the translation point (internal/haplane/qos.go) and
 	// defeated one layer below it, where every test that watched for it
 	// built a Config by hand instead of loading one.
+	//
+	// Since 0.15.0 it governs what lies OUTSIDE the convention's status and
+	// set functions: the discovery configs and their retractions, the
+	// `<name>/connected` markers and the Last Will, and the snapshot windows.
+	// Status items are QoS 0 and `set` is subscribed at QoS 1, as
+	// mqtt-smarthome 2.0 and openccu-loom ADR 0083 fix them.
 	MQTTQoS *int `yaml:"MQTT_QOS"`
-	// MQTTRetain is a pointer so an unset value can default to true while
-	// still letting operators force false.
-	MQTTRetain *bool `yaml:"MQTT_RETAIN"`
+	// MQTTMaintenance switches the mqtt-smarthome maintenance topics
+	// (`<name>/maintenance/…`) on or off. A pointer so an unset value can
+	// default to true while still letting operators force false.
+	MQTTMaintenance *bool `yaml:"MQTT_MAINTENANCE"`
+	// MQTTStatsInterval is the period of `<name>/maintenance/stats` in
+	// seconds. A pointer for the reason MQTTQoS is one: 0 is an answer —
+	// "off" — and not the absence of one.
+	MQTTStatsInterval *int `yaml:"MQTT_STATS_INTERVAL"`
 
 	// --- Home Assistant discovery ---
 	HASSEnable         bool   `yaml:"HASS_ENABLE"`
@@ -78,6 +89,19 @@ type Config struct {
 	// --- Misc ---
 	Language string `yaml:"LANGUAGE"`
 	Debug    bool   `yaml:"DEBUG"`
+
+	// Removed lists the configuration keys this release no longer reads
+	// and found set anyway, so the daemon can say so at start instead of
+	// ignoring them in silence. Filled by [Load]; never decoded.
+	Removed []string `yaml:"-"`
+}
+
+// removedKeys are the keys earlier releases read and this one does not,
+// with what replaced them.
+var removedKeys = map[string]string{
+	// mqtt-smarthome 2.0 §3.2: persistent state MUST be retained, so the
+	// retain flag is no longer an operator choice.
+	"MQTT_RETAIN": "status items are always retained (mqtt-smarthome 2.0 §3.2)",
 }
 
 // ReconnectInitialDuration returns the initial reconnect backoff.
@@ -124,8 +148,20 @@ func (c *Config) QoSLevel() int {
 	return *c.MQTTQoS
 }
 
-// RetainEnabled reports whether MQTT messages should be published with
-// the retain flag. Unset (nil) defaults to true.
-func (c *Config) RetainEnabled() bool {
-	return c.MQTTRetain == nil || *c.MQTTRetain
+// MaintenanceEnabled reports whether the maintenance topics are on. Unset
+// (nil) defaults to true, as mqtt-smarthome 2.0 §7 recommends.
+func (c *Config) MaintenanceEnabled() bool {
+	return c.MQTTMaintenance == nil || *c.MQTTMaintenance
 }
+
+// StatsIntervalSeconds is MQTT_STATS_INTERVAL in seconds. Unset is the
+// shipped default; an explicit 0 stays 0, which switches the topic off.
+func (c *Config) StatsIntervalSeconds() int {
+	if c.MQTTStatsInterval == nil {
+		return DefaultMQTTStatsInterval
+	}
+	return *c.MQTTStatsInterval
+}
+
+// RemovedKeyNote explains what replaced a key listed in [Config.Removed].
+func RemovedKeyNote(key string) string { return removedKeys[key] }

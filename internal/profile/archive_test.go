@@ -94,6 +94,11 @@ func TestParseArchiveBytes(t *testing.T) {
 	if _, ok := p.Description.ByName("Demo.Setting.Power"); !ok {
 		t.Error("description not parsed from archive")
 	}
+	// The cached description carries the haId to the daemon, which uses it
+	// as the device segment of every topic.
+	if p.Description.HaID != "0102030405" {
+		t.Errorf("Description.HaID = %q, want the index's haId", p.Description.HaID)
+	}
 }
 
 func TestDefaultHostTLS(t *testing.T) {
@@ -249,6 +254,7 @@ func TestLoadDevicesValidation(t *testing.T) {
 		"no psk":    "devices:\n  - name: x\n    connection_type: AES\n",
 		"aes no iv": "devices:\n  - name: x\n    connection_type: AES\n    psk64: a\n",
 		"duplicate": "devices:\n  - name: x\n    connection_type: TLS\n    psk64: a\n  - name: x\n    connection_type: TLS\n    psk64: b\n",
+		"bad haid":  "devices:\n  - name: x\n    haid: ../x\n    connection_type: TLS\n    psk64: a\n",
 		"empty":     "devices: []\n",
 	}
 	for label, content := range cases {
@@ -260,8 +266,49 @@ func TestLoadDevicesValidation(t *testing.T) {
 	}
 }
 
+// TestResolveHaID pins where the topic's device segment comes from: the
+// explicit `haid`, then the cached description, then the description's
+// file name — which hc-util parse has always written as <haId>.json, and
+// which is all an installation from before 0.15.0 has — and nothing else.
+// A device with none is refused with what to do about it, rather than
+// published under a segment that would move again once the haId is known.
+func TestResolveHaID(t *testing.T) {
+	desc := &Description{HaID: "FROM-PROFILE"}
+	old := &Description{} // a cache written before 0.15.0
+	cases := []struct {
+		name   string
+		dc     DeviceConfig
+		desc   *Description
+		want   string
+		source HaIDSource
+		err    error
+	}{
+		{"explicit wins", DeviceConfig{Name: "dw", HaID: "EXPLICIT", Description: "p/FILE.json"}, desc, "EXPLICIT", HaIDFromConfig, nil},
+		{"from the description", DeviceConfig{Name: "dw", Description: "p/FILE.json"}, desc, "FROM-PROFILE", HaIDFromDescription, nil},
+		{"an existing install: the file hc-util named", DeviceConfig{Name: "dw", Description: "./profiles/0102030405.json"}, old, "0102030405", HaIDFromFileName, nil},
+		{"a renamed file still yields a segment", DeviceConfig{Name: "dw", Description: "/data/dishwasher.json"}, old, "dishwasher", HaIDFromFileName, nil},
+		{"a file name that is no haId", DeviceConfig{Name: "dw", Description: "/data/Geschirrspüler.json"}, old, "", 0, ErrNoHaID},
+		{"no description path", DeviceConfig{Name: "dw"}, old, "", 0, ErrNoHaID},
+		{"no description at all", DeviceConfig{Name: "dw"}, nil, "", 0, ErrNoHaID},
+	}
+	for _, c := range cases {
+		got, source, err := ResolveHaID(c.dc, c.desc)
+		if got != c.want || source != c.source || !errors.Is(err, c.err) {
+			t.Errorf("%s: ResolveHaID = (%q, %v, %v), want (%q, %v, %v)", c.name, got, source, err, c.want, c.source, c.err)
+		}
+	}
+	if _, _, err := ResolveHaID(DeviceConfig{Name: "dw"}, &Description{HaID: "../x"}); err == nil {
+		t.Error("an unsafe haId from the description was accepted")
+	}
+	_, _, err := ResolveHaID(DeviceConfig{Name: "Geschirrspüler"}, nil)
+	if err == nil || !strings.Contains(err.Error(), "Geschirrspüler") || !strings.Contains(err.Error(), "haid") {
+		t.Errorf("the refusal does not name the device and the key: %v", err)
+	}
+}
+
 func TestDescriptionJSONRoundTrip(t *testing.T) {
 	d := mustParse(t)
+	d.HaID = "0102030405"
 	dir := t.TempDir()
 	path := filepath.Join(dir, "desc.json")
 	if err := SaveDescriptionJSON(path, d); err != nil {
@@ -278,6 +325,9 @@ func TestDescriptionJSONRoundTrip(t *testing.T) {
 	}
 	if len(loaded.Entries) != len(d.Entries) {
 		t.Errorf("entry count changed: %d -> %d", len(d.Entries), len(loaded.Entries))
+	}
+	if loaded.HaID != d.HaID {
+		t.Errorf("round-trip lost the haId: %q -> %q", d.HaID, loaded.HaID)
 	}
 }
 

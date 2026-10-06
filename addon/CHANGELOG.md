@@ -5,6 +5,102 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-06
+
+**Breaking.** The MQTT topic tree moves onto the
+[mqtt-smarthome 2.0](https://github.com/mqtt-smarthome/mqtt-smarthome/blob/master/SPEC.md)
+convention, with every other project of this family (openccu-loom ADR 0083).
+A clean break: there is no compatibility switch. **Home Assistant needs
+nothing** — discovery re-points every entity and no `unique_id`, entity id,
+device identifier or discovery topic changes, so history, areas, names,
+dashboards and automations survive. Anything that reads the raw topics —
+Node-RED, dashboards, scripts — has to move. The README has the old and the
+new topics side by side.
+
+### Changed
+- **Topics are `<name>/<function>/<item…>`, and the device segment is the
+  appliance's haId** instead of its name in `devices.yaml`:
+  `<topic>/<device>/<Feature/Path>/state` → `<name>/status/<haId>/<Feature/Path>`,
+  `…/set` → `<name>/set/<haId>/<Feature/Path>`,
+  `<topic>/<device>/availability` → `<name>/status/<haId>/online`,
+  `<topic>/<device>/connection_state` → `<name>/status/<haId>/connection_state`,
+  `…/_control/{start,stop}_program/set` → `<name>/set/<haId>/_control/{start,stop}_program`.
+  `<name>` is `MQTT_TOPIC`, default `homeconnect` as before.
+- **`<topic>/status` (`online`/`offline`) becomes `<name>/connected`**: `0`
+  when the daemon is not running (the Last Will, and on a graceful stop), `1`
+  while it is on the broker but no appliance is reachable, `2` while at least
+  one is. Every entity is available at `connected` 2 and its appliance's
+  `online` item.
+- **Every status item is a JSON object `{"val","ts","lc"}`**, retained, at
+  QoS 0, published on change and again after every broker reconnect. Booleans
+  are JSON booleans and numbers JSON numbers. **Enums carry their token** — the
+  member name the appliance speaks (`On`, `Run`, `Present`) — instead of the
+  localized label; Home Assistant still shows the labels, mapped in discovery.
+  A German installation's event binary sensors (`ProgramFinished`, …) used to
+  publish `Vorhanden` against a `payload_on` of `Present` and never turned on;
+  they now do. A program item with no known program still publishes `None`.
+- **`set`** accepts a plain value or `{"val": …}`; booleans as
+  `true`/`false`, `1`/`0`, `on`/`off`, `yes`/`no` (before, anything but
+  `true` wrote `false`); numbers are rounded to the feature's step and clamped
+  to its range; enums by token in any case, localized labels still accepted.
+  Empty and retained messages are ignored, a rejected or failed request is
+  logged at `warn` with its topic and payload, and `set` is subscribed at QoS 1.
+- `MQTT_QOS` now governs only the discovery documents, `connected` and the
+  Last Will; status items are QoS 0 and `set` QoS 1 whatever it says.
+- `MQTT_TOPIC` must be a single topic level: a value with `/`, `+` or `#` is
+  refused at start.
+
+### Added
+- **`<name>/info`**: retained JSON naming the running instance — `name`
+  (`go-homeconnect2mqtt`), `version`, `spec`, `go`, `host`, `pid`, `started`,
+  `maintenance`, `commit`, `build_date`, `appliances`, `language`.
+- **Maintenance topics**, on by default: `<name>/maintenance/set/loglevel`
+  (`error`/`warn`/`info`/`debug`, until the next start),
+  `<name>/maintenance/set/restart` (a graceful stop — `connected` 0, exit 0 —
+  only where a supervisor restarts the process: `HC2M_SUPERVISED=1`/`0`, else
+  systemd, Kubernetes or a container is detected; refused at `warn`
+  otherwise) and retained `<name>/maintenance/stats`. New options
+  `MQTT_MAINTENANCE` (default `true`) and `MQTT_STATS_INTERVAL` (seconds,
+  default `60`, `0` = off). **Anyone who may publish on the broker can use
+  them**: secure the broker with per-client ACLs (the daemon needs `<name>/#`
+  and the discovery prefix) or switch maintenance off.
+- **`haid` in `devices.yaml`**: the appliance's haId, the new device segment.
+  `hc-util parse` prints it in its snippet and records it in the cached
+  description. The daemon takes the key, else the description's record, else
+  the description's file name without extension (`hc-util parse` has always
+  named it `<haId>.json`). **An upgrading installation starts unchanged**: it
+  has neither of the first two, so its topics land under the file name — the
+  real haId on the documented setup path — and the log says
+  `bridge.haid_from_description_filename` once per appliance at `warn`, with
+  the remedy (add `haid:` or re-run `hc-util parse`; a different haid set
+  later moves that appliance's topics once). Only a device none of the three
+  yields a valid haId for, or two devices resolving to the same one, are
+  refused at start, naming the devices.
+- **The migration sweep**: on every start the daemon reads back, for a few
+  seconds, what the broker retains under the old tree and clears exactly the
+  topics the old release published for the configured appliances, plus the
+  old `<topic>/status`, and status items an appliance no longer has. It never
+  matches by prefix — another instance's topics, an unconfigured appliance and
+  anything else under the root survive — and a second start finds nothing.
+  An appliance whose `devices.yaml` name is a function name (`status`, `set`,
+  `get`, `info`, `meta`, `connected`, `maintenance`) keeps its old topics,
+  which have to be cleared by hand.
+
+### Removed
+- `MQTT_RETAIN`: status items are always retained (mqtt-smarthome 2.0 §3.2).
+  A leftover key is ignored with a `config.key_removed` warning.
+
+### Add-on
+- New options `maintenance` (default on) and `stats_interval` (default 60).
+  The add-on sets `HC2M_SUPERVISED=0`: the Supervisor does not restart an
+  add-on that exits cleanly, so a restart over MQTT is refused rather than
+  stopping the add-on; restart it from Home Assistant.
+- A device's `haid` is written to `devices.yaml` and is now the device segment
+  of its topics. An add-on installation needs no change: the add-on re-parses
+  the profile ZIPs on every start, so the description records the haId, and
+  a device without `haid` falls back to its description's file name as
+  above.
+
 ## [0.14.0] - 2026-10-02
 
 ### Changed

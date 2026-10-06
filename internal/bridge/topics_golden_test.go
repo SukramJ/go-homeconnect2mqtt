@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SukramJ/go-hamqtt/discovery"
 	hagomqtt "github.com/SukramJ/go-hamqtt/publisher/gomqtt"
 
 	"github.com/SukramJ/go-mqtt"
@@ -62,15 +61,20 @@ import (
 //     TestStateTopicBuildersAgree, which compares BUILDER against
 //     BUILDER and never consults the golden file, so it fails even
 //     immediately after a regeneration.
-//   - F4 — the command subscription is still the whole device sub-tree,
-//     <root>/<device>/#, because the feature path is variable-depth and no
-//     fixed-arity filter covers it. It is no longer unguarded: MQTT 5.0
-//     No Local plus a Device.Relative check before dispatch. Asserted by
+//   - F4 — RESOLVED BY THE LAYOUT in 0.15.0. The command subscription is
+//     still a sub-tree, <name>/set/<haId>/#, because the feature path is
+//     variable-depth — but the function now sits at the second level, so
+//     it matches none of this daemon's own publishes. MQTT 5.0 No Local
+//     and a Device.Relative check before dispatch stay. Asserted by
 //     TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree.
-//   - F1 — FIXED. <root>/status carries the Last Will and is now declared
-//     by every payload, alongside the device availability topic, under
+//   - F1 — FIXED. <name>/connected carries the Last Will and is declared
+//     by every component, alongside the appliance's online item, under
 //     mode "all". `availability_topics_no_entity_reads` is down to the
 //     single connection_state topic (F7, deliberately left).
+//
+// Since 0.15.0 the advertised topics are read off the device DOCUMENT —
+// the form this daemon publishes — rather than off the per-entity oracle,
+// which renders the pre-0.15.0 layout on purpose (see internal/hass).
 
 var updateTopicsGolden = flag.Bool("update-topics-golden", false,
 	"rewrite internal/bridge/testdata/topics.json from the current builders")
@@ -358,23 +362,24 @@ func (s *subRecorder) Unsubscribe(context.Context, string) error { return nil }
 // a chosen MQTT_QOS and MQTT_RETAIN. It is the same construction
 // cmd/homeconnect2mqtt performs, so every assertion made against it is an
 // assertion about the shipped composition root.
-func planeFor(t *testing.T, rec *subRecorder, qos int, retain bool) *haplane.Plane {
+func planeFor(t *testing.T, rec *subRecorder, qos int) *haplane.Plane {
 	t.Helper()
-	return planeWithLimit(t, rec, qos, retain, nil)
+	return planeWithLimit(t, rec, qos, nil)
 }
 
 // planeWithLimit is planeFor with the broker's advertised Maximum Packet
 // Size supplied. A nil hook means UNKNOWN, which publishes.
 func planeWithLimit(
-	t *testing.T, rec *subRecorder, qos int, retain bool, maxPacket func() (uint32, bool),
+	t *testing.T, rec *subRecorder, qos int, maxPacket func() (uint32, bool),
 ) *haplane.Plane {
 	t.Helper()
+	inst := testLayout(pinRoot)
 	return haplane.New(hagomqtt.Transport(rec), haplane.Config{
 		Prefix:              pinPrefix,
-		StatusTopic:         layout.Bridge(pinRoot),
-		Layout:              hass.NewLayout(pinRoot),
+		StatusTopic:         inst.Connected(),
+		Layout:              hass.NewLayout(inst),
 		QoS:                 haplane.QoS(qos),
-		Retain:              retain,
+		SetFilter:           inst.SetFilter(),
 		BrokerMaxPacketSize: maxPacket,
 		Logger:              slog.New(slog.DiscardHandler),
 	})
@@ -417,7 +422,7 @@ func pinBridgeQoS(t *testing.T, qos int) (*Bridge, *Device, *hass.Discovery, *su
 	// rather than the constant that fed them. That is what lets the F9
 	// pin survive a whole plane moving: a step that re-routes these calls
 	// through another library still has to hand the transport a 0.
-	plane := planeFor(t, rec, qos, cfg.RetainEnabled())
+	plane := planeFor(t, rec, qos)
 	// HASS_DISCOVERY defaults to "curated"; the pin uses the full set so
 	// the topic tree is the widest one this daemon can produce.
 	disc := hass.New(plane, pinPrefix, pinRoot, cfg.Language, false, logger)
@@ -431,7 +436,7 @@ func pinBridgeQoS(t *testing.T, qos int) (*Bridge, *Device, *hass.Discovery, *su
 		HASS:   disc,
 		Devices: []DeviceSpec{{
 			Config: profile.DeviceConfig{
-				Name: pinDevice, Host: "192.168.1.50",
+				Name: pinDevice, HaID: haIDFor(pinDevice), Host: "192.168.1.50",
 				ConnectionType: profile.ConnectionAES, PSK64: b64(32), IV64: b64(16),
 			},
 			Description: desc,
@@ -456,8 +461,8 @@ func realStateTopics(d *Device) []string {
 	return out
 }
 
-// advertised reads state_topic and command_topic out of the real
-// discovery payloads, produced by the real builder.
+// advertised reads state_topic and command_topic out of the real device
+// document, produced by the real builder.
 func advertised(t *testing.T, dev *Device) (states, commands map[string]string) {
 	t.Helper()
 	states, commands = map[string]string{}, map[string]string{}
@@ -473,42 +478,36 @@ func advertised(t *testing.T, dev *Device) (states, commands map[string]string) 
 }
 
 // renderPayloads drives the real hass.Discovery over the device's real
-// entities and returns config topic -> decoded payload.
+// entities and returns component key -> decoded component of the device
+// document, which is what this daemon publishes.
 func renderPayloads(t *testing.T, dev *Device) map[string]map[string]any {
 	t.Helper()
 	cat, err := pinCatalog()
 	if err != nil {
 		t.Fatalf("mapping.Load: %v", err)
 	}
-	pr := &payloadRecorder{payloads: map[string]map[string]any{}}
-	d := hass.New(pr, pinPrefix, pinRoot, "de", false, slog.New(slog.DiscardHandler))
+	d := hass.New(nil, pinPrefix, pinRoot, "de", false, slog.New(slog.DiscardHandler))
 	d.SetEnricher(cat)
-	d.PublishDevice(context.Background(), dev.name, dev.app.Info(), dev.app.Entities())
-	if len(pr.payloads) == 0 {
-		t.Fatal("the discovery builder published nothing")
+	b, err := d.BundleFor(dev.name, dev.haID, dev.app.Info(), dev.app.Entities())
+	if err != nil {
+		t.Fatalf("BundleFor: %v", err)
 	}
-	return pr.payloads
-}
-
-type payloadRecorder struct {
-	mu       sync.Mutex
-	payloads map[string]map[string]any
-}
-
-// PublishBundle satisfies hass.ConfigWriter. The topic pin drives the
-// per-entity builder, which is the form the pinned tree records.
-func (p *payloadRecorder) PublishBundle(context.Context, *discovery.Bundle) (bool, error) {
-	return false, errors.New("payloadRecorder: the device document path is not driven here")
-}
-
-func (p *payloadRecorder) Publish(_ context.Context, topic string, payload []byte) (bool, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	var m map[string]any
-	if err := json.Unmarshal(payload, &m); err == nil {
-		p.payloads[topic] = m
+	out := make(map[string]map[string]any, len(b.Components))
+	for key := range b.Components {
+		raw, err := json.Marshal(b.Components[key])
+		if err != nil {
+			t.Fatalf("marshal %s: %v", key, err)
+		}
+		var m map[string]any
+		if err := json.Unmarshal(raw, &m); err != nil {
+			t.Fatalf("decode %s: %v", key, err)
+		}
+		out[key] = m
 	}
-	return true, nil
+	if len(out) == 0 {
+		t.Fatal("the discovery builder rendered nothing")
+	}
+	return out
 }
 
 func sortedKeys[V any](m map[string]V) []string {
@@ -561,9 +560,17 @@ func TestTopicGolden(t *testing.T) {
 	// was true, and true for a reason that meant the pinned wire
 	// under-reported what the daemon does on it. Measured off the
 	// transport by TestTheReadBackWindowSubscribesAtMQTTQoS.
+	//
+	// The migration sweep's windows (migrate.go), likewise transient and
+	// likewise stated: the old bare status topic, the device's OLD sub-tree
+	// under its configured name, and its new status tree for §3.2's
+	// steady-state read-back. None of them reaches `<name>/set/…`.
 	filters = append(filters,
 		filterQoS{Filter: pinPrefix + "/#", QoS: int(pinQoS)},
 		filterQoS{Filter: pinPrefix + "/device/+/config", QoS: int(pinQoS)})
+	for _, f := range b.legacySweepPlan().filters {
+		filters = append(filters, filterQoS{Filter: f, QoS: int(pinQoS)})
+	}
 	sort.Slice(filters, func(i, j int) bool { return filters[i].Filter < filters[j].Filter })
 
 	states, commands := advertised(t, dev)
@@ -578,7 +585,7 @@ func TestTopicGolden(t *testing.T) {
 		}
 	}
 
-	availTopics := []string{dev.topics.Availability(), dev.topics.ConnectionState()}
+	availTopics := []string{dev.topics.Online(), dev.topics.ConnectionState()}
 	sort.Strings(availTopics)
 	// Read the availability LIST, which is what the payloads carry since
 	// F1; the flat availability_topic key is gone.
@@ -594,7 +601,7 @@ func TestTopicGolden(t *testing.T) {
 		}
 	}
 	unreferenced := []string{}
-	for _, at := range append([]string{layout.Bridge(pinRoot)}, availTopics...) {
+	for _, at := range append([]string{b.layout.Connected()}, availTopics...) {
 		if !referenced[at] {
 			unreferenced = append(unreferenced, at)
 		}
@@ -602,7 +609,7 @@ func TestTopicGolden(t *testing.T) {
 	sort.Strings(unreferenced)
 
 	got := topicGolden{
-		BridgeStatusTopic:               layout.Bridge(pinRoot),
+		BridgeStatusTopic:               b.layout.Connected(),
 		DeviceAvailabilityTopics:        availTopics,
 		AvailabilityTopicsNoEntityReads: unreferenced,
 		StateTopics:                     realStateTopics(dev),
@@ -613,10 +620,12 @@ func TestTopicGolden(t *testing.T) {
 		PublishQoSRetain: map[string]string{
 			"discovery_config":    "qos=MQTT_QOS retain=true",
 			"discovery_retract":   "qos=MQTT_QOS retain=true (empty payload)",
-			"entity_state":        "qos=MQTT_QOS retain=MQTT_RETAIN",
-			"device_availability": "qos=MQTT_QOS retain=MQTT_RETAIN",
-			"bridge_status":       "qos=MQTT_QOS retain=true",
-			"bridge_will":         "qos=MQTT_QOS retain=true",
+			"entity_state":        "qos=0 retain=true (status object)",
+			"device_availability": "qos=0 retain=true (status object)",
+			"bridge_status":       "qos=MQTT_QOS retain=true (0/1/2)",
+			"bridge_will":         "qos=MQTT_QOS retain=true (0)",
+			"migration_clear":     "qos=0 retain=true (empty payload)",
+			"set_subscription":    "qos=1",
 		},
 	}
 
@@ -786,7 +795,7 @@ func TestAdvertisedCommandTopicsResolveToSomethingThatHandlesThem(t *testing.T) 
 		rel, ok := dev.topics.Relative(ct)
 		if !ok {
 			t.Errorf("%s advertises %s, which is not a command topic of %s",
-				cfgTopic, ct, dev.topics.Base())
+				cfgTopic, ct, dev.haID)
 			continue
 		}
 		switch rel {
@@ -809,21 +818,19 @@ func TestAdvertisedCommandTopicsResolveToSomethingThatHandlesThem(t *testing.T) 
 		len(commands), features, controls)
 }
 
-// TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree is F4, after the fix.
+// TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree is F4, resolved.
 //
-// The filter itself is unchanged and cannot change: the feature path is
-// variable-depth, so no fixed-arity filter covers the command tree. What
-// changed is that the sub-tree is no longer unguarded. Two guards, because
-// the two halves are different mechanisms:
+// The filter is still a sub-tree — the feature path is variable-depth, so
+// no fixed-arity filter covers the command tree — but since 0.15.0 it is
+// `<name>/set/<haId>/#`, and the function at the second level keeps it off
+// every topic this daemon publishes. Before, `<root>/<device>/#` matched
+// all 689 of them and only No Local and Device.Relative stood between a
+// state publish and a command. Both guards stay:
 //
-//   - MQTT 5.0 No Local, so the broker does not forward this daemon's own
-//     publishes back to it at all. Recorded in the golden as an option on
-//     the filter, which is the only place it is observable from outside.
-//   - Device.Relative, checked before anything is dispatched. No Local is
-//     a no-op on a 3.1.1 link and does not cover the retained replay a
-//     broker delivers on (re)subscribe, and under MQTT_RETAIN: false the
-//     retained check does not fire either. Before the fix, every one of
-//     the 689 own publishes below spawned a goroutine that returned.
+//   - MQTT 5.0 No Local, recorded in the golden as an option on the filter,
+//     which is the only place it is observable from outside.
+//   - Device.Relative, checked before anything is dispatched — and the
+//     retained check beside it, which No Local does not cover.
 func TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree(t *testing.T) {
 	b, dev, _, rec := pinBridge(t)
 	if err := b.subscribeCommands(context.Background()); err != nil {
@@ -833,35 +840,34 @@ func TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree(t *testing.T) {
 	filters := append([]filterQoS(nil), rec.filters...)
 	rec.mu.Unlock()
 
-	var deviceFilter string
+	deviceFilter := dev.topics.CommandFilter()
+	var found, noLocal bool
 	for _, f := range filters {
-		if strings.HasSuffix(f.Filter, "/#") {
-			deviceFilter = f.Filter
+		if f.Filter != deviceFilter {
+			continue
 		}
-	}
-	if deviceFilter == "" {
-		t.Fatal("no device sub-tree subscription — F4 is fixed; update this test and the golden together")
-	}
-	var noLocal bool
-	for _, f := range filters {
-		if f.Filter == deviceFilter {
-			for _, o := range f.Options {
-				if o == "WithNoLocal" {
-					noLocal = true
-				}
+		found = true
+		if f.QoS != int(mqtt.QoS1) {
+			t.Errorf("%s is subscribed at QoS %d, want 1 (openccu-loom ADR 0083)", deviceFilter, f.QoS)
+		}
+		for _, o := range f.Options {
+			if o == "WithNoLocal" {
+				noLocal = true
 			}
 		}
+	}
+	if !found {
+		t.Fatalf("no subscription %s among %v", deviceFilter, filters)
 	}
 	if !noLocal {
 		t.Errorf("%s is subscribed without mqtt.WithNoLocal — the broker will "+
 			"forward this daemon's own publishes straight back to it (F4)", deviceFilter)
 	}
 
-	ownTopics := append(realStateTopics(dev), dev.topics.Availability(), dev.topics.ConnectionState())
+	ownTopics := append(realStateTopics(dev), dev.topics.Online(), dev.topics.ConnectionState(), b.layout.Connected())
 	for _, own := range ownTopics {
-		if !matchFilter(deviceFilter, own) {
-			t.Errorf("%s is published but not matched by %s — the filter narrowed; "+
-				"update this test and the golden together", own, deviceFilter)
+		if matchFilter(deviceFilter, own) {
+			t.Errorf("%s is one of this daemon's own publishes and %s matches it (F4)", own, deviceFilter)
 		}
 		if shouldDispatch(dev, own, false) {
 			t.Errorf("%s is one of this daemon's own publishes, but the handler "+
@@ -873,6 +879,9 @@ func TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree(t *testing.T) {
 	// must still drop the broker's retained replay of one.
 	_, commands := advertised(t, dev)
 	for cfgTopic, ct := range commands {
+		if !matchFilter(deviceFilter, ct) {
+			t.Errorf("%s advertises %s, which %s does not cover", cfgTopic, ct, deviceFilter)
+		}
 		if !shouldDispatch(dev, ct, false) {
 			t.Errorf("%s advertises %s, which the handler would not dispatch", cfgTopic, ct)
 		}
@@ -881,9 +890,7 @@ func TestCommandFilterIsGuardedAgainstTheDaemonsOwnTree(t *testing.T) {
 				"command re-fires its write on every reconnect", cfgTopic, ct)
 		}
 	}
-	t.Logf("F4: %s still matches %d of this daemon's own publishes; No Local stops the "+
-		"broker sending them and Relative rejects all %d before dispatch",
-		deviceFilter, len(ownTopics), len(ownTopics))
+	t.Logf("F4: %s matches none of this daemon's %d own publishes", deviceFilter, len(ownTopics))
 }
 
 // matchFilter is a minimal MQTT topic-filter matcher, sufficient for the
@@ -928,7 +935,8 @@ func TestQoSZeroReachesTheTransportAsQoSZero(t *testing.T) {
 		t.Fatalf("subscribeCommands: %v", err)
 	}
 	b.publishDiscovery(context.Background(), dev)
-	b.publish(dev.topics.Availability(), []byte("online"))
+	b.publish(dev.topics.Online(), true)
+	b.setDeviceConnected(dev, true)
 
 	rec.mu.Lock()
 	filters := append([]filterQoS(nil), rec.filters...)
@@ -944,11 +952,16 @@ func TestQoSZeroReachesTheTransportAsQoSZero(t *testing.T) {
 		}
 	}
 	for _, f := range filters {
-		// The two transient reconcile filters are hard-wired to QoS 0 and
-		// are not recorded here; these are the command and birth ones,
-		// which follow MQTT_QOS.
-		if f.QoS != int(mqtt.QoS0) {
-			t.Errorf("subscribe %s: qos = %d, want 0", f.Filter, f.QoS)
+		// The command routes are the one subscription MQTT_QOS no longer
+		// reaches: `set` is subscribed at QoS 1 in all six projects
+		// (openccu-loom ADR 0083), an upper bound a QoS 0 publisher still
+		// gets QoS 0 under. Everything else follows MQTT_QOS.
+		want := int(mqtt.QoS0)
+		if f.Filter == dev.topics.CommandFilter() {
+			want = int(mqtt.QoS1)
+		}
+		if f.QoS != want {
+			t.Errorf("subscribe %s: qos = %d, want %d", f.Filter, f.QoS, want)
 		}
 	}
 	t.Logf("F9: MQTT_QOS: 0 reached the transport as QoS 0 on %d publishes and %d subscribes",

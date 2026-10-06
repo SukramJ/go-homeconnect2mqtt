@@ -281,7 +281,7 @@ func TestSweepDoesNotRetractASecondAppliancesConfigs(t *testing.T) {
 	// yet. That is what makes the scope measurable: a pass that judged the
 	// whole fleet would own its configs and, with nothing claimed, clear
 	// them. A fixture that left it out of b.devices would pass either way.
-	b.devices = append(b.devices, &Device{name: "Backofen", topics: newDeviceTopics(pinRoot, "Backofen")})
+	b.devices = append(b.devices, &Device{name: "Backofen", haID: haIDFor("Backofen"), topics: newDeviceTopics(testLayout(pinRoot), haIDFor("Backofen"))})
 
 	other := "homeassistant/sensor/backofen/bsh_common_status_operationstate/config"
 	seedRetained(rec, map[string]string{
@@ -434,7 +434,7 @@ func TestRefreshDiscoveryOnceIsFleetWide(t *testing.T) {
 	// Two appliances of ours, so the fleet scope is measurable: a refresh
 	// that only cleared the first device would pass a single-device
 	// fixture and leave half an installed base standing.
-	b.devices = append(b.devices, &Device{name: "Backofen", topics: newDeviceTopics(pinRoot, "Backofen")})
+	b.devices = append(b.devices, &Device{name: "Backofen", haID: haIDFor("Backofen"), topics: newDeviceTopics(testLayout(pinRoot), haIDFor("Backofen"))})
 
 	// The two device documents are in the wanted set and the sweep cannot
 	// find them: OwnsConfigTopic declines the device-document form, so they

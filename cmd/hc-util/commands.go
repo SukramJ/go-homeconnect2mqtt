@@ -106,6 +106,7 @@ func parseCmd(args []string, stdout, stderr io.Writer) error {
 		fprintln(stdout, "devices:")
 		for _, p := range profiles {
 			fprintf(stdout, "  - name: %s\n", p.HaID)
+			fprintf(stdout, "    haid: %s           # device segment of every MQTT topic\n", p.HaID)
 			fprintf(stdout, "    host: \"\"            # %s (mDNS) or set a manual IP\n", p.DefaultHost())
 			fprintf(stdout, "    connection_type: %s\n", p.ConnectionType)
 			fprintf(stdout, "    psk64: %q\n", p.PSK64)

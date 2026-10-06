@@ -6,13 +6,14 @@ package haplane
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/SukramJ/go-hamqtt/discovery"
-	"github.com/SukramJ/go-hamqtt/model"
 	"github.com/SukramJ/go-hamqtt/publisher"
 	hatopic "github.com/SukramJ/go-hamqtt/topic"
 )
@@ -57,29 +58,52 @@ func (c *capture) records() []record {
 	return append([]record(nil), c.pubs...)
 }
 
-// testLayout is a minimal topic.Layout: this package must not depend on
-// internal/hass (which depends on nothing here), and the layout's own
-// agreement with the daemon's builders is pinned in internal/hass.
-type testLayout struct{}
+// testLayout is the convention's own layout: this package must not depend
+// on internal/hass (which depends on nothing here), and the daemon layout's
+// agreement with its builders is pinned in internal/hass. What this package
+// needs from a layout is the topic.SmartHomeLayout capability, which is
+// what switches the runtime's `connected` vocabulary.
+func testLayout() hatopic.SmartHome {
+	l, err := hatopic.NewSmartHome("homeconnect")
+	if err != nil {
+		panic(err)
+	}
+	return l
+}
 
-func (testLayout) State(model.Slot) string        { return "homeconnect/dev/x/state" }
-func (testLayout) Command(model.Slot) string      { return "homeconnect/dev/x/set" }
-func (testLayout) Availability(model.Slot) string { return "homeconnect/dev/availability" }
-func (testLayout) Bridge() string                 { return "homeconnect/status" }
+const (
+	testConnected = "homeconnect/connected"
+	testState     = "homeconnect/status/HAID/BSH/x"
+)
 
-var _ hatopic.Layout = testLayout{}
-
-func newPlane(t *testing.T, mqttQoS int, retain bool) (*Plane, *capture) {
+func newPlane(t *testing.T, mqttQoS int) (*Plane, *capture) {
 	t.Helper()
 	c := &capture{}
 	return New(c, Config{
 		Prefix:      "homeassistant",
-		StatusTopic: "homeconnect/status",
-		Layout:      testLayout{},
+		StatusTopic: testConnected,
+		Layout:      testLayout(),
 		QoS:         QoS(mqttQoS),
-		Retain:      retain,
+		SetFilter:   "homeconnect/set/#",
 		Logger:      slog.New(slog.DiscardHandler),
 	}), c
+}
+
+// statusVal decodes the `val` of a status object off the wire.
+func statusVal(t *testing.T, payload []byte) any {
+	t.Helper()
+	var obj struct {
+		Val any   `json:"val"`
+		TS  int64 `json:"ts"`
+		LC  int64 `json:"lc"`
+	}
+	if err := json.Unmarshal(payload, &obj); err != nil {
+		t.Fatalf("%q is not a status object: %v", payload, err)
+	}
+	if obj.TS == 0 || obj.LC == 0 || obj.LC > obj.TS {
+		t.Errorf("%q: ts/lc missing or lc > ts", payload)
+	}
+	return obj.Val
 }
 
 // TestQoSTranslatesZeroToTheDeliberateSentinel is F9 at the one point the
@@ -120,34 +144,17 @@ func TestQoSRefusesAValueNobodyChose(t *testing.T) {
 }
 
 // TestEveryPublishCarriesTheStatedQoS reads the wire byte off the
-// transport for each plane in turn — discovery, state, birth — which is
-// the only place a silently-defaulted field becomes visible.
+// transport for each plane in turn — discovery, birth, retraction, will —
+// which is the only place a silently-defaulted field becomes visible. The
+// state plane is the exception, and it is asserted as one: status items are
+// QoS 0 by the convention whatever MQTT_QOS says (openccu-loom ADR 0083).
 func TestEveryPublishCarriesTheStatedQoS(t *testing.T) {
 	t.Parallel()
 	for _, mqttQoS := range []int{0, 1} {
-		// retain=false too, because the non-retained state path is
-		// publisher.StatePublisher.Pulse, whose OWN default is QoS 0 — the
-		// one field in the package that does not default to 1. A plane
-		// that stated StateConfig.QoS and forgot PulseQoS would publish a
-		// whole non-retained fleet at a level nobody chose, and only at
-		// MQTT_QOS: 1 would it be visible.
-		for _, retain := range []bool{true, false} {
-			pulsePlane, pulseCap := newPlane(t, mqttQoS, retain)
-			if err := pulsePlane.PublishState(t.Context(), "homeconnect/dev/x/state", []byte("42")); err != nil {
-				t.Fatalf("state publish: %v", err)
-			}
-			recs := pulseCap.records()
-			if len(recs) != 1 || int(recs[0].qos) != mqttQoS {
-				t.Errorf("MQTT_QOS %d retain %v: state reached the transport as %+v", mqttQoS, retain, recs)
-			}
-		}
-		p, c := newPlane(t, mqttQoS, true)
+		p, c := newPlane(t, mqttQoS)
 		ctx := t.Context()
 		if _, err := p.Publish(ctx, "homeassistant/sensor/dev/x/config", []byte(`{"a":1}`)); err != nil {
 			t.Fatalf("discovery publish: %v", err)
-		}
-		if err := p.PublishState(ctx, "homeconnect/dev/x/state", []byte("42")); err != nil {
-			t.Fatalf("state publish: %v", err)
 		}
 		if err := p.AnnounceOnline(ctx); err != nil {
 			t.Fatalf("announce: %v", err)
@@ -155,14 +162,20 @@ func TestEveryPublishCarriesTheStatedQoS(t *testing.T) {
 		if err := p.Retract(ctx, "homeassistant/sensor/dev/gone/config"); err != nil {
 			t.Fatalf("retract: %v", err)
 		}
+		if err := p.PublishStatus(ctx, testState, 42); err != nil {
+			t.Fatalf("state publish: %v", err)
+		}
 		recs := c.records()
 		if len(recs) != 4 {
 			t.Fatalf("MQTT_QOS %d: %d publishes, want 4", mqttQoS, len(recs))
 		}
 		for _, r := range recs {
-			if int(r.qos) != mqttQoS {
-				t.Errorf("MQTT_QOS %d: %s reached the transport at QoS %d — the operator's "+
-					"delivery guarantee moved (F9)", mqttQoS, r.topic, r.qos)
+			want := mqttQoS
+			if r.topic == testState {
+				want = 0
+			}
+			if int(r.qos) != want {
+				t.Errorf("MQTT_QOS %d: %s reached the transport at QoS %d, want %d", mqttQoS, r.topic, r.qos, want)
 			}
 		}
 		will, err := p.Will()
@@ -175,69 +188,68 @@ func TestEveryPublishCarriesTheStatedQoS(t *testing.T) {
 	}
 }
 
-// TestPublishStateHonoursMQTTRetain pins all four combinations of the
-// operator's MQTT_RETAIN against an empty and a non-empty payload.
-//
-// Neither library call can express the flag on its own:
-// publisher.StatePublisher.Publish is unconditionally retained and Pulse
-// unconditionally not, so a plane that reached for the first would
-// silently retain a fleet an operator deliberately runs non-retained, and
-// one that reached for the second would leave every entity blank until
-// its datapoint next changed.
-func TestPublishStateHonoursMQTTRetain(t *testing.T) {
+// TestPublishStatusIsARetainedStatusObject pins the payload shape every
+// discovery payload reads through `value_json.val`, and the one way to say
+// "no value": an empty retained payload, never `{"val":null}`.
+func TestPublishStatusIsARetainedStatusObject(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name    string
-		retain  bool
-		payload []byte
-		wantRet bool
+		name  string
+		value any
+		want  any // decoded val; nil means the empty retraction
 	}{
-		{"retained, a value", true, []byte("42"), true},
-		{"retained, no value: the retraction the old code performed by accident", true, nil, true},
-		{"not retained, a value", false, []byte("42"), false},
-		{"not retained, no value", false, nil, false},
+		{"a number", 42, float64(42)},
+		{"a float", 3.5, 3.5},
+		{"a boolean", true, true},
+		{"a token", "BSH.Common.EnumType.PowerState.On", "BSH.Common.EnumType.PowerState.On"},
+		{"an object", map[string]any{"a": float64(1)}, map[string]any{"a": float64(1)}},
+		{"no value", nil, nil},
 	}
 	for _, tc := range cases {
-		p, c := newPlane(t, 1, tc.retain)
-		if err := p.PublishState(t.Context(), "homeconnect/dev/x/state", tc.payload); err != nil {
+		p, c := newPlane(t, 1)
+		if err := p.PublishStatus(t.Context(), testState, tc.value); err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
 		recs := c.records()
-		if len(recs) != 1 {
-			t.Fatalf("%s: %d publishes, want 1", tc.name, len(recs))
+		if len(recs) != 1 || !recs[0].retain || recs[0].qos != 0 {
+			t.Fatalf("%s: wire carried %+v, want one retained QoS 0 publish", tc.name, recs)
 		}
-		if recs[0].retain != tc.wantRet {
-			t.Errorf("%s: retain = %v, want %v (MQTT_RETAIN is %v)",
-				tc.name, recs[0].retain, tc.wantRet, tc.retain)
+		if tc.want == nil {
+			if len(recs[0].payload) != 0 {
+				t.Errorf("%s: payload %q, want the empty retraction", tc.name, recs[0].payload)
+			}
+			continue
 		}
-		if len(recs[0].payload) != len(tc.payload) {
-			t.Errorf("%s: payload %q, want %q", tc.name, recs[0].payload, tc.payload)
+		got, _ := json.Marshal(statusVal(t, recs[0].payload))
+		want, _ := json.Marshal(tc.want)
+		if !bytes.Equal(got, want) {
+			t.Errorf("%s: val = %s, want %s", tc.name, got, want)
 		}
 	}
 }
 
-// TestPublishStateDeduplicatesARetainedRepeat is the one behaviour this
-// step ADDS rather than preserves, so it is pinned in both directions.
+// TestPublishStatusDeduplicatesAnUnchangedVal is pinned in both directions.
 //
 // Every NOTIFY from an appliance reaches onUpdate whether or not anything
-// moved, so an unchanged value used to cost one retained broker write and
-// one Home Assistant state evaluation each time. A changed value must
-// still go out, which is the half a too-eager gate would break.
-func TestPublishStateDeduplicatesARetainedRepeat(t *testing.T) {
+// moved, so an unchanged value would cost one retained broker write and
+// one Home Assistant state evaluation each time — and with a status object
+// whose `ts` moves on every observation, a byte comparison would never see
+// a repeat at all. The gate compares `val`. A changed value must still go
+// out, which is the half a too-eager gate would break.
+func TestPublishStatusDeduplicatesAnUnchangedVal(t *testing.T) {
 	t.Parallel()
-	p, c := newPlane(t, 1, true)
-	const topic = "homeconnect/dev/x/state"
-	for _, payload := range []string{"Run", "Run", "Run", "Inactive", "Run"} {
-		if err := p.PublishState(t.Context(), topic, []byte(payload)); err != nil {
+	p, c := newPlane(t, 1)
+	for _, v := range []string{"Run", "Run", "Run", "Inactive", "Run"} {
+		if err := p.PublishStatus(t.Context(), testState, v); err != nil {
 			t.Fatal(err)
 		}
 	}
 	recs := c.records()
-	got := make([]string, 0, len(recs))
+	got := make([]any, 0, len(recs))
 	for _, r := range recs {
-		got = append(got, string(r.payload))
+		got = append(got, statusVal(t, r.payload))
 	}
-	want := []string{"Run", "Inactive", "Run"}
+	want := []any{"Run", "Inactive", "Run"}
 	if len(got) != len(want) {
 		t.Fatalf("wire carried %v, want %v", got, want)
 	}
@@ -248,19 +260,44 @@ func TestPublishStateDeduplicatesARetainedRepeat(t *testing.T) {
 	}
 }
 
-// TestNonRetainedStateIsNeverDeduplicated: an operator running
-// MQTT_RETAIN: false has edge-triggered consumers, and a gate that
-// swallowed a repeat would swallow an event.
-func TestNonRetainedStateIsNeverDeduplicated(t *testing.T) {
+// TestAStatusPublishIntoTheCommandTreeIsRefused: the command tree is
+// `<name>/set/#`, stated to the state plane as its collision guard — which
+// before 0.15.0 could not be stated at all, because the old command filter
+// matched every state topic (F4).
+func TestAStatusPublishIntoTheCommandTreeIsRefused(t *testing.T) {
 	t.Parallel()
-	p, c := newPlane(t, 1, false)
-	for range 3 {
-		if err := p.PublishState(t.Context(), "homeconnect/dev/x/state", []byte("Present")); err != nil {
+	p, c := newPlane(t, 1)
+	if err := p.PublishStatus(t.Context(), "homeconnect/set/HAID/BSH/x", 1); err == nil {
+		t.Error("a status publish into the command tree was accepted")
+	}
+	if n := len(c.records()); n != 0 {
+		t.Errorf("%d publishes reached the wire", n)
+	}
+}
+
+// TestRepublishStatusResendsTheCachedObjects is the "and on every
+// reconnect" half of the publish rule: the replay sends the bytes the
+// broker accepted, original `ts` included, without consulting the gate.
+func TestRepublishStatusResendsTheCachedObjects(t *testing.T) {
+	t.Parallel()
+	p, c := newPlane(t, 1)
+	ctx := t.Context()
+	for _, topic := range []string{testState, testState + "2"} {
+		if err := p.PublishStatus(ctx, topic, "Run"); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if n := len(c.records()); n != 3 {
-		t.Errorf("wire carried %d publishes, want 3 — a pulse is an event, not a state", n)
+	first := c.records()
+	n, err := p.RepublishStatus(ctx)
+	if err != nil || n != 2 {
+		t.Fatalf("RepublishStatus = (%d, %v), want (2, nil)", n, err)
+	}
+	replay := c.records()[len(first):]
+	for i, r := range replay {
+		if !bytes.Equal(r.payload, first[i].payload) || !r.retain {
+			t.Errorf("replay of %s = %q retained=%v, want the cached %q retained",
+				r.topic, r.payload, r.retain, first[i].payload)
+		}
 	}
 }
 
@@ -278,13 +315,10 @@ func TestNonRetainedStateIsNeverDeduplicated(t *testing.T) {
 // "already published".
 func TestReconnectOpensTheDedupGateAndRebuildsTheDiscoveryRuntime(t *testing.T) {
 	t.Parallel()
-	p, c := newPlane(t, 1, true)
+	p, c := newPlane(t, 1)
 	ctx := t.Context()
-	const (
-		stateTopic  = "homeconnect/dev/x/state"
-		configTopic = "homeassistant/sensor/dev/x/config"
-	)
-	if err := p.PublishState(ctx, stateTopic, []byte("Run")); err != nil {
+	const configTopic = "homeassistant/sensor/dev/x/config"
+	if err := p.PublishStatus(ctx, testState, "Run"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := p.Publish(ctx, configTopic, []byte(`{"a":1}`)); err != nil {
@@ -305,7 +339,7 @@ func TestReconnectOpensTheDedupGateAndRebuildsTheDiscoveryRuntime(t *testing.T) 
 		t.Errorf("the new runtime already claims %v — it inherited the old connection's beliefs", got)
 	}
 	before := len(c.records())
-	if err := p.PublishState(ctx, stateTopic, []byte("Run")); err != nil {
+	if err := p.PublishStatus(ctx, testState, "Run"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := p.Publish(ctx, configTopic, []byte(`{"a":1}`)); err != nil {
@@ -314,6 +348,51 @@ func TestReconnectOpensTheDedupGateAndRebuildsTheDiscoveryRuntime(t *testing.T) 
 	if n := len(c.records()) - before; n != 2 {
 		t.Errorf("the reconnect re-sent %d of the 2 unchanged payloads — a broker that came back "+
 			"without its retained store holds neither, and every entity stays blank", n)
+	}
+}
+
+// TestConnectedLevelSurvivesAReconnect pins `<name>/connected` across the
+// runtime swap. publisher.Runtime remembers the level, and Plane.Reconnect
+// throws the runtime away — so without the plane's own memory a broker
+// reconnect while every appliance is up would announce 1, and every entity
+// would sit unavailable until an appliance happened to reconnect too.
+func TestConnectedLevelSurvivesAReconnect(t *testing.T) {
+	t.Parallel()
+	p, c := newPlane(t, 1)
+	ctx := t.Context()
+	payloads := func() []string {
+		var out []string
+		for _, r := range c.records() {
+			if r.topic == testConnected {
+				out = append(out, string(r.payload))
+			}
+		}
+		return out
+	}
+	steps := []struct {
+		name string
+		do   func() error
+		want []string
+	}{
+		{"the first announce: no appliance yet", func() error { return p.AnnounceOnline(ctx) }, []string{"1"}},
+		{"an appliance connects", func() error { return p.SetConnected(ctx, discovery.ConnectedOperational) }, []string{"1", "2"}},
+		{"a repeat publishes nothing", func() error { return p.SetConnected(ctx, discovery.ConnectedOperational) }, []string{"1", "2"}},
+		{"a broker reconnect", func() error { p.Reconnect(); return p.AnnounceOnline(ctx) }, []string{"1", "2", "2"}},
+		{"the last appliance drops", func() error { return p.SetConnected(ctx, discovery.ConnectedBroker) }, []string{"1", "2", "2", "1"}},
+		{"another reconnect", func() error { p.Reconnect(); return p.AnnounceOnline(ctx) }, []string{"1", "2", "2", "1", "1"}},
+		{"a graceful stop", func() error { return p.AnnounceOffline(ctx) }, []string{"1", "2", "2", "1", "1", "0"}},
+	}
+	for _, st := range steps {
+		if err := st.do(); err != nil {
+			t.Fatalf("%s: %v", st.name, err)
+		}
+		if got := payloads(); strings.Join(got, ",") != strings.Join(st.want, ",") {
+			t.Fatalf("%s: connected carried %v, want %v", st.name, got, st.want)
+		}
+	}
+	will, err := p.Will()
+	if err != nil || will.Topic != testConnected || string(will.Payload) != "0" {
+		t.Errorf("will = %+v (%v), want 0 on %s", will, err, testConnected)
 	}
 }
 
@@ -345,11 +424,12 @@ func TestTransportRefusesUseBeforeItIsWired(t *testing.T) {
 
 // TestWillAgreesWithTheAnnouncements: the broker writes the will when
 // this daemon dies without a DISCONNECT and the daemon writes the
-// announcements itself, so the two must name one topic, two payloads and
-// one guarantee. A will nobody reads is indistinguishable from no will.
+// announcements itself, so the two must name one topic and one guarantee,
+// and the graceful stop must write what the will writes. A will nobody
+// reads is indistinguishable from no will.
 func TestWillAgreesWithTheAnnouncements(t *testing.T) {
 	t.Parallel()
-	p, c := newPlane(t, 1, true)
+	p, c := newPlane(t, 1)
 	will, err := p.Will()
 	if err != nil {
 		t.Fatalf("will: %v", err)
@@ -373,11 +453,11 @@ func TestWillAgreesWithTheAnnouncements(t *testing.T) {
 				r.qos, r.retain, will.QoS, will.Retain)
 		}
 	}
-	if string(recs[0].payload) != string(publisher.BirthPayload) {
-		t.Errorf("birth payload = %q", recs[0].payload)
+	if string(recs[0].payload) != "1" {
+		t.Errorf("birth payload = %q, want 1 (the broker is up, no appliance yet)", recs[0].payload)
 	}
-	if !bytes.Equal(recs[1].payload, will.Payload) {
-		t.Errorf("offline payload = %q, will payload = %q", recs[1].payload, will.Payload)
+	if !bytes.Equal(recs[1].payload, will.Payload) || string(will.Payload) != "0" {
+		t.Errorf("offline payload = %q, will payload = %q, want both 0", recs[1].payload, will.Payload)
 	}
 }
 
@@ -396,94 +476,11 @@ func TestStatusTopicDisagreementIsRefused(t *testing.T) {
 	}()
 	New(&capture{}, Config{
 		Prefix:      "homeassistant",
-		StatusTopic: "homeconnect/bridge/status", // the library default's shape, not this daemon's
-		Layout:      testLayout{},
+		StatusTopic: "homeconnect/status", // the pre-0.15.0 topic, not the layout's
+		Layout:      testLayout(),
 		QoS:         QoS(1),
 		Logger:      slog.New(slog.DiscardHandler),
 	})
-}
-
-// TestStateEncodingIsInertAndStatedAnyway names a field that cannot
-// change a byte, which is a blind spot a pin can never see: a mutation to
-// an inert field fails nothing, so nothing distinguishes "deliberately
-// stated" from "silently ignored".
-//
-// StateConfig.Encoding selects what publisher renders in PublishValue and
-// PublishComponentValue. This daemon renders its own state payload
-// (bridge.payloadFor: a localized enum label, a bare number, a JSON
-// object) and hands the BYTES to Publish, which never consults the
-// encoding — deliberately, because publisher's own renderer writes a Go
-// bool as "true"/"false" and a float with its own formatting, and those
-// are not this daemon's bytes.
-//
-// So the field is stated for the day a call site reaches for the
-// convenience: the zero Encoding is EnvelopeEncoding, which would wrap
-// every payload in JSON that the 667 configs already on the broker have no
-// value_template to read. This asserts the inertness in both directions —
-// perturbing the encoding changes nothing through Publish, and the two
-// encodings genuinely differ through the renderer — so a later reader can
-// tell which of the two it is looking at.
-func TestStateEncodingIsInertAndStatedAnyway(t *testing.T) {
-	t.Parallel()
-	const topic = "homeconnect/dev/x/state"
-	rendered := map[discovery.Encoding]string{}
-	for _, enc := range []discovery.Encoding{discovery.RawEncoding, discovery.EnvelopeEncoding} {
-		c := &capture{}
-		sp := publisher.NewStatePublisher(c, publisher.StateConfig{
-			QoS:      publisher.QoSAtLeastOnce,
-			PulseQoS: publisher.QoSAtLeastOnce,
-			Encoding: enc,
-			Logger:   slog.New(slog.DiscardHandler),
-		})
-		if _, err := sp.Publish(t.Context(), topic, []byte("Run")); err != nil {
-			t.Fatal(err)
-		}
-		if got := string(c.records()[0].payload); got != "Run" {
-			t.Errorf("encoding %v: Publish wrote %q, want the caller's own bytes", enc, got)
-		}
-		if _, err := sp.PublishValue(t.Context(), topic+"/v", "Run", true); err != nil {
-			t.Fatal(err)
-		}
-		rendered[enc] = string(c.records()[1].payload)
-	}
-	if rendered[discovery.RawEncoding] == rendered[discovery.EnvelopeEncoding] {
-		t.Fatalf("the two encodings render identically (%q), so stating one proves nothing",
-			rendered[discovery.RawEncoding])
-	}
-	if rendered[discovery.RawEncoding] != "Run" {
-		t.Errorf("RawEncoding rendered %q, want the bare value", rendered[discovery.RawEncoding])
-	}
-}
-
-// TestStateBytesReachTheWireUnwrapped is StateConfig.Encoding's only
-// observable consequence here, and the test exists because the field is
-// otherwise INERT — an inert field is a blind spot a pin can never see.
-//
-// This daemon renders its own state payload (bridge.payloadFor: a
-// localized enum label, a bare number, a JSON object) and hands the bytes
-// to Publish, so publisher's own renderer is never called and
-// StateConfig.Encoding never selects anything. It is stated anyway because
-// the zero value is EnvelopeEncoding and a later call to PublishValue —
-// the obvious convenience — would then wrap every payload in JSON that
-// the 667 configs already on the broker have no value_template to read.
-// What IS observable is that nothing wraps the bytes today, and that is
-// what this asserts.
-func TestStateBytesReachTheWireUnwrapped(t *testing.T) {
-	t.Parallel()
-	p, c := newPlane(t, 1, true)
-	for _, payload := range []string{"Run", "42", "3.5", `{"a":1}`, "Programm starten"} {
-		if err := p.PublishState(t.Context(), "homeconnect/dev/"+payload+"/state", []byte(payload)); err != nil {
-			t.Fatal(err)
-		}
-	}
-	for _, r := range c.records() {
-		if want := r.topic[len("homeconnect/dev/") : len(r.topic)-len("/state")]; string(r.payload) != want {
-			t.Errorf("wire carried %q, want %q — something rendered the payload", r.payload, want)
-		}
-	}
-	if discovery.RawEncoding == discovery.EnvelopeEncoding {
-		t.Fatal("the two encodings are the same value, so the Encoding field proves nothing")
-	}
 }
 
 // TestBypassForKeepsTheAvailabilityMarkersOffTheBreaker pins the
@@ -499,14 +496,13 @@ func TestStateBytesReachTheWireUnwrapped(t *testing.T) {
 // happens to succeed.
 func TestBypassForKeepsTheAvailabilityMarkersOffTheBreaker(t *testing.T) {
 	t.Parallel()
-	const status = "homeconnect/status"
+	const status = testConnected
 	gated, direct := &capture{}, &capture{}
 	p := New(BypassFor(status, gated, direct), Config{
 		Prefix:      "homeassistant",
 		StatusTopic: status,
-		Layout:      testLayout{},
+		Layout:      testLayout(),
 		QoS:         QoS(1),
-		Retain:      true,
 		Logger:      slog.New(slog.DiscardHandler),
 	})
 	ctx := t.Context()
@@ -519,7 +515,7 @@ func TestBypassForKeepsTheAvailabilityMarkersOffTheBreaker(t *testing.T) {
 	if _, err := p.Publish(ctx, "homeassistant/sensor/dev/x/config", []byte(`{"a":1}`)); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.PublishState(ctx, "homeconnect/dev/x/state", []byte("42")); err != nil {
+	if err := p.PublishStatus(ctx, testState, 42); err != nil {
 		t.Fatal(err)
 	}
 	if n := len(direct.records()); n != 2 {

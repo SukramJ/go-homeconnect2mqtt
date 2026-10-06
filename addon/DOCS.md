@@ -9,12 +9,13 @@ For a standard Home Assistant install with the Mosquitto broker:
    **`/share/homeconnect/`** (the add-on creates that folder on first start).
 2. Add one entry per appliance under **`devices`**. With the ZIPs in place you
    only need three fields:
-   - `name` — a logical name (used in MQTT topics).
+   - `name` — the appliance's name in Home Assistant.
    - `host` — the appliance's **LAN IP** (mDNS usually does not work from inside
      the container, so set an explicit IP).
    - `haid` — the appliance haId (in the ZIP's `<serial>.json` and the parse
-     log). It auto-fills `connection_type`, `psk64`/`iv64` and the description
-     from the matching ZIP. You can still set any of those explicitly to override.
+     log). It is the device segment of every MQTT topic, and it auto-fills
+     `connection_type`, `psk64`/`iv64` and the description from the matching
+     ZIP. You can still set any of those explicitly to override.
 3. Leave **`mqtt_server` empty** — the add-on auto-connects to the Home
    Assistant MQTT broker, and `hass_enable` is on by default, so entities appear
    automatically via MQTT discovery.
@@ -31,7 +32,9 @@ For a standard Home Assistant install with the Mosquitto broker:
 | `mqtt_port` | int | `1883` | MQTT broker port (only used when `mqtt_server` is a bare host). |
 | `mqtt_login` | str | `""` | MQTT username (only when `mqtt_server` is set). |
 | `mqtt_password` | password | `""` | MQTT password (only when `mqtt_server` is set). |
-| `mqtt_topic` | str | `homeconnect` | Base MQTT topic for published appliance state. |
+| `mqtt_topic` | str | `homeconnect` | The instance name: every topic is `<mqtt_topic>/<function>/…` (mqtt-smarthome 2.0). It is the **only** thing that keeps two instances on one broker apart — give each its own. The default `homeconnect` is also the default instance name of hobbyquaker's Node.js adapter `homeconnect2mqtt`; running both on one broker needs one of them renamed. One topic level: no `/`, `+` or `#`. |
+| `maintenance` | bool | `true` | The maintenance topics `<mqtt_topic>/maintenance/…` (runtime log level, process stats). See *Maintenance* below — and its security note. |
+| `stats_interval` | int | `60` | Seconds between `<mqtt_topic>/maintenance/stats`; `0` switches them off. |
 | `hass_enable` | bool | `true` | Publish Home Assistant MQTT discovery so entities appear automatically. |
 | `hass_discovery` | list(full\|curated) | `curated` | `curated` (default) publishes only the primary set, aligned with the entities the official Home Connect integration creates (~60 instead of ~590 across three appliances); `full` exposes every feature (the long tail disabled-by-default + categorized as diagnostic/config). **Switching `full` → `curated` on a running installation DELETES entities:** the ~510 components per appliance that `curated` drops are tombstoned in the device document, so Home Assistant removes them along with their recorder history and anything referencing them. The add-on logs `hass.curated_components_omitted` with the count on start; see *Removing an entity* below. |
 | `hass_discovery_refresh` | bool | `false` | One-shot migration. On start the add-on clears all its retained discovery configs and re-creates the entities, so Home Assistant picks up changes it caches at first registration (entity **category**, name). Set it `true`, restart, then set it back to `false`. Resets per-entity room/custom-name; entity ids and automations are preserved. |
@@ -43,9 +46,9 @@ For a standard Home Assistant install with the Mosquitto broker:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `name` | str | Logical device name; used in MQTT topics. **Required.** |
+| `name` | str | The appliance's name in Home Assistant, and the slug of its discovery document. **Required.** |
 | `host` | str | Appliance LAN IP (or hostname). **Required** (not in the profile). |
-| `haid` | str? | Appliance haId. With the ZIP in `/share/homeconnect` this alone auto-fills `connection_type`, `psk64`/`iv64` and `description`. |
+| `haid` | str? | Appliance haId — the device segment of every MQTT topic. With the ZIP in `/share/homeconnect` this alone auto-fills `connection_type`, `psk64`/`iv64` and `description`. Without it the haId is read from the description the add-on parsed, else from the description's file name (`<haId>.json`, logged at warn); only when none of these yields an haId does the add-on refuse to start, naming the device. |
 | `connection_type` | list(AES\|TLS)? | Optional; auto-filled from the ZIP via `haid`. `AES` (newer) or `TLS` (older). |
 | `psk64` | password? | Optional; auto-filled from the ZIP via `haid`. The pre-shared key. |
 | `iv64` | password? | Optional; AES only; auto-filled from the ZIP. |
@@ -53,9 +56,28 @@ For a standard Home Assistant install with the Mosquitto broker:
 
 ## Topics
 
-State is published under `<mqtt_topic>/<device>/<Feature/Path>/state`; writable
-features listen on `…/set`; availability/connection are at
-`<mqtt_topic>/<device>/availability` and `…/connection_state`.
+Since 0.15.0 the topics follow mqtt-smarthome 2.0, `<mqtt_topic>/<function>/<item…>`,
+with the appliance's **haId** as the device segment:
+
+| Topic | Before 0.15.0 |
+| --- | --- |
+| `<mqtt_topic>/connected` — `0` add-on stopped, `1` no appliance reachable, `2` operational | `<mqtt_topic>/status` (`online`/`offline`) |
+| `<mqtt_topic>/info` — what is running (`go-homeconnect2mqtt`, version, …) | — |
+| `<mqtt_topic>/status/<haid>/<Feature/Path>` — `{"val":…,"ts":…,"lc":…}` | `<mqtt_topic>/<name>/<Feature/Path>/state` |
+| `<mqtt_topic>/set/<haid>/<Feature/Path>` — plain value or `{"val":…}` | `…/<Feature/Path>/set` |
+| `<mqtt_topic>/status/<haid>/online` — `val` `true`/`false` | `<mqtt_topic>/<name>/availability` |
+| `<mqtt_topic>/status/<haid>/connection_state` | `<mqtt_topic>/<name>/connection_state` |
+
+Values are JSON (`true`/`false`, numbers) and an enum carries its token
+(`On`, `Run`), not the translated label — Home Assistant still shows the
+labels. Home Assistant entities are **not** affected: discovery re-points them
+and keeps their ids, history and automations. Anything else that read the old
+topics (Node-RED, scripts) has to move. The add-on clears its old retained
+topics itself on every start — exactly the ones it published for the
+appliances in `devices`, never a prefix; an appliance whose `name` was
+`status`, `set`, `get`, `info`, `meta`, `connected` or `maintenance` keeps its
+old topics, which have to be cleared by hand. See the main README for the
+full table and the migration notes.
 
 Home Assistant discovery is one retained **device document** per appliance, at
 `<hass_base_topic>/device/<appliance slug>/config` — for a `devices` entry named
@@ -97,8 +119,10 @@ by a second instance of this add-on — which addresses the same topic, because
 `mqtt_topic` appears in neither the discovery prefix nor the appliance slug —
 is judged component by component: a component is carried forward only when
 its payload names a topic **only this instance renders**, which is
-`<mqtt_topic>/status` or `<mqtt_topic>/<appliance>/availability`. A sibling
-instance's entities are therefore never deleted.
+`<mqtt_topic>/connected` or `<mqtt_topic>/status/<haid>/online` (and, in a
+document an earlier version left, `<mqtt_topic>/status` or
+`<mqtt_topic>/<appliance>/availability`). A sibling instance's entities are
+therefore never deleted.
 
 The match is exact, not "starts with our root", and that distinction is the
 guarantee itself: a prefix test claimed every component of an instance rooted
@@ -119,6 +143,21 @@ WARN hass.curated_components_omitted device=Geschirrspüler omitted=510 publishe
 
 — and setting the option back to `full` re-creates the entities, but not
 their history.
+
+## Maintenance
+
+With `maintenance` on (the default) the add-on listens on
+`<mqtt_topic>/maintenance/set/loglevel` (`error`, `warn`, `info` or `debug`,
+until the next start) and publishes process statistics on
+`<mqtt_topic>/maintenance/stats` every `stats_interval` seconds.
+`<mqtt_topic>/maintenance/set/restart` is refused and logged: a restart is a
+clean exit, and the Supervisor does not start an add-on again after one —
+restart the add-on from Home Assistant instead.
+
+**Security.** Anyone who may publish on the broker can change the log level
+through these topics. Give the add-on's MQTT user ACLs for `<mqtt_topic>/#`
+and the discovery prefix only, and switch `maintenance` off on a broker that
+cannot be secured.
 
 ## Notes
 

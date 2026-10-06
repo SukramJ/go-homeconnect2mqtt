@@ -8,27 +8,15 @@
 package bridge
 
 import (
-	"encoding/json"
-	"strconv"
-
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 )
 
-// availability payload values. Spelled once in internal/hass, because the
-// entity that reads this topic is told there which two words to expect
-// (F1); a third spelling here could drift from it silently.
-const (
-	availOnline  = hass.PayloadAvailable
-	availOffline = hass.PayloadNotAvailable
-)
-
-// payloadNone is Home Assistant's "no value" payload: an mqtt select clears its
-// selection and an enum sensor goes unknown. An empty payload would only be
-// ignored, leaving the last value in place.
+// payloadNone is Home Assistant's "no value" state: an mqtt select clears its
+// selection and an enum sensor goes unknown when its value template renders
+// it. It is published as the `val` of a program item that has no program to
+// show — see [statusValue].
 const payloadNone = "None"
 
 // deviceTopics is this package's view of the shared topic layout in
@@ -39,8 +27,8 @@ type deviceTopics struct {
 	layout.Device
 }
 
-func newDeviceTopics(rootTopic, device string) deviceTopics {
-	return deviceTopics{Device: layout.NewDevice(rootTopic, device)}
+func newDeviceTopics(inst layout.Instance, haID string) deviceTopics {
+	return deviceTopics{Device: inst.Device(haID)}
 }
 
 func (t deviceTopics) state(e *homeconnect.Entity) string {
@@ -52,42 +40,36 @@ func isProgramKind(k profile.EntryKind) bool {
 	return k == profile.KindActiveProgram || k == profile.KindSelectedProgram
 }
 
-// payloadFor renders an entity's display value as an MQTT payload.
-func payloadFor(e *homeconnect.Entity, lang string) string {
+// statusValue is an entity's value as the `val` of its status object
+// (mqtt-smarthome 2.0 §5.2): a JSON boolean, a JSON number, a string, or the
+// structured value an Object feature carries. Nil means "no value", which
+// the plane publishes as an empty retained payload.
+//
+// An enum carries its TOKEN — the member name the appliance speaks, e.g.
+// "BSH.Common.EnumType.PowerState.On" — and never the localized label it
+// used to: a label changes with LANGUAGE and is not what a write has to
+// carry back (openccu-loom ADR 0083). The labels live in the discovery
+// payload, which maps between the two for Home Assistant.
+func statusValue(e *homeconnect.Entity) any {
 	v := e.Value()
 	if v == nil {
-		return ""
+		return nil
 	}
 	// An active/selected program reported as a raw uid — idle (uid 0) or a
 	// program the profile does not name — publishes "None" so the program
 	// select/sensor clears instead of rejecting a value that is not one of its
 	// options. The raw uid survives as a string when the element carries no
 	// type, so an unresolved enum member counts as raw here too.
+	//
+	// "None" rather than an empty payload, because an empty retained payload
+	// renders nothing through the value template and Home Assistant keeps the
+	// last program on display; and rather than `{"val":null}`, which the
+	// status object refuses. It is a stable token like every other `val`.
 	if isProgramKind(e.Desc.Kind) {
 		s, ok := v.(string)
 		if !ok || (e.Desc.IsEnum() && !e.HasEnumName(s)) {
 			return payloadNone
 		}
 	}
-	switch t := v.(type) {
-	case string:
-		if e.Desc.IsEnum() {
-			return i18n.EnumLabel(t, lang) // localized dropdown/enum value
-		}
-		return t
-	case bool:
-		return strconv.FormatBool(t)
-	case int:
-		return strconv.Itoa(t)
-	case int64:
-		return strconv.FormatInt(t, 10)
-	case float64:
-		return strconv.FormatFloat(t, 'f', -1, 64)
-	default:
-		// Object values (parsed JSON) are re-marshalled.
-		if b, err := json.Marshal(v); err == nil {
-			return string(b)
-		}
-		return ""
-	}
+	return v
 }

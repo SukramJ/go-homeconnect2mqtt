@@ -59,7 +59,8 @@ type Config struct {
 	// Prefix is HASS_BASE_TOPIC, the discovery prefix.
 	Prefix string
 
-	// StatusTopic is the daemon's own availability topic, <MQTT_TOPIC>/status.
+	// StatusTopic is the daemon's own availability topic,
+	// <MQTT_TOPIC>/connected.
 	//
 	// It is stated even though Layout renders it, and that IS the
 	// assertion: publisher.New fills an empty StatusTopic from the layout
@@ -74,13 +75,22 @@ type Config struct {
 	Layout hatopic.Layout
 
 	// QoS is MQTT_QOS in the publisher vocabulary; see [QoS]. It governs
-	// the discovery publishes, the retractions, the birth and death
-	// markers, the Last Will and the orphan sweep's snapshot window.
+	// the discovery publishes, the retractions, the `connected` markers,
+	// the Last Will and the snapshot windows. It does NOT govern the state
+	// plane: status items are QoS 0 by the convention (mqtt-smarthome 2.0
+	// §4, openccu-loom ADR 0083), whatever the operator set here.
 	QoS publisher.QoS
 
-	// Retain is MQTT_RETAIN, which this daemon applies to the state
-	// plane. See [Plane.PublishState] for what it selects between.
-	Retain bool
+	// SetFilter is the subscription that covers every command topic,
+	// `<name>/set/#`, stated to the state plane as its collision guard.
+	//
+	// Before 0.15.0 this could not be stated at all: the command filter was
+	// "<root>/<device>/#", which matched every state topic of the device by
+	// construction, and stating it would have refused all 687 state
+	// publishes per appliance (F4). The function now sits at the second
+	// level, so the two trees are disjoint by an MQTT filter and the guard
+	// the library offers can finally be used.
+	SetFilter string
 
 	// BrokerMaxPacketSize reports the largest packet the broker said it
 	// would accept, and whether that answer is known at all.
@@ -132,6 +142,22 @@ type Plane struct {
 	// installed base's delivery guarantee, with a broker capture as the
 	// only evidence — and it is why internal/haplane/qos.go exists.
 	snapshotQoS byte
+
+	// replayMu makes the reconnect replay exclusive. Every status publish
+	// holds it shared; [Plane.RepublishStatus] holds it exclusively, so no
+	// device's newer value can be written between the replay's snapshot of
+	// a topic and its resend of the older one — publisher.StatePublisher
+	// requires one writer per topic at a time, and the replay is a second
+	// writer of every topic.
+	replayMu sync.RWMutex
+
+	// connMu serialises `<name>/connected` and remembers the level the
+	// daemon last asked for. The level lives here rather than only in the
+	// runtime because [Plane.Reconnect] replaces the runtime, and a fresh
+	// one starts at 1 — a reconnect must not forget that the appliances are
+	// up.
+	connMu    sync.Mutex
+	connected int
 }
 
 // resolveWireQoS is publisher's own resolveQoS, which is unexported.
@@ -175,34 +201,30 @@ func New(tr publisher.Transport, cfg Config) *Plane {
 		},
 		logger:      logger,
 		snapshotQoS: resolveWireQoS("Config.QoS", cfg.QoS),
+		connected:   discovery.ConnectedBroker,
 	}
 	p.rt.Store(p.newRT())
+	var filters []string
+	if cfg.SetFilter != "" {
+		filters = []string{cfg.SetFilter}
+	}
 	p.state = publisher.NewStatePublisher(tr, publisher.StateConfig{
-		// Both levels are stated. QoS's zero value is QoSUnset (QoS 1)
-		// and PulseQoS's default is QoS 0, so a struct that set only the
-		// first would publish a non-retained state at a level the
-		// operator never chose.
-		QoS:      cfg.QoS,
-		PulseQoS: cfg.QoS,
-		// RawEncoding, not the library default: this daemon publishes the
-		// bare value and no discovery payload carries a value_template.
-		// The zero Encoding is EnvelopeEncoding, which would make every
-		// state topic unreadable by the configs already on the broker.
-		Encoding: discovery.RawEncoding,
-		// CommandFilters is deliberately EMPTY, and that is a finding
-		// rather than an omission. The guard refuses a state publish whose
-		// topic matches one of the consumer's command filters. This
-		// daemon's command filter is "<root>/<device>/#" — the feature
-		// path is variable-depth, so no fixed-arity filter covers the
-		// command tree — and it therefore matches every state topic of the
-		// device by construction. Stating it here would refuse all 687
-		// state publishes per appliance. The disjointness this daemon
-		// actually has is by SUFFIX ("/set" against "/state"), which an
-		// MQTT filter cannot express and publisher.MatchFilter cannot see;
-		// it is enforced by layout.Device.Relative before dispatch, and by
-		// MQTT 5.0 No Local at the broker. See F4, and
-		// TestCommandFilterCannotBeStatedToTheStatePlane.
-		Logger: logger,
+		// Both levels are stated, and both are QoS 0: mqtt-smarthome 2.0
+		// §4 publishes status at QoS 0, and MQTT_QOS no longer reaches this
+		// plane. Stating them rather than leaning on the status-object
+		// default keeps the pair equal by construction (the library warns
+		// when only one is stated).
+		QoS:      publisher.QoSAtMostOnce,
+		PulseQoS: publisher.QoSAtMostOnce,
+		// The status object, {"val","ts","lc"}, which every discovery
+		// payload reads through `value_json.val`. The dedup gate compares
+		// `val` only, so an appliance re-reporting an unchanged value
+		// publishes nothing and keeps its `lc`.
+		Encoding: discovery.StatusObjectEncoding,
+		// `<name>/set/#`: a state publish that would land in this daemon's
+		// own command tree is refused rather than echoed into the router.
+		CommandFilters: filters,
+		Logger:         logger,
 	})
 	return p
 }
@@ -246,10 +268,36 @@ func (p *Plane) Reconnect() {
 	p.state.Reset()
 }
 
-// AnnounceOnline publishes the retained birth marker on the status topic.
-func (p *Plane) AnnounceOnline(ctx context.Context) error { return p.Runtime().AnnounceOnline(ctx) }
+// AnnounceOnline publishes `<name>/connected` at the level the daemon last
+// asked for — 1 while no appliance is reachable, 2 once one is — on the
+// current runtime. Call it on every (re)connect, after [Plane.Reconnect]:
+// the broker publishes the will (0) on the drop, and the fresh runtime
+// starts at 1 whatever the appliances are doing.
+func (p *Plane) AnnounceOnline(ctx context.Context) error {
+	p.connMu.Lock()
+	defer p.connMu.Unlock()
+	rt := p.Runtime()
+	if p.connected != discovery.ConnectedBroker {
+		// A transition on the fresh runtime publishes the level itself.
+		if changed, err := rt.SetConnected(ctx, p.connected); changed {
+			return err
+		}
+	}
+	return rt.AnnounceOnline(ctx)
+}
 
-// AnnounceOffline publishes the retained death marker — the counterpart a
+// SetConnected moves `<name>/connected` between 1 (broker reachable, no
+// appliance reachable) and 2 (operational). A repeat of the current level
+// publishes nothing. The level is remembered across [Plane.Reconnect].
+func (p *Plane) SetConnected(ctx context.Context, level int) error {
+	p.connMu.Lock()
+	defer p.connMu.Unlock()
+	p.connected = level
+	_, err := p.Runtime().SetConnected(ctx, level)
+	return err
+}
+
+// AnnounceOffline publishes `<name>/connected` 0 — the counterpart a
 // graceful DISCONNECT suppresses the Last Will for.
 func (p *Plane) AnnounceOffline(ctx context.Context) error { return p.Runtime().AnnounceOffline(ctx) }
 
@@ -351,35 +399,45 @@ func (p *Plane) Retract(ctx context.Context, topics ...string) error {
 // Declared is every discovery config topic this process currently claims.
 func (p *Plane) Declared() []string { return p.Runtime().Declared() }
 
-// PublishState writes one entity-state, availability or connection-state
-// payload, honouring MQTT_RETAIN.
+// PublishStatus writes one status item — a feature value, an appliance's
+// `online` or its `connection_state` — as a retained status object, and
+// reports nothing on an unchanged `val`.
 //
-// The branch is the whole reason this method exists rather than a direct
-// call. publisher.StatePublisher.Publish is unconditionally retained and
-// publisher.StatePublisher.Pulse unconditionally not, so neither alone can
-// express an operator flag that selects between them — and picking the
-// first would silently retain a fleet that an operator deliberately runs
-// non-retained. The four combinations reproduce exactly what this daemon
-// put on the wire before the plane moved:
-//
-//	retain + payload   -> Publish  (retained, dedup-gated)
-//	retain + empty     -> Evict    (retained, empty: the retraction the
-//	                                old code performed by accident)
-//	no retain + any    -> Pulse    (not retained, not deduplicated)
-//
-// An empty payload is reachable — payloadFor renders a nil value and a
-// value it cannot marshal as no bytes at all — and publisher rejects it
-// with ErrEmptyStatePayload rather than quietly retracting, which is why
-// saying so is this method's job and not the caller's.
-func (p *Plane) PublishState(ctx context.Context, topic string, payload []byte) error {
-	if !p.cfg.Retain {
-		return p.state.Pulse(ctx, topic, payload)
-	}
-	if len(payload) == 0 {
+// A nil value clears the item: an empty retained payload is the
+// convention's "no value" (mqtt-smarthome 2.0 §5.1), and the library
+// refuses `{"val":null}` because Home Assistant would read it as the string
+// "None". payloadFor's predecessor reached the same retraction for a value
+// it could not render.
+func (p *Plane) PublishStatus(ctx context.Context, topic string, value any) error {
+	p.replayMu.RLock()
+	defer p.replayMu.RUnlock()
+	if value == nil {
 		return p.state.Evict(ctx, topic)
 	}
-	_, err := p.state.Publish(ctx, topic, payload)
+	_, err := p.state.PublishStatus(ctx, topic, publisher.Observation{Value: value})
 	return err
+}
+
+// RepublishStatus re-sends every status item this process has published,
+// with its original `ts` and `lc` — the "and on every (re)connect" half of
+// the publish rule (mqtt-smarthome 2.0 §3.2): a broker that came back
+// without its retained store holds nothing, and a static feature would
+// otherwise stay blank until it next changed, which may be never.
+//
+// It is exclusive against [Plane.PublishStatus]; see Plane.replayMu.
+func (p *Plane) RepublishStatus(ctx context.Context) (int, error) {
+	p.replayMu.Lock()
+	defer p.replayMu.Unlock()
+	return p.state.Republish(ctx)
+}
+
+// Evict clears retained topics with an empty payload, at the state plane's
+// QoS. It is what the migration sweep clears the old layout's leftovers
+// through.
+func (p *Plane) Evict(ctx context.Context, topics ...string) error {
+	p.replayMu.RLock()
+	defer p.replayMu.RUnlock()
+	return p.state.Evict(ctx, topics...)
 }
 
 // Close finishes with the current discovery runtime.
@@ -441,6 +499,36 @@ func (p *Plane) Snapshot(
 	window time.Duration,
 	visit func(topic string, payload []byte) (done bool),
 ) error {
+	return p.snapshot(ctx, []string{filter}, false, window, visit)
+}
+
+// SnapshotRetained is [Plane.Snapshot] over several filters at once, one
+// window for all of them, delivering only RETAINED messages.
+//
+// The migration sweep reads what the broker holds, not what is being
+// published while it looks — and its own status publishes, which an open
+// subscription echoes back without the retain flag, are exactly the
+// traffic it must not mistake for leftovers. Several filters in one window
+// because the sweep's subscriptions are narrow on purpose: one wide
+// `<name>/#` would overlap the command tree, and a broker sends one copy
+// per matching subscription, so a command arriving inside the window would
+// reach its handler twice.
+func (p *Plane) SnapshotRetained(
+	ctx context.Context,
+	filters []string,
+	window time.Duration,
+	visit func(topic string, payload []byte) (done bool),
+) error {
+	return p.snapshot(ctx, filters, true, window, visit)
+}
+
+func (p *Plane) snapshot(
+	ctx context.Context,
+	filters []string,
+	retainedOnly bool,
+	window time.Duration,
+	visit func(topic string, payload []byte) (done bool),
+) error {
 	if p.tr == nil {
 		return errors.New("haplane: snapshot without a transport")
 	}
@@ -463,8 +551,8 @@ func (p *Plane) Snapshot(
 		complete = make(chan struct{})
 		once     sync.Once
 	)
-	gated := func(topic string, payload []byte, _ bool) {
-		if len(payload) == 0 {
+	gated := func(topic string, payload []byte, retained bool) {
+		if len(payload) == 0 || (retainedOnly && !retained) {
 			return
 		}
 		visitMu.Lock()
@@ -476,10 +564,28 @@ func (p *Plane) Snapshot(
 			once.Do(func() { close(complete) })
 		}
 	}
-	// The same level the sweep window subscribes at, resolved once at
-	// construction rather than spelled again here. See Plane.snapshotQoS.
-	if err := p.tr.Subscribe(ctx, filter, p.snapshotQoS, gated); err != nil {
-		return fmt.Errorf("haplane: snapshot subscribe %s: %w", filter, err)
+	// On a context of its own: the caller's may already be cancelled, and
+	// that is precisely the case where leaving the subscription installed
+	// does the most damage.
+	teardown := func() {
+		tctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), snapshotTeardown)
+		defer cancel()
+		for _, filter := range filters {
+			if err := p.tr.Unsubscribe(tctx, filter); err != nil {
+				p.logger.Warn("haplane.snapshot_unsubscribe",
+					slog.String("filter", filter), slog.String("err", err.Error()))
+			}
+		}
+	}
+	for i, filter := range filters {
+		// The same level the sweep window subscribes at, resolved once at
+		// construction rather than spelled again here. See
+		// Plane.snapshotQoS.
+		if err := p.tr.Subscribe(ctx, filter, p.snapshotQoS, gated); err != nil {
+			filters = filters[:i]
+			teardown()
+			return fmt.Errorf("haplane: snapshot subscribe %s: %w", filter, err)
+		}
 	}
 	timer := time.NewTimer(window)
 	defer timer.Stop()
@@ -492,14 +598,6 @@ func (p *Plane) Snapshot(
 	closed = true
 	visitMu.Unlock()
 
-	// On a context of its own: the caller's may already be cancelled, and
-	// that is precisely the case where leaving the subscription installed
-	// does the most damage.
-	teardown, cancel := context.WithTimeout(context.WithoutCancel(ctx), snapshotTeardown)
-	defer cancel()
-	if err := p.tr.Unsubscribe(teardown, filter); err != nil {
-		p.logger.Warn("haplane.snapshot_unsubscribe",
-			slog.String("filter", filter), slog.String("err", err.Error()))
-	}
+	teardown()
 	return ctx.Err()
 }

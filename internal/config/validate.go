@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net"
 	"strings"
+
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 )
 
 // allowedLanguages is the whitelist for the display language.
@@ -45,8 +47,12 @@ func Validate(c *Config) error {
 	}
 	if c.MQTTTopic == "" {
 		add("MQTT_TOPIC is required")
+	} else if _, err := layout.New(c.MQTTTopic); err != nil {
+		// The instance name is one topic level (mqtt-smarthome 2.0 §3).
+		add("MQTT_TOPIC %q is not a valid instance name: it must not contain /, + or #", c.MQTTTopic)
 	}
 	rangeCheck("MQTT_QOS", c.QoSLevel(), 0, 1)
+	rangeCheck("MQTT_STATS_INTERVAL", c.StatsIntervalSeconds(), 0, 86400)
 	// Both-or-neither for MQTT credentials.
 	if (c.MQTTLogin == "") != (c.MQTTPassword == "") {
 		add("MQTT_LOGIN and MQTT_PASSWORD must both be set or both empty")

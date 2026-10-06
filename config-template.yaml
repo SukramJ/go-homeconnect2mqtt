@@ -6,9 +6,21 @@
 MQTT_SERVER: "tcp://localhost:1883"
 MQTT_LOGIN: ""
 MQTT_PASSWORD: ""
+# MQTT_TOPIC is the instance name: every topic is <MQTT_TOPIC>/<function>/...
+# (mqtt-smarthome 2.0). It is the ONLY thing that keeps two instances on one
+# broker apart — give each its own. The default "homeconnect" is also the
+# default instance name of hobbyquaker's Node.js adapter homeconnect2mqtt;
+# running both on one broker needs one of them renamed. One topic level:
+# no "/", "+" or "#".
 MQTT_TOPIC: "homeconnect"
+# QoS of the discovery documents, <MQTT_TOPIC>/connected and the Last Will.
+# Status items are always QoS 0 and retained, `set` is subscribed at QoS 1.
 MQTT_QOS: 1
-MQTT_RETAIN: true
+# Maintenance topics (<MQTT_TOPIC>/maintenance/...): runtime log level,
+# restart under a supervisor, process stats. Anyone who may publish on the
+# broker can use them — secure the broker with ACLs or switch this off.
+MQTT_MAINTENANCE: true
+MQTT_STATS_INTERVAL: 60  # seconds between <MQTT_TOPIC>/maintenance/stats; 0 = off
 
 # --- Home Assistant discovery ---
 HASS_ENABLE: true

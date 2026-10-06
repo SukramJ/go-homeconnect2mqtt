@@ -78,13 +78,19 @@ func (r *bundleRecorder) written() int {
 //   - `platform` moves out of the topic and into the entry, because a
 //     document's components are not addressed by platform any more.
 //
-// Everything else — every topic, every `unique_id`, every
-// `default_entity_id`, both availability sources, `availability_mode`,
-// `options`, `device_class`, `payload_press` — must be byte-identical to
-// the file pinned before the library existed. Those are the strings Home
-// Assistant keys its registries on and has a migration path for none of;
-// a document that moved one would not migrate a user's fleet, it would
-// replace it.
+// Since 0.15.0 the pins are the rendering BEFORE the mqtt-smarthome move, so
+// the keys the convention owns ([conventionKeys]: the state and command
+// topics, the availability list and the two templates) are enumerated too,
+// and each is asserted against its exact re-pointed form by
+// [checkRepointed] rather than dropped.
+//
+// Everything else — every `unique_id`, every `default_entity_id`,
+// `availability_mode`, `options` in their order, `device_class`,
+// `payload_press` — must be byte-identical to the file pinned before the
+// library existed. Those are the strings Home Assistant keys its registries
+// on and has a migration path for none of; a document that moved one would
+// not migrate a user's fleet, it would replace it. This is the proof that
+// the 0.15.0 document re-points every entity and re-keys none.
 //
 // It runs over all four pinned configurations, which is 2 238 components.
 func TestTheDocumentsComponentsArePinnedPayloads(t *testing.T) {
@@ -95,7 +101,7 @@ func TestTheDocumentsComponentsArePinnedPayloads(t *testing.T) {
 			if tc.enriched {
 				d.SetEnricher(pinEnricher(t))
 			}
-			b, err := d.BundleFor(tc.device, pincatalog.Info, pinEntities(t))
+			b, err := d.BundleFor(tc.device, goldenHaID, pincatalog.Info, pinEntities(t))
 			if err != nil {
 				t.Fatalf("BundleFor: %v", err)
 			}
@@ -106,6 +112,11 @@ func TestTheDocumentsComponentsArePinnedPayloads(t *testing.T) {
 			}
 			for _, row := range want {
 				platform, key := platformAndKeyOf(t, row.Topic)
+				// The node id — the discovery topic's segment, and the
+				// slug of the device NAME, not of its haId.
+				if parsed, _ := publisher.ParseConfigTopic(goldenPrefix, row.Topic); b.NodeID != parsed.NodeID {
+					t.Errorf("%s: the document's node id %q is not the pinned %q", key, b.NodeID, parsed.NodeID)
+				}
 				comp, ok := b.Components[key]
 				if !ok {
 					t.Errorf("%s is pinned and the document has no component %q", row.Topic, key)
@@ -115,18 +126,14 @@ func TestTheDocumentsComponentsArePinnedPayloads(t *testing.T) {
 					t.Errorf("%s: component platform %q, topic says %q", key, comp.Platform, platform)
 				}
 				got := decodeComponent(t, comp)
-				// The two enumerated differences, applied to the pin rather
+				checkRepointed(t, tc.device, row, goldenRow{Topic: row.Topic, Payload: got})
+				// The enumerated differences, applied to the pin rather
 				// than to the component: a key silently missing from the
 				// component then still fails.
-				expect := map[string]any{}
-				for k, v := range row.Payload {
-					if k == "device" {
-						continue
-					}
-					expect[k] = v
-				}
+				expect := withoutConvention(row).Payload
+				delete(expect, "device")
 				expect["platform"] = platform
-				compareJSON(t, key, expect, got)
+				compareJSON(t, key, expect, withoutConvention(goldenRow{Payload: got}).Payload)
 			}
 			total += len(b.Components)
 		})
@@ -150,7 +157,7 @@ func TestTheDocumentCarriesThePinnedDeviceBlock(t *testing.T) {
 			if tc.enriched {
 				d.SetEnricher(pinEnricher(t))
 			}
-			b, err := d.BundleFor(tc.device, pincatalog.Info, pinEntities(t))
+			b, err := d.BundleFor(tc.device, goldenHaID, pincatalog.Info, pinEntities(t))
 			if err != nil {
 				t.Fatalf("BundleFor: %v", err)
 			}
@@ -243,7 +250,7 @@ func canonicalJSON(v any) any {
 func TestTheBundleTopicIsTheOneTheRendererAddresses(t *testing.T) {
 	for _, device := range []string{"Geschirrspüler", "Dishwasher", "Wash Machine", "Herd/Backofen"} {
 		d := New(nil, goldenPrefix, goldenRoot, "de", false, slog.New(slog.DiscardHandler))
-		b, err := d.BundleFor(device, pincatalog.Info, pinEntities(t))
+		b, err := d.BundleFor(device, goldenHaID, pincatalog.Info, pinEntities(t))
 		if err != nil {
 			t.Fatalf("BundleFor(%q): %v", device, err)
 		}
@@ -367,7 +374,7 @@ func TestTheDocumentedDowngradeTopicMatchesTheCode(t *testing.T) {
 func TestAnEmptyDocumentIsWithheld(t *testing.T) {
 	rec := &bundleRecorder{}
 	d := New(rec, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
-	topic, _, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, pincatalog.Info, nil, nil)
+	topic, _, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, goldenHaID, pincatalog.Info, nil, nil)
 	if err == nil {
 		t.Fatal("an empty document was published")
 	}
@@ -405,7 +412,7 @@ func TestAnEmptyDocumentIsWithheld(t *testing.T) {
 func TestABlockingDocumentIsWithheld(t *testing.T) {
 	rec := &bundleRecorder{}
 	d := New(rec, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
-	b, err := d.BundleFor(goldenDeviceEN, pincatalog.Info, pinEntities(t))
+	b, err := d.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, pinEntities(t))
 	if err != nil {
 		t.Fatalf("BundleFor: %v", err)
 	}
@@ -467,7 +474,7 @@ func TestABlockingDocumentIsWithheld(t *testing.T) {
 // ever stops holding, this daemon is writing 510 entries for nothing.
 func TestOmittingAComponentDoesNotRemoveIt(t *testing.T) {
 	d := New(nil, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
-	full, err := d.BundleFor(goldenDeviceEN, pincatalog.Info, pinEntities(t))
+	full, err := d.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, pinEntities(t))
 	if err != nil {
 		t.Fatalf("BundleFor: %v", err)
 	}
@@ -552,7 +559,7 @@ func TestCuratedOmissionsAreCountedAndSaidOutLoud(t *testing.T) {
 	// different number than the one an operator pays.
 	fullD := New(nil, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
 	fullD.SetEnricher(pinEnricher(t))
-	full, err := fullD.BundleFor(goldenDeviceEN, pincatalog.Info, pinEntities(t))
+	full, err := fullD.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, pinEntities(t))
 	if err != nil {
 		t.Fatalf("BundleFor(full): %v", err)
 	}
@@ -561,7 +568,7 @@ func TestCuratedOmissionsAreCountedAndSaidOutLoud(t *testing.T) {
 	curated := New(nil, goldenPrefix, goldenRoot, "en", true,
 		slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))
 	curated.SetEnricher(pinEnricher(t))
-	got, err := curated.BundleFor(goldenDeviceEN, pincatalog.Info, pinEntities(t))
+	got, err := curated.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, pinEntities(t))
 	if err != nil {
 		t.Fatalf("BundleFor(curated): %v", err)
 	}
@@ -589,7 +596,7 @@ func TestCuratedOmissionsAreCountedAndSaidOutLoud(t *testing.T) {
 	// Assistant restart. A warning that repeats per republish is a warning
 	// an operator filters out.
 	before := strings.Count(buf.String(), "hass.curated_components_omitted")
-	if _, err := curated.BundleFor(goldenDeviceEN, pincatalog.Info, pinEntities(t)); err != nil {
+	if _, err := curated.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, pinEntities(t)); err != nil {
 		t.Fatalf("BundleFor(curated, again): %v", err)
 	}
 	if after := strings.Count(buf.String(), "hass.curated_components_omitted"); after != before {
@@ -602,7 +609,7 @@ func TestCuratedOmissionsAreCountedAndSaidOutLoud(t *testing.T) {
 	quietD := New(nil, goldenPrefix, goldenRoot, "en", false,
 		slog.New(slog.NewTextHandler(&quiet, &slog.HandlerOptions{Level: slog.LevelWarn})))
 	quietD.SetEnricher(pinEnricher(t))
-	if _, err := quietD.BundleFor(goldenDeviceEN, pincatalog.Info, pinEntities(t)); err != nil {
+	if _, err := quietD.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, pinEntities(t)); err != nil {
 		t.Fatalf("BundleFor(full, again): %v", err)
 	}
 	if strings.Contains(quiet.String(), "hass.curated_components_omitted") {

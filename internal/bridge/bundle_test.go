@@ -6,12 +6,15 @@ package bridge
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/SukramJ/go-hamqtt/discovery"
 	"github.com/SukramJ/go-hamqtt/publisher"
 
 	"github.com/SukramJ/go-mqtt"
@@ -89,7 +92,7 @@ func TestTheMigrationRetractsEveryPerEntityConfigBeforeTheDocument(t *testing.T)
 	defer drainReconciles(t, b)
 
 	doc := bundleTopicFor(b, dev.name)
-	bundle, err := b.hass.BundleFor(dev.name, dev.app.Info(), dev.app.Entities())
+	bundle, err := b.hass.BundleFor(dev.name, dev.haID, dev.app.Info(), dev.app.Entities())
 	if err != nil {
 		t.Fatalf("BundleFor: %v", err)
 	}
@@ -232,7 +235,7 @@ func TestTheSweepNeverOffersTheDocumentItJustPublished(t *testing.T) {
 	// asynchronous, and two windows over one stub is a test racing itself
 	// rather than a property.
 	seedRetained(rec, map[string]string{doc: `{"device":{"identifiers":["homeconnect_geschirrspuler"]},"components":{}}`})
-	if _, _, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, dev.app.Info(), dev.app.Entities(), nil); err != nil {
+	if _, _, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, dev.haID, dev.app.Info(), dev.app.Entities(), nil); err != nil {
 		t.Fatalf("PublishDeviceBundle: %v", err)
 	}
 
@@ -364,7 +367,7 @@ func TestBothSweepGuardsMustFailTogether(t *testing.T) {
 	doc := bundleTopicFor(b, dev.name)
 	rec.setFail(doc)
 
-	topic, _, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, d0(dev), dev.app.Entities(), nil)
+	topic, _, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, dev.haID, d0(dev), dev.app.Entities(), nil)
 	if err == nil {
 		t.Fatal("the stub accepted a document it was told to refuse")
 	}
@@ -483,27 +486,27 @@ func TestTheReconnectRepublishDoesNotOverlapItself(t *testing.T) {
 // TestTheDeviceAvailabilityPayloadsAreTheOnesEveryConfigDeclares closes a
 // loop that nothing was closing.
 //
-// availOnline and availOffline are defined from internal/hass's constants,
-// so they cannot drift from them by a typo — but they can be SWAPPED, and
-// swapping them passed the whole suite: the three tests that touched them
-// compared the published byte against the same two constants they were
-// testing, and the goldens pin `payload_available` inside the discovery
-// payload with nothing comparing that to the word the device worker
-// actually writes.
+// The two words could once be SWAPPED and pass the whole suite: the tests
+// that touched them compared the published byte against the same constants
+// they were testing, and the goldens pin `payload_available` inside the
+// discovery payload with nothing comparing that to what the device worker
+// actually writes. Since 0.15.0 the worker writes a boolean status object
+// and the config reads it through a template, which is one more place for
+// the two halves to disagree.
 //
-// Inverted, every appliance reads `offline` while it is connected. Under
+// Inverted, every appliance reads unavailable while it is connected. Under
 // `availability_mode: all` that is the whole fleet greyed out whenever the
 // appliance is up, and nothing on the wire or in a log names the cause.
 //
-// So the assertion crosses the two planes: the payload the worker publishes
-// on the device availability topic, against the payload the rendered
-// discovery config tells Home Assistant to expect there.
+// So the assertion crosses the two planes: the `val` the worker publishes
+// on the appliance's `online` item, rendered the way the declared template
+// renders it, against the payload the config tells Home Assistant to expect.
 func TestTheDeviceAvailabilityPayloadsAreTheOnesEveryConfigDeclares(t *testing.T) {
 	shortWindow(t)
 	b, dev, _, rec := pinBridge(t)
 	defer drainReconciles(t, b)
 
-	bundle, err := b.hass.BundleFor(dev.name, dev.app.Info(), dev.app.Entities())
+	bundle, err := b.hass.BundleFor(dev.name, dev.haID, dev.app.Info(), dev.app.Entities())
 	if err != nil {
 		t.Fatalf("BundleFor: %v", err)
 	}
@@ -513,15 +516,16 @@ func TestTheDeviceAvailabilityPayloadsAreTheOnesEveryConfigDeclares(t *testing.T
 	}
 	var comp struct {
 		Availability []struct {
-			Topic        string `json:"topic"`
-			Available    string `json:"payload_available"`
-			NotAvailable string `json:"payload_not_available"`
+			Topic         string `json:"topic"`
+			Available     string `json:"payload_available"`
+			NotAvailable  string `json:"payload_not_available"`
+			ValueTemplate string `json:"value_template"`
 		} `json:"availability"`
 	}
 	if err := json.Unmarshal(raw, &comp); err != nil {
 		t.Fatalf("component: %v", err)
 	}
-	avail := dev.topics.Availability()
+	avail := dev.topics.Online()
 	declared := -1
 	for i, a := range comp.Availability {
 		if a.Topic == avail {
@@ -530,6 +534,10 @@ func TestTheDeviceAvailabilityPayloadsAreTheOnesEveryConfigDeclares(t *testing.T
 	}
 	if declared < 0 {
 		t.Fatalf("no component declares %s as an availability source: %+v", avail, comp.Availability)
+	}
+	// `{{ value_json.val | lower }}`: the rendering below is that template's.
+	if tpl := comp.Availability[declared].ValueTemplate; tpl != discovery.StatusBoolValueTemplate {
+		t.Fatalf("the online item is read through %q, this test renders %q", tpl, discovery.StatusBoolValueTemplate)
 	}
 
 	for _, tc := range []struct {
@@ -544,9 +552,9 @@ func TestTheDeviceAvailabilityPayloadsAreTheOnesEveryConfigDeclares(t *testing.T
 		if !ok {
 			t.Fatalf("%s: nothing was published on %s", tc.state, avail)
 		}
-		if string(got) != tc.want {
-			t.Errorf("%s: the worker wrote %q on %s, every config declares %q there",
-				tc.state, got, avail, tc.want)
+		if rendered := strings.ToLower(fmt.Sprint(statusVal(string(got)))); rendered != tc.want {
+			t.Errorf("%s: the worker wrote %q on %s, which renders %q; every config declares %q there",
+				tc.state, got, avail, rendered, tc.want)
 		}
 	}
 }
@@ -690,7 +698,7 @@ func smallBridgeWith(
 
 	rec := &subRecorder{}
 	logger := slog.New(slog.DiscardHandler)
-	plane := planeWithLimit(t, rec, cfg.QoSLevel(), cfg.RetainEnabled(), maxPacket)
+	plane := planeWithLimit(t, rec, cfg.QoSLevel(), maxPacket)
 	desc := smallDescription(t)
 	specs := make([]DeviceSpec, 0, len(names))
 	for _, name := range names {
@@ -699,7 +707,7 @@ func smallBridgeWith(
 				// 127.0.0.1:80 refuses fast, so Run's workers cycle
 				// through the offline path instead of hanging on a dial
 				// to an address nothing answers.
-				Name: name, Host: "127.0.0.1",
+				Name: name, HaID: haIDFor(name), Host: "127.0.0.1",
 				ConnectionType: profile.ConnectionAES, PSK64: b64(32), IV64: b64(16),
 			},
 			Description: desc,

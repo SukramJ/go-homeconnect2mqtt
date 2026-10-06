@@ -34,7 +34,8 @@ Profile Downloader* (openHAB target format); after that everything is local.
 # 1. Download your appliance profile with the Home Connect Profile Downloader
 #    (target format: openHAB) — you get a ZIP per registered appliance.
 
-# 2. Parse it into cached device descriptions + a device inventory entry.
+# 2. Parse it into cached device descriptions + a device inventory entry
+#    (it prints each appliance's haId, the device segment of its topics).
 hc-util parse profile.zip --out ./profiles
 
 # 3. Configure the daemon.
@@ -68,15 +69,133 @@ the add-on options and stay on your Home Assistant host.
 
 ## MQTT topics
 
-```
-<topic>/<device>/<Feature/Path>/state    # e.g. .../BSH/Common/Setting/PowerState/state
-<topic>/<device>/<Feature/Path>/set      # writable features only
-<topic>/<device>/availability            # online / offline (LWT)
-<topic>/<device>/connection_state        # connecting / handshake / connected / reconnecting / ...
-```
+Since 0.15.0 the topic tree follows the
+[mqtt-smarthome 2.0](https://github.com/mqtt-smarthome/mqtt-smarthome/blob/master/SPEC.md)
+convention, `<name>/<function>/<item…>`, like every other project of this
+family (openccu-loom ADR 0083). `<name>` is `MQTT_TOPIC` (default
+`homeconnect`), and the device segment is the appliance's **haId** — a stable
+hardware id — instead of its name in `devices.yaml`.
 
-Feature names use dotted notation (`BSH.Common.Status.OperationState`) mapped to
-slash-separated MQTT paths.
+| 0.15.0 and later | Payload | Before (≤ 0.14.0) |
+|---|---|---|
+| `<name>/connected` | `0` not running (Last Will, graceful stop), `1` on the broker but no appliance reachable, `2` at least one appliance reachable | `<topic>/status` (`online`/`offline`) |
+| `<name>/info` | retained JSON: `name` (`go-homeconnect2mqtt`), `version`, `spec`, `go`, `host`, `pid`, `started`, `maintenance`, `commit`, `build_date`, `appliances`, `language` | — |
+| `<name>/status/<haId>/<Feature/Path>` | status object, e.g. `{"val":"On","ts":…,"lc":…}` | `<topic>/<device>/<Feature/Path>/state` (plain) |
+| `<name>/set/<haId>/<Feature/Path>` | plain value or `{"val":…}` | `<topic>/<device>/<Feature/Path>/set` |
+| `<name>/status/<haId>/_uid/<n>` | status object (a feature the profile does not name) | `<topic>/<device>/_uid/<n>/state` |
+| `<name>/status/<haId>/online` | status object, `val` `true`/`false` | `<topic>/<device>/availability` (`online`/`offline`) |
+| `<name>/status/<haId>/connection_state` | status object, `val` `connecting`/`connected`/`reconnecting`/`offline`/… | `<topic>/<device>/connection_state` |
+| `<name>/set/<haId>/_control/start_program`, `…/stop_program` | any non-empty payload | `<topic>/<device>/_control/{start,stop}_program/set` |
+| `<name>/maintenance/…` | see [Maintenance](#maintenance) | — |
+
+Feature paths stay Home Connect's own identifiers: the dotted name
+(`BSH.Common.Status.OperationState`) becomes the slash-separated item path,
+every segment made topic-safe.
+
+**Status payloads.** Every status item is a JSON object `{"val", "ts", "lc"}`
+(`ts` when the value was observed, `lc` when it last changed, both in
+milliseconds). Booleans are JSON booleans, numbers JSON numbers, Object
+features their JSON value. An enum carries its **token** — the member name the
+appliance speaks (`On`, `Run`, `Present`) — not the localized label it used to
+publish; Home Assistant still shows the labels, through the discovery
+payload. An active or selected program that names no known program publishes
+the token `None`, which Home Assistant reads as "no value". Status items are
+retained, published at QoS 0 on every change and again after every broker
+reconnect — never on an unchanged value.
+
+**`set` payloads.** A plain value and `{"val": …}` are the same request.
+Booleans accept `true`/`false`, `1`/`0`, `on`/`off` and `yes`/`no` in any
+case; numbers are rounded to the feature's step and clamped to its range;
+enums are matched by token, case-insensitively, and localized labels are still
+accepted. An Object feature takes a JSON object. Empty and retained messages
+are ignored, a rejected or failed request is logged at `warn` with its topic
+and payload, and `set` is subscribed at QoS 1.
+
+**The haId.** It is taken, in this order, from the `haid` key of a device
+entry in `devices.yaml`; from the cached description `hc-util parse` writes
+(0.15.0 and later record it there); or from that description's **file name**
+without its extension — `hc-util parse` has always written it as
+`<haId>.json`, so on the documented setup path that is the haId. The last
+source is logged once per device at `warn`
+(`bridge.haid_from_description_filename`), naming the device and the segment,
+because a renamed file yields whatever it was renamed to: pin the haId with
+`haid:` or by re-running `hc-util parse`, knowing that a different haId set
+later moves that appliance's topics once. Only a device none of the three
+yields a valid haId for is **refused at start**, with the device named; so are
+two devices that resolve to the same segment. It never falls back to the
+device name, because the topics would then move a second time once the haId is
+filled in.
+
+**The instance name.** `MQTT_TOPIC` is the only thing that keeps two
+instances on one broker apart, and nothing checks it: two instances with the
+same name write the same topics and overwrite each other's `connected` and
+`info`. Give each instance its own name. Note also that the default,
+`homeconnect`, is the default instance name of hobbyquaker's Node.js adapter
+`homeconnect2mqtt` as well — running both on one broker needs one of them
+renamed. The name is one topic level: since 0.15.0 a `MQTT_TOPIC` containing
+`/`, `+` or `#` is refused at start.
+
+### Migrating from 0.14.x
+
+0.15.0 is a clean break: there is no compatibility switch, and anything that
+reads the raw topics — Node-RED flows, dashboards, scripts — has to move to the
+table above and read `val` out of the JSON. **Home Assistant needs nothing**:
+the discovery document re-points every entity to the new topics and keeps its
+`unique_id`, entity id, device and history.
+
+- **The old retained topics are cleared automatically.** On every start the
+  daemon reads back, for a few seconds, what the broker holds under the old
+  tree and clears exactly the topics the old release published for the
+  appliances in `devices.yaml` — each feature's `…/state`, `…/availability`,
+  `…/connection_state` — plus the old `<topic>/status`. It never matches by
+  prefix, so another instance's topics, an appliance it is not configured
+  with, and anything else under the same root are left alone. It also clears
+  status items an appliance no longer has (`<name>/status/<haId>/…`). A
+  second start finds nothing to do.
+- **What it leaves:** an appliance that was removed from `devices.yaml` before
+  the upgrade (its name is no longer known), and an appliance whose name in
+  `devices.yaml` is one of the convention's function names — `status`, `set`,
+  `get`, `info`, `meta`, `connected`, `maintenance` — because its old topics
+  cannot be told from the new tree by their shape. Clear those by hand, e.g.
+  `mosquitto_pub -h <broker> -u <user> -P <password> -t 'homeconnect/status/availability' -r -n`.
+- **`MQTT_RETAIN` is removed.** Status items are always retained (spec §3.2);
+  a leftover key is ignored with a `config.key_removed` warning at start.
+- **`MQTT_QOS` now governs only** the discovery documents, `connected` and
+  the Last Will. Status items are QoS 0 and `set` is subscribed at QoS 1, as
+  the convention fixes them.
+- **An existing installation starts unchanged.** Its `devices.yaml` has no
+  `haid` and its cached descriptions do not record one, so the haId is taken
+  from the description's file name, which `hc-util parse` made `<haId>.json`;
+  the log says so once per appliance at `warn`. Add `haid:` (or re-run
+  `hc-util parse`) to silence it. Only an appliance whose description file was
+  renamed to something that is not an haId — e.g. `Geschirrspüler.json` — is
+  refused at start, naming the device.
+- **Rolling back to 0.14.x** needs no manual step: it republishes its own
+  discovery document and its own topics. The 0.15.0 tree stays retained until
+  the next 0.15.0 start, whose sweep clears the old one again.
+
+### Maintenance
+
+On by default, as mqtt-smarthome 2.0 §7 recommends; `MQTT_MAINTENANCE: false`
+switches it off (and `<name>/info` says so).
+
+| Topic | Effect |
+|---|---|
+| `<name>/maintenance/set/loglevel` | `error`, `warn`, `info` or `debug`: the daemon's log level, until the next start |
+| `<name>/maintenance/set/restart` | any payload: a graceful shutdown — `connected` goes to `0`, the process exits 0 — and only where a supervisor restarts it afterwards; otherwise refused and logged at `warn` |
+| `<name>/maintenance/stats` | retained process statistics (`rss`, `heapUsed`, `heapTotal`, `cpu`, `uptime`, `ts`) every `MQTT_STATS_INTERVAL` seconds (default `60`, `0` = off) |
+
+Whether a supervisor restarts the daemon is answered by `HC2M_SUPERVISED`
+(`1`/`true` or `0`/`false`) when it is set, and otherwise detected: systemd,
+Kubernetes or a container count as supervised. A container started without a
+restart policy is detected as supervised too — set `HC2M_SUPERVISED=0` there.
+The Home Assistant add-on sets it to `0`, because the Supervisor does not
+restart an add-on that exits cleanly.
+
+**Security.** Anyone who may publish on the broker can restart the daemon or
+raise its log level through these topics. Use broker authentication and
+per-client ACLs — the daemon needs `<name>/#` and the discovery prefix, nothing
+else — and switch maintenance off on a broker that cannot be secured.
 
 ### Home Assistant discovery
 
@@ -125,8 +244,10 @@ publish of that connection. Every way that read can fail produces *fewer*
 removals and never different ones, and a document published by a second
 instance of this daemon is judged component by component: a component is
 carried forward only when its payload names a topic **only this instance
-renders** — `<MQTT_TOPIC>/status`, or `<MQTT_TOPIC>/<appliance>/availability`
-— so a sibling instance's entities are never deleted.
+renders** — `<MQTT_TOPIC>/connected` or `<MQTT_TOPIC>/status/<haId>/online`,
+or, in a document an earlier release left, `<MQTT_TOPIC>/status` or
+`<MQTT_TOPIC>/<appliance>/availability` — so a sibling instance's entities are
+never deleted.
 
 That is an exact match rather than a prefix, and the difference is the whole
 guarantee. A prefix test claimed every component of an instance rooted

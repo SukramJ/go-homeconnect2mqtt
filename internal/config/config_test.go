@@ -33,8 +33,14 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	if cfg.QoSLevel() != DefaultMQTTQoS {
 		t.Errorf("MQTTQoS = %d, want %d", cfg.QoSLevel(), DefaultMQTTQoS)
 	}
-	if !cfg.RetainEnabled() {
-		t.Error("RetainEnabled() = false, want true (default)")
+	if !cfg.MaintenanceEnabled() {
+		t.Error("MaintenanceEnabled() = false, want true (default)")
+	}
+	if cfg.StatsIntervalSeconds() != DefaultMQTTStatsInterval {
+		t.Errorf("StatsIntervalSeconds() = %d, want %d", cfg.StatsIntervalSeconds(), DefaultMQTTStatsInterval)
+	}
+	if len(cfg.Removed) != 0 {
+		t.Errorf("Removed = %v, want none", cfg.Removed)
 	}
 	if cfg.AppName != DefaultAppName {
 		t.Errorf("AppName = %q, want %q", cfg.AppName, DefaultAppName)
@@ -92,13 +98,89 @@ func TestMQTTQoSZeroSurvivesTheLoader(t *testing.T) {
 	}
 }
 
-func TestRetainCanBeForcedFalse(t *testing.T) {
-	cfg, err := Load(strings.NewReader("MQTT_SERVER: tcp://h:1883\nMQTT_RETAIN: false\n"), nil)
-	if err != nil {
-		t.Fatalf("Load: %v", err)
+// TestMaintenanceAndStatsFromBothSources: MQTT_MAINTENANCE can be switched
+// off and MQTT_STATS_INTERVAL can be 0 (off), from the file and from the
+// HC2M_* environment — the two ways the add-on and a container set them.
+func TestMaintenanceAndStatsFromBothSources(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		yaml        string
+		env         mapEnv
+		maintenance bool
+		stats       int
+	}{
+		{"file", "MQTT_SERVER: tcp://h:1883\nMQTT_MAINTENANCE: false\nMQTT_STATS_INTERVAL: 0\n", nil, false, 0},
+		{"environment", "MQTT_SERVER: tcp://h:1883\n", mapEnv{
+			EnvPrefix + "MQTT_MAINTENANCE": "false", EnvPrefix + "MQTT_STATS_INTERVAL": "0",
+		}, false, 0},
+		{"an interval", "MQTT_SERVER: tcp://h:1883\nMQTT_STATS_INTERVAL: 300\n", nil, true, 300},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var env Env
+			if tc.env != nil {
+				env = tc.env
+			}
+			cfg, err := Load(strings.NewReader(tc.yaml), env)
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if cfg.MaintenanceEnabled() != tc.maintenance {
+				t.Errorf("MaintenanceEnabled() = %v, want %v", cfg.MaintenanceEnabled(), tc.maintenance)
+			}
+			if cfg.StatsIntervalSeconds() != tc.stats {
+				t.Errorf("StatsIntervalSeconds() = %d, want %d — 0 means off, not unset",
+					cfg.StatsIntervalSeconds(), tc.stats)
+			}
+		})
 	}
-	if cfg.RetainEnabled() {
-		t.Error("RetainEnabled() = true, want false when explicitly set")
+}
+
+// TestRemovedRetainKeyIsReported: MQTT_RETAIN stopped doing anything in
+// 0.15.0 (status items are always retained). yaml.v3 ignores an unknown
+// key, so without the Removed list an operator who set it would never
+// learn that.
+func TestRemovedRetainKeyIsReported(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		yaml string
+		env  mapEnv
+	}{
+		{"file", "MQTT_SERVER: tcp://h:1883\nMQTT_RETAIN: false\n", nil},
+		{"environment", "MQTT_SERVER: tcp://h:1883\n", mapEnv{EnvPrefix + "MQTT_RETAIN": "true"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var env Env
+			if tc.env != nil {
+				env = tc.env
+			}
+			cfg, err := Load(strings.NewReader(tc.yaml), env)
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if len(cfg.Removed) != 1 || cfg.Removed[0] != "MQTT_RETAIN" {
+				t.Fatalf("Removed = %v, want [MQTT_RETAIN]", cfg.Removed)
+			}
+			if RemovedKeyNote("MQTT_RETAIN") == "" {
+				t.Error("no note for MQTT_RETAIN")
+			}
+		})
+	}
+}
+
+// TestMQTTTopicMustBeOneLevel: since 0.15.0 MQTT_TOPIC is the
+// mqtt-smarthome instance name, which spec §3 forbids to contain /, + or #.
+// A multi-level root that started before is refused at start, with the
+// reason, rather than published outside the grammar.
+func TestMQTTTopicMustBeOneLevel(t *testing.T) {
+	for _, topic := range []string{"home/connect", "homeconnect/", "a+b", "a#"} {
+		_, err := Load(strings.NewReader("MQTT_SERVER: tcp://h:1883\nMQTT_TOPIC: \""+topic+"\"\n"), nil)
+		var ve *ValidationError
+		if !errors.As(err, &ve) || !strings.Contains(err.Error(), "MQTT_TOPIC") {
+			t.Errorf("MQTT_TOPIC %q: err = %v, want a validation error naming MQTT_TOPIC", topic, err)
+		}
+	}
+	if _, err := Load(strings.NewReader("MQTT_SERVER: tcp://h:1883\nMQTT_STATS_INTERVAL: -1\n"), nil); err == nil {
+		t.Error("a negative MQTT_STATS_INTERVAL was accepted")
 	}
 }
 

@@ -16,6 +16,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/SukramJ/go-hamqtt/discovery"
 	"github.com/SukramJ/go-hamqtt/publisher"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
@@ -38,6 +39,17 @@ import (
 //
 // and read the diff. A non-empty diff is a change to what an installed
 // base receives; it is never "just a test update".
+//
+// # Since 0.15.0 the pins are the pre-convention rendering
+//
+// 0.15.0 moved every topic onto mqtt-smarthome 2.0 (openccu-loom ADR 0083),
+// and the builder these files were written from — the per-entity oracle —
+// was deliberately left rendering the layout every earlier release
+// published (layout.LegacyDevice, layout.LegacyBridge). So the files are
+// what an installed base received BEFORE the move, unchanged, and
+// TestHamqttReproducesEveryPinnedPayloadOutsideTheConvention compares the
+// device document against them key by key: every key the convention does
+// not own — identities first of all — must be byte for byte what it was.
 //
 // # What the file is, and what it is not
 //
@@ -94,6 +106,19 @@ const (
 	goldenQoS = publisher.QoSAtLeastOnce
 )
 
+// goldenHaID is the appliance's haId, the device segment of every topic
+// since 0.15.0. Chosen once and never changed, like the two names below.
+const goldenHaID = "BOSCH-SMV68TX06E-68A40E000001"
+
+// goldenInstance is the layout of the shipped default instance name.
+func goldenInstance() layout.Instance {
+	inst, err := layout.New(goldenRoot)
+	if err != nil {
+		panic(err)
+	}
+	return inst
+}
+
 // Two device names, chosen once and never changed. "Dishwasher" is the
 // plain case; "Geschirrspüler" is the case an operator in this project's
 // default language (LANGUAGE: de) actually types, and it is the one that
@@ -141,8 +166,8 @@ func (r *recorder) Unsubscribe(context.Context, string) error { return nil }
 func goldenRuntime(tr publisher.Transport) *publisher.Runtime {
 	return publisher.New(tr, publisher.Config{
 		Prefix:      goldenPrefix,
-		StatusTopic: layout.Bridge(goldenRoot),
-		Layout:      NewLayout(goldenRoot),
+		StatusTopic: goldenInstance().Connected(),
+		Layout:      NewLayout(goldenInstance()),
 		QoS:         goldenQoS,
 		Logger:      slog.New(slog.DiscardHandler),
 	})
@@ -519,32 +544,41 @@ func TestEveryPayloadDeclaresBothAvailabilityLevels(t *testing.T) {
 }
 
 // TestBridgeAvailabilityTopicIsTheOneTheWillWrites is F1's other half:
-// the topic every payload declares is the one the daemon's own Last Will,
-// birth and shutdown publishes write. Both sides read layout.Bridge, so
-// they cannot drift; this asserts the string that reaches the payload.
+// the topic every component of the device document declares first is the
+// one the daemon's own Last Will, birth and shutdown publishes write —
+// `<name>/connected` since 0.15.0 — read through the template that makes
+// it available at 2. Both sides read the layout's Connected, so they
+// cannot drift; this asserts the string that reaches the payload.
 //
 // It also asserts the topic is in the daemon's own publish root and not in
-// Home Assistant's discovery tree, which is why F1 needed no topic move
-// and no retraction of a retained copy at an old location.
+// Home Assistant's discovery tree.
 func TestBridgeAvailabilityTopicIsTheOneTheWillWrites(t *testing.T) {
-	want := layout.Bridge(goldenRoot)
-	if want != goldenRoot+"/status" {
-		t.Fatalf("layout.Bridge(%q) = %q, want %q", goldenRoot, want, goldenRoot+"/status")
+	will, err := goldenRuntime(&recorder{}).Will()
+	if err != nil {
+		t.Fatalf("will: %v", err)
 	}
-	if strings.HasPrefix(want, goldenPrefix+"/") {
-		t.Errorf("%q is inside Home Assistant's discovery tree", want)
+	if want := goldenRoot + "/connected"; will.Topic != want || string(will.Payload) != "0" {
+		t.Fatalf("will = %s %q, want %s 0", will.Topic, will.Payload, want)
 	}
-	for _, r := range publishPin(t, "en", goldenDeviceEN, false, true) {
-		list, ok := r.Payload["availability"].([]any)
-		if !ok || len(list) != 2 {
-			t.Fatalf("%s: availability is not a two-entry list: %v", r.Topic, r.Payload["availability"])
+	if strings.HasPrefix(will.Topic, goldenPrefix+"/") {
+		t.Errorf("%q is inside Home Assistant's discovery tree", will.Topic)
+	}
+	d := New(nil, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
+	d.SetEnricher(pinEnricher(t))
+	b, err := d.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, pinEntities(t))
+	if err != nil {
+		t.Fatalf("BundleFor: %v", err)
+	}
+	for key, comp := range b.Components {
+		if len(comp.Availability) != 2 {
+			t.Fatalf("%s: availability is not a two-entry list: %+v", key, comp.Availability)
 		}
-		first, ok := list[0].(map[string]any)
-		if !ok {
-			t.Fatalf("%s: availability[0] is not an object: %v", r.Topic, list[0])
+		first := comp.Availability[0]
+		if first.Topic != will.Topic {
+			t.Errorf("%s: first availability source = %q, want %q (bridge before device)", key, first.Topic, will.Topic)
 		}
-		if first["topic"] != want {
-			t.Errorf("%s: first availability source = %v, want %q (bridge before device)", r.Topic, first["topic"], want)
+		if first.ValueTemplate != discovery.ConnectedTemplate(discovery.ConnectedOperational) {
+			t.Errorf("%s: connected is read through %q, want available at 2", key, first.ValueTemplate)
 		}
 	}
 }

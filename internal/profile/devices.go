@@ -5,9 +5,11 @@ package profile
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -20,7 +22,11 @@ import (
 // DeviceConfig is one entry of the operator-maintained devices file
 // (docs/06-architecture.md §4).
 type DeviceConfig struct {
-	Name           string         `yaml:"name"`
+	Name string `yaml:"name"`
+	// HaID is the appliance's Home Connect id, the device segment of every
+	// MQTT topic since 0.15.0. Optional when the cached description records
+	// it (hc-util parse writes it there); see [ResolveHaID].
+	HaID           string         `yaml:"haid"`
 	Host           string         `yaml:"host"`
 	ManualHost     bool           `yaml:"manual_host"`
 	ConnectionType ConnectionType `yaml:"connection_type"`
@@ -85,6 +91,9 @@ func LoadDevices(path string) ([]DeviceConfig, error) {
 			)
 		}
 		byNodeID[node] = d.Name
+		if d.HaID != "" && !ValidHaID(d.HaID) {
+			return nil, fmt.Errorf("profile: device %q has an invalid haid %q", d.Name, d.HaID)
+		}
 		if d.ConnectionType != ConnectionAES && d.ConnectionType != ConnectionTLS {
 			return nil, fmt.Errorf("profile: device %q has invalid connection_type %q", d.Name, d.ConnectionType)
 		}
@@ -125,14 +134,74 @@ func LoadDescriptionJSON(path string, logger *slog.Logger) (*Description, error)
 	return &d, nil
 }
 
-// validateDeviceName rejects a device name that cannot safely become an
-// MQTT topic segment or a Home Assistant node id.
+// ErrNoHaID is returned by [ResolveHaID] for a device whose haId is known
+// from none of its sources.
+var ErrNoHaID = errors.New("profile: device has no haid")
+
+// HaIDSource says where [ResolveHaID] found a device's haId.
+type HaIDSource int
+
+// The sources, in the order they are consulted.
+const (
+	// HaIDFromConfig is the `haid` key of the devices.yaml entry.
+	HaIDFromConfig HaIDSource = iota + 1
+	// HaIDFromDescription is the haId hc-util parse 0.15.0 and later
+	// record in the cached description.
+	HaIDFromDescription
+	// HaIDFromFileName is the cached description's file name without its
+	// extension. hc-util parse has always written the cache as
+	// `<out>/<haId>.json` and printed `description: <out>/<haId>.json`, so
+	// on the documented setup path — and in the add-on, which builds the
+	// path the same way — this IS the haId. It is the only source every
+	// installation from before 0.15.0 has, and without it every one of them
+	// would refuse to start on upgrade. A renamed file yields whatever name
+	// it was given, which is why the caller says so.
+	HaIDFromFileName
+)
+
+// ResolveHaID is the appliance's haId, the device segment of every MQTT
+// topic, and where it came from: the `haid` from devices.yaml, else the one
+// the cached description recorded, else the description's file name when
+// that is a valid haId (see [HaIDFromFileName]).
 //
-// The name is the operator's, and it goes into the topic tree twice, in
-// two different forms (F2 of notes/adr0070-phase7-measurement.md): raw
-// into every state, command and availability topic and into the device's
-// "<root>/<name>/#" command subscription, and slugified into the
-// discovery config topic's node id. Nothing validated it.
+// There is deliberately no fallback to the device name: a name-derived
+// segment would move every topic again the day the haId is filled in. A
+// device with no usable source is refused at start, with what to do about
+// it — see [ErrNoHaID].
+func ResolveHaID(dc DeviceConfig, desc *Description) (string, HaIDSource, error) {
+	switch {
+	case dc.HaID != "":
+		if !ValidHaID(dc.HaID) {
+			return "", 0, fmt.Errorf("profile: device %q has an invalid haid %q", dc.Name, dc.HaID)
+		}
+		return dc.HaID, HaIDFromConfig, nil
+	case desc != nil && desc.HaID != "":
+		if !ValidHaID(desc.HaID) {
+			return "", 0, fmt.Errorf("profile: device %q: its description records an invalid haid %q", dc.Name, desc.HaID)
+		}
+		return desc.HaID, HaIDFromDescription, nil
+	}
+	if base := filepath.Base(dc.Description); dc.Description != "" {
+		if id := strings.TrimSuffix(base, filepath.Ext(base)); id != "" && ValidHaID(id) {
+			return id, HaIDFromFileName, nil
+		}
+	}
+	return "", 0, fmt.Errorf("%w: device %q — add `haid: <haId>` to its devices.yaml entry "+
+		"(the haId is the name of its <haId>.json in the profile archive), or re-run "+
+		"`hc-util parse` so its cached description records it", ErrNoHaID, dc.Name)
+}
+
+// validateDeviceName rejects a device name that cannot safely become a
+// Home Assistant node id, or that earlier releases could not put into a
+// topic.
+//
+// The name is the operator's. Since 0.15.0 it is in no MQTT topic any more
+// — the haId is the device segment — but it is still slugified into the
+// discovery config topic's node id and the device identifiers (F2 of
+// notes/adr0070-phase7-measurement.md), and the migration sweep still
+// rebuilds the topics an earlier release published under it. The rules
+// below are the ones those releases enforced, kept unchanged so a
+// devices.yaml that started before starts now.
 //
 // Non-ASCII is fine and is deliberately allowed — MQTT topic names are
 // UTF-8 (§1.5.4) and this project's default language is German, so

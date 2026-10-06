@@ -70,8 +70,8 @@ func snapshotPlane(t *testing.T, tr publisher.Transport) *Plane {
 	t.Helper()
 	return New(tr, Config{
 		Prefix:      "homeassistant",
-		StatusTopic: "homeconnect/status",
-		Layout:      testLayout{},
+		StatusTopic: testConnected,
+		Layout:      testLayout(),
 		QoS:         QoS(1),
 		Logger:      slog.New(slog.DiscardHandler),
 	})
@@ -221,8 +221,8 @@ func TestSnapshotSubscribesAtTheConfiguredQoS(t *testing.T) {
 		tr := &replayTransport{}
 		p := New(tr, Config{
 			Prefix:      "homeassistant",
-			StatusTopic: "homeconnect/status",
-			Layout:      testLayout{},
+			StatusTopic: testConnected,
+			Layout:      testLayout(),
 			QoS:         QoS(int(want)),
 			Logger:      slog.New(slog.DiscardHandler),
 		})
@@ -351,5 +351,99 @@ func TestNoVisitRunsAfterSnapshotReturns(t *testing.T) {
 	if gotLate {
 		t.Error("a visit was still running after Snapshot returned: the caller's map is live " +
 			"in two goroutines under two different mutexes")
+	}
+}
+
+// liveTransport is a replayTransport that ALSO delivers, on every
+// subscription, the live messages a running broker forwards while a window
+// is open — without the retain flag, which is how an MQTT subscriber sees
+// a publish (the flag survives only on the replay at subscribe time).
+type liveTransport struct {
+	replayTransport
+	live map[string][]byte
+}
+
+func (l *liveTransport) Subscribe(ctx context.Context, filter string, qos byte, h publisher.Handler) error {
+	if err := l.replayTransport.Subscribe(ctx, filter, qos, h); err != nil {
+		return err
+	}
+	for topic, payload := range l.live {
+		if publisher.MatchFilter(filter, topic) {
+			h(topic, payload, false)
+		}
+	}
+	return nil
+}
+
+// TestSnapshotRetainedReadsOnlyWhatTheBrokerHolds is the migration sweep's
+// window: several narrow filters in one window, every one of them taken
+// down, and only RETAINED deliveries visited — the daemon's own status
+// publishes echo back on an open subscription without the flag, and the
+// sweep must never mistake one of them for a leftover.
+func TestSnapshotRetainedReadsOnlyWhatTheBrokerHolds(t *testing.T) {
+	t.Parallel()
+	tr := &liveTransport{
+		replayTransport: replayTransport{retained: map[string][]byte{
+			"homeconnect/dw/availability": []byte("online"),
+			"homeconnect/status":          []byte("offline"),
+			"homeconnect/other/x/state":   []byte("1"),
+		}},
+		live: map[string][]byte{"homeconnect/dw/live/state": []byte("echo")},
+	}
+	p := snapshotPlane(t, tr)
+	filters := []string{"homeconnect/dw/#", "homeconnect/status"}
+	var mu sync.Mutex
+	var seen []string
+	err := p.SnapshotRetained(t.Context(), filters, 20*time.Millisecond, func(topic string, _ []byte) bool {
+		mu.Lock()
+		defer mu.Unlock()
+		seen = append(seen, topic)
+		return false
+	})
+	if err != nil {
+		t.Fatalf("SnapshotRetained: %v", err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(seen) != 2 {
+		t.Errorf("visited %v, want exactly the two retained topics under the filters", seen)
+	}
+	for _, topic := range seen {
+		if topic == "homeconnect/dw/live/state" {
+			t.Error("a live (non-retained) delivery was visited")
+		}
+	}
+	if down := tr.tornDown(); len(down) != len(filters) {
+		t.Errorf("tore down %v, want every one of %v", down, filters)
+	}
+}
+
+// failSecondSubscribe refuses every subscription after the first.
+type failSecondSubscribe struct {
+	replayTransport
+	n int
+}
+
+func (f *failSecondSubscribe) Subscribe(ctx context.Context, filter string, qos byte, h publisher.Handler) error {
+	f.n++
+	if f.n > 1 {
+		return errors.New("broker refused")
+	}
+	return f.replayTransport.Subscribe(ctx, filter, qos, h)
+}
+
+// TestSnapshotRetainedTakesDownWhatItInstalledWhenASubscribeFails: a
+// window that dies half-installed must not leave the half it installed.
+func TestSnapshotRetainedTakesDownWhatItInstalledWhenASubscribeFails(t *testing.T) {
+	t.Parallel()
+	tr := &failSecondSubscribe{}
+	p := snapshotPlane(t, tr)
+	err := p.SnapshotRetained(t.Context(), []string{"a/#", "b/#", "c/#"}, time.Second,
+		func(string, []byte) bool { return false })
+	if err == nil {
+		t.Fatal("a refused subscription was not reported")
+	}
+	if down := tr.tornDown(); len(down) != 1 || down[0] != "a/#" {
+		t.Errorf("tore down %v, want exactly the one filter that was installed", down)
 	}
 }

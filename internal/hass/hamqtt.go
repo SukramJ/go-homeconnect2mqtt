@@ -6,6 +6,7 @@ package hass
 import (
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 
 	hacatalog "github.com/SukramJ/go-ha-catalog"
@@ -71,28 +72,30 @@ const hamqttOriginName = "go-homeconnect2mqtt"
 // TestHamqttLayoutAgreesWithTheDaemonsOwnBuilders asserts it builder against
 // builder rather than through the goldens.
 //
-// topic.Default is not usable here for two independent reasons, both
-// measured in notes/adr0070-phase7-measurement.md §4:
+// It is a topic.SmartHomeLayout (openccu-loom ADR 0083): Bridge is
+// `<name>/connected`, carrying 0/1/2, and Availability is the appliance's
+// `online` status item. go-hamqtt reads that capability to switch both
+// availability entries to the convention's vocabulary — `connected` read
+// through a template that is available at 2, `online` read as a boolean
+// status object — so the methods below are forwarded rather than left to
+// an embedded topic.SmartHome, whose Availability would render the wrong
+// device segment.
 //
-//   - Default.Bridge() renders "<root>/bridge/status"; this daemon's bridge
-//     status topic — the one its Last Will writes and every payload declares
-//     as its first availability source — is "<root>/status".
-//   - Default.State() renders "<root>/<address>/<bucket>/<path...>"; this
-//     daemon renders "<root>/<raw device name>/<Dotted/Feature/Path>/state",
-//     with no bucket segment, the ORIGINAL casing of the feature name, and
-//     the RAW device name rather than the slug that is the device's address
-//     (F2 — the config topic's node id is slugified and nothing else is).
+// topic.SmartHome's own State is not usable either: it renders the slot's
+// scope, address, channel and bucket before the path, and this tree is
+// `<name>/status/<haId>/<Dotted/Feature/Path>`, with no bucket segment and
+// the ORIGINAL casing of the feature name.
 //
 // # Which parts of a Slot this Layout reads, and which it ignores
 //
-// It reads Scope[0] and Path. It ignores Address, Channel and Bucket, and
-// that is deliberate rather than an oversight:
+// It reads Scope[0] — the appliance's haId — and Path. It ignores Address,
+// Channel and Bucket, and that is deliberate rather than an oversight:
 //
 //   - Address is model.Device.UID(), i.e. "homeconnect_geschirrspuler" —
-//     the identity string, which F2 measured to be a DIFFERENT string from
-//     the topic segment "Geschirrspüler". A layout that read Address would
-//     move every state, command and availability topic of a non-ASCII device
-//     name and strand its retained state.
+//     the identity string, derived from the operator's device name. The
+//     topic segment is the haId, a different string on purpose (F2): a
+//     layout that read Address would move every topic whenever the device
+//     was renamed, which is what 0.15.0 stopped.
 //   - Channel and Bucket have no counterpart in this tree at all: a Home
 //     Connect feature is a dotted name of variable depth and nothing
 //     sub-addresses it.
@@ -102,46 +105,52 @@ const hamqttOriginName = "go-homeconnect2mqtt"
 // TestHamqttLayoutIgnoresAddressChannelAndBucket asserts the inertness
 // explicitly, which is the only way to tell "deliberately ignored" from
 // "silently dropped".
-type Layout struct{ root string }
+type Layout struct{ inst layout.Instance }
 
-var _ hatopic.Layout = Layout{}
+var _ hatopic.SmartHomeLayout = Layout{}
 
-// NewLayout is the layout under the bridge root, e.g. "homeconnect".
+// NewLayout is the layout of the instance, e.g. "homeconnect".
 //
 // Exported because three call sites need the SAME value and a second
 // construction is how they drift: the discovery renderer hands it to
-// discovery.StdContext, publisher.Config takes it so the daemon's status
-// topic is checkable against Layout.Bridge rather than free-form, and
-// cmd/homeconnect2mqtt builds both.
-func NewLayout(root string) Layout { return Layout{root: strings.TrimRight(root, "/")} }
+// discovery.StdContext, publisher.Config takes it so the daemon's
+// `connected` topic is checkable against Layout.Bridge rather than
+// free-form, and cmd/homeconnect2mqtt builds both.
+func NewLayout(inst layout.Instance) Layout { return Layout{inst: inst} }
 
-// device resolves the appliance a slot belongs to. The raw operator device
-// name travels in Scope[0]: it is the topic segment, not the identity, and
-// model.Slot has no other field that means "the container this datapoint
-// sits in".
+// device resolves the appliance a slot belongs to. The haId travels in
+// Scope[0]: it is the topic segment, not the identity, and model.Slot has
+// no other field that means "the container this datapoint sits in".
 func (l Layout) device(s model.Slot) layout.Device {
-	name := ""
+	haID := ""
 	if len(s.Scope) > 0 {
-		name = s.Scope[0]
+		haID = s.Scope[0]
 	}
-	return layout.NewDevice(l.root, name)
+	return l.inst.Device(haID)
 }
 
 // State implements topic.Layout.
-func (l Layout) State(s model.Slot) string {
-	return l.device(s).Base() + "/" + strings.Join(s.Path, "/") + "/state"
-}
+func (l Layout) State(s model.Slot) string { return l.device(s).Status(s.Path...) }
 
 // Command implements topic.Layout.
-func (l Layout) Command(s model.Slot) string {
-	return l.device(s).Base() + "/" + strings.Join(s.Path, "/") + "/set"
+func (l Layout) Command(s model.Slot) string { return l.device(s).Set(s.Path...) }
+
+// Availability implements topic.Layout: the appliance's `online` item.
+func (l Layout) Availability(s model.Slot) string { return l.device(s).Online() }
+
+// Bridge implements topic.Layout: `<name>/connected`.
+func (l Layout) Bridge() string { return l.inst.Connected() }
+
+// Connected implements topic.SmartHomeLayout.
+func (l Layout) Connected() string { return l.inst.Connected() }
+
+// Info implements topic.SmartHomeLayout.
+func (l Layout) Info() string { return l.inst.SmartHome().Info() }
+
+// Maintenance implements topic.SmartHomeLayout.
+func (l Layout) Maintenance(item ...string) string {
+	return l.inst.SmartHome().Maintenance(item...)
 }
-
-// Availability implements topic.Layout.
-func (l Layout) Availability(s model.Slot) string { return l.device(s).Availability() }
-
-// Bridge implements topic.Layout.
-func (l Layout) Bridge() string { return layout.Bridge(l.root) }
 
 // ---------------------------------------------------------------------------
 // the context
@@ -188,14 +197,17 @@ func (c hamqttContext) ObjectID(dev *model.Device, e model.Entity) string {
 
 // hamqttContext builds the render context for this Discovery's configuration.
 //
-// RawEncoding, not the default EnvelopeEncoding: this daemon publishes the
-// bare value on a state topic, so no entity carries a value_template. The
-// zero Encoding would attach one to all 667 entities that have a state topic.
+// StatusObjectEncoding: since 0.15.0 every state topic carries the
+// mqtt-smarthome status object {"val","ts","lc"}, so every entity with a
+// state topic reads `value_json.val` — lowered on binary_sensor and switch,
+// mapped from token to label on a labelled enum — and the availability list
+// reads `connected` and the appliance's `online` item in their own
+// vocabulary.
 func (d *Discovery) hamqttContext() hamqttContext {
 	return hamqttContext{
-		Layout: NewLayout(d.rootTopic),
+		Layout: NewLayout(d.inst),
 		Lang:   d.lang,
-		Enc:    discovery.RawEncoding,
+		Enc:    discovery.StatusObjectEncoding,
 	}
 }
 
@@ -219,14 +231,14 @@ func hamqttDevice(device string, info profile.DeviceInfo) *model.Device {
 	}
 }
 
-// hamqttSlot is one datapoint's coordinate. Scope carries the RAW device
-// name because that is the topic segment (F2); Address carries the device's
+// hamqttSlot is one datapoint's coordinate. Scope carries the appliance's
+// haId because that is the topic segment; Address carries the device's
 // identity because model.Slot.Valid requires one and because
 // discovery.DeviceSlot rebuilds it from the device when it resolves
-// model.LevelDevice. The two are different strings on purpose.
-func hamqttSlot(dev *model.Device, device string, path ...string) model.Slot {
+// model.LevelDevice. The two are different strings on purpose (F2).
+func hamqttSlot(dev *model.Device, haID string, path ...string) model.Slot {
 	return model.Slot{
-		Scope:   []string{device},
+		Scope:   []string{haID},
 		Address: dev.UID(),
 		Bucket:  model.BucketValues,
 		Path:    path,
@@ -255,6 +267,11 @@ func (d *Discovery) describe(e *homeconnect.Entity, platform string) *model.Desc
 	case platformBinarySensor:
 		if e.Desc.Kind == profile.KindEvent {
 			desc.Extra = map[string]any{"payload_on": "Present", "payload_off": "Off"}
+			// An event's state is its enum TOKEN, not a boolean, so the
+			// lowered template the status-object encoding gives a
+			// binary_sensor would turn "Present" into "present" and match
+			// neither payload. Read `val` as it is.
+			desc.ValueTemplate = discovery.StatusValueTemplate
 		} else {
 			desc.Extra = map[string]any{"payload_on": "true", "payload_off": "false"}
 		}
@@ -322,21 +339,42 @@ func (d *Discovery) enrichDescription(e *homeconnect.Entity, desc *model.Descrip
 
 // localizeDescriptionOptions is localizeOptions against a Description.
 //
-// The codes are replaced by their labels rather than carried as
-// model.Enum.Labels, because this bridge publishes the localized string as
-// the entity's STATE too (bridge/publish.go) — Home Assistant compares the
-// state against the options list verbatim, so the two must be the same
-// strings, and a label/code split would advertise the codes.
+// Since 0.15.0 the state topic carries the enum's TOKEN — the member name
+// the appliance speaks, which does not change with LANGUAGE — and the label
+// lives here only, as model.Enum.Labels. Under the status-object encoding
+// go-hamqtt then renders the `options` list from the labels and the
+// value/command template pair that maps between the two, so Home Assistant
+// still shows and sends labels while the wire carries tokens.
+//
+// The codes are ordered by their labels, in the display language, which is
+// the order localizeOptions gives the labels themselves (F11): the
+// `options` list Home Assistant shows is unchanged by the move.
 func (d *Discovery) localizeDescriptionOptions(desc *model.Description) {
 	if desc.Options == nil {
 		return
 	}
-	loc := make([]string, len(desc.Options.Codes))
-	for i, o := range desc.Options.Codes {
-		loc[i] = i18n.EnumLabel(o, d.lang)
+	codes := append([]string(nil), desc.Options.Codes...)
+	label := make(map[string]string, len(codes))
+	for _, c := range codes {
+		label[c] = i18n.EnumLabel(c, d.lang)
 	}
-	sortLocalized(loc)
-	desc.Options = &model.Enum{Codes: loc}
+	sort.SliceStable(codes, func(i, j int) bool {
+		a, b := label[codes[i]], label[codes[j]]
+		if ka, kb := collateKey(a), collateKey(b); ka != kb {
+			return ka < kb
+		}
+		return a < b
+	})
+	var labels map[string]model.Localized
+	for _, c := range codes {
+		if l := label[c]; l != c {
+			if labels == nil {
+				labels = map[string]model.Localized{}
+			}
+			labels[c] = model.L(l)
+		}
+	}
+	desc.Options = &model.Enum{Codes: codes, Labels: labels}
 }
 
 // sanitizeDescriptionForPlatform is sanitizeForPlatform, clause for clause,
@@ -380,7 +418,7 @@ func sanitizeDescriptionForPlatform(desc *model.Description, platform string) {
 // The third return is how many entities the CURATED filter dropped, and it
 // exists because that number is the cost of an add-on option nobody is
 // told the price of. See [Discovery.warnCuratedOmissions].
-func (d *Discovery) hamqttModel(device string, info profile.DeviceInfo, entities []*homeconnect.Entity) (*model.Device, []model.Entity, int) {
+func (d *Discovery) hamqttModel(device, haID string, info profile.DeviceInfo, entities []*homeconnect.Entity) (*model.Device, []model.Entity, int) {
 	dev := hamqttDevice(device, info)
 	out := make([]model.Entity, 0, len(entities)+2)
 	curated := 0
@@ -400,7 +438,7 @@ func (d *Discovery) hamqttModel(device string, info profile.DeviceInfo, entities
 			curated++
 			continue
 		}
-		slot := hamqttSlot(dev, device, strings.Split(layout.FeaturePath(e.Name(), e.UID()), "/")...)
+		slot := hamqttSlot(dev, haID, layout.FeatureItem(e.Name(), e.UID())...)
 		out = append(out, &model.Basic{
 			EntityKey:      featureKey(e),
 			EntityPlatform: hacatalog.Platform(platform),
@@ -408,7 +446,7 @@ func (d *Discovery) hamqttModel(device string, info profile.DeviceInfo, entities
 			Binds:          hamqttBindings(e, platform, slot),
 		})
 	}
-	return dev, append(out, d.hamqttProgramControls(device, dev, entities)...), curated
+	return dev, append(out, d.hamqttProgramControls(haID, dev, entities)...), curated
 }
 
 // warnCuratedOmissions says out loud what HASS_DISCOVERY: curated costs on
@@ -481,7 +519,7 @@ func hamqttBindings(e *homeconnect.Entity, platform string, slot model.Slot) []m
 // deliberate differences from a command-derived button (F6) survive
 // unchanged: payload_press "PRESS", no entity_category, no
 // enabled_by_default.
-func (d *Discovery) hamqttProgramControls(device string, dev *model.Device, entities []*homeconnect.Entity) []model.Entity {
+func (d *Discovery) hamqttProgramControls(haID string, dev *model.Device, entities []*homeconnect.Entity) []model.Entity {
 	hasProgram := false
 	for _, e := range entities {
 		if e.Desc.Kind == profile.KindActiveProgram || e.Desc.Kind == profile.KindSelectedProgram {
@@ -507,7 +545,7 @@ func (d *Discovery) hamqttProgramControls(device string, dev *model.Device, enti
 			Extra: map[string]any{"payload_press": controlPressPayload},
 		}
 		sanitizeDescriptionForPlatform(desc, platformButton)
-		slot := hamqttSlot(dev, device, strings.Split(layout.ControlPath(c.key), "/")...)
+		slot := hamqttSlot(dev, haID, strings.Split(layout.ControlPath(c.key), "/")...)
 		out = append(out, &model.Basic{
 			EntityKey:      c.key,
 			EntityPlatform: hacatalog.Platform(platformButton),
@@ -541,8 +579,8 @@ type hamqttRow struct {
 // deliberate: configTopic in discovery.go composes the same string by hand,
 // and the whole point of step 4 is to find out whether the library agrees
 // with it rather than to assume so.
-func (d *Discovery) hamqttComponents(device string, info profile.DeviceInfo, entities []*homeconnect.Entity) ([]hamqttRow, error) {
-	dev, ents, _ := d.hamqttModel(device, info, entities)
+func (d *Discovery) hamqttComponents(device, haID string, info profile.DeviceInfo, entities []*homeconnect.Entity) ([]hamqttRow, error) {
+	dev, ents, _ := d.hamqttModel(device, haID, info, entities)
 	ctx := d.hamqttContext()
 	nodeID := ctx.NodeID(dev)
 	rows := make([]hamqttRow, 0, len(ents))
@@ -577,8 +615,8 @@ func (d *Discovery) hamqttComponents(device string, info profile.DeviceInfo, ent
 // and plus the `platform` the per-entity form carried in its topic.
 // TestTheDocumentsComponentsAreThePinnedPayloads is what asserts that
 // rather than stating it.
-func (d *Discovery) BundleFor(device string, info profile.DeviceInfo, entities []*homeconnect.Entity) (*discovery.Bundle, error) {
-	dev, ents, omitted := d.hamqttModel(device, info, entities)
+func (d *Discovery) BundleFor(device, haID string, info profile.DeviceInfo, entities []*homeconnect.Entity) (*discovery.Bundle, error) {
+	dev, ents, omitted := d.hamqttModel(device, haID, info, entities)
 	d.warnCuratedOmissions(device, omitted, len(ents))
 	b, err := discovery.Render(d.hamqttContext(), dev, ents, discovery.Origin{Name: hamqttOriginName})
 	if err != nil {

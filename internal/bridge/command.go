@@ -5,9 +5,11 @@ package bridge
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -17,7 +19,6 @@ import (
 
 	"github.com/SukramJ/go-mqtt"
 
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
@@ -28,34 +29,37 @@ import (
 const commandDrainTimeout = 5 * time.Second
 
 // subscribeCommands wires the inbound half onto publisher.CommandRouter:
-// one route per device, covering that device's command sub-tree.
+// one route per device, covering that device's command sub-tree, plus the
+// instance's maintenance commands.
 //
-// # The filter, and why it is still the whole sub-tree
+// # The filter
 //
 // The feature path is variable-depth — a Home Connect feature is a dotted
 // name of any length — so no fixed-arity filter covers the command tree
-// and "<root>/<device>/#" is forced. It therefore also matches all 689 of
-// this daemon's own state, availability and connection-state publishes for
-// the device (F4). Three things keep that from turning a state publish
-// into a command this daemon issues to itself:
+// and "<name>/set/<haId>/#" is forced. Before 0.15.0 the equivalent filter
+// was "<root>/<device>/#", which also matched all 689 of this daemon's own
+// state, availability and connection-state publishes for the device (F4).
+// The function now sits at the second level, so the command tree and the
+// status tree are disjoint by an MQTT filter, and the state plane is told
+// `<name>/set/#` as its collision guard (haplane.Config.SetFilter). What
+// still stands guard on top of that:
 //
 //   - MQTT 5.0 No Local, so the broker does not forward this daemon's own
 //     publishes back to it at all. The shipped go-hamqtt transport adapter
-//     implements publisher.NoLocalSubscriber and the router uses it, so
-//     the option survives the move rather than having to be re-passed.
-//   - publisher.CommandConfig.DeliverRetained, off. No Local does not
-//     cover the retained replay the broker delivers on (re)subscribe —
-//     that is not a forward — and this is now a stated policy rather than
-//     a hand-written `if msg.Retain` a refactor could drop.
-//   - [shouldDispatch]'s Relative check, which is the real disjointness
-//     rule: a command topic ends in "/set" and a state topic in "/state".
-//     That is a SUFFIX, which an MQTT filter cannot express, which is why
-//     publisher.CommandRouter.CheckDisjoint and
-//     publisher.StateConfig.CommandFilters — both of which decide by
-//     matching a filter — cannot be used here and would refuse every one
-//     of this daemon's own state publishes if they were. See
-//     TestCommandFilterCannotBeStatedToTheStatePlane, which asserts that
-//     rather than leaving it as a comment.
+//     implements publisher.NoLocalSubscriber and the router uses it.
+//   - publisher.CommandConfig.DeliverRetained, off. A retained `set` is
+//     ignored (openccu-loom ADR 0083): it is somebody's `mosquitto_pub -r`
+//     left behind, and the broker replays it on every (re)subscribe.
+//   - [shouldDispatch], which states the same two rules once more where a
+//     test can reach them.
+//
+// # The payload
+//
+// Every route is a publisher.CommandRouter.HandleSet route, so the payload
+// arrives normalised per mqtt-smarthome 2.0 §5.3: a plain value and
+// `{"val": …}` are the same thing, an empty payload never reaches a
+// handler, and malformed JSON is logged at warn with its topic and payload
+// by the router itself.
 //
 // # One route per device, and no overlap
 //
@@ -64,25 +68,31 @@ const commandDrainTimeout = 5 * time.Second
 // matching handler per copy — so two overlapping routes run a handler
 // twice per published message, which openccu-loom measured against
 // Mosquitto and needed a separate connection to fix. The routes here are
-// "<root>/<name>/#" per configured device and LoadDevices refuses a
-// duplicate name, so they differ in a literal level and cannot overlap;
-// publisher.CommandRouter refuses the pair at registration if they ever
-// do. The two transient discovery-tree subscriptions this daemon used to
-// install are gone (the sweep opens one window under the discovery
-// prefix), and the birth subscription is under the discovery prefix too,
-// so neither can multiply a command.
+// "<name>/set/<haId>/#" per configured device and bridge.New refuses a
+// duplicate haId, so they differ in a literal level and cannot overlap;
+// the maintenance route is "<name>/maintenance/set/#", disjoint by its
+// second level; publisher.CommandRouter refuses the pair at registration
+// if they ever do overlap. The migration sweep's windows stay outside the
+// command tree for the same reason (see migrate.go), and the birth
+// subscription is under the discovery prefix, so neither can multiply a
+// command.
 func (b *Bridge) subscribeCommands(ctx context.Context) error {
 	router := publisher.NewCommandRouter(gomqtt.Transport(b.mqtt), b.commandConfig(ctx))
 	for _, d := range b.devices {
 		dev := d
 		filter := dev.topics.CommandFilter()
-		if err := router.Handle(filter, func(hctx context.Context, cmd publisher.Command) {
-			b.onCommand(hctx, dev, cmd)
+		if err := router.HandleSet(filter, func(hctx context.Context, cmd publisher.Command, v publisher.SetValue) {
+			b.onCommand(hctx, dev, cmd, v)
 		}); err != nil {
 			// A rejected route is a composition mistake — a malformed
 			// filter, a duplicate, an overlap — not a broker condition,
 			// so it fails the boot rather than being retried.
 			return fmt.Errorf("bridge: route %s: %w", filter, err)
+		}
+	}
+	if b.instance != nil {
+		if err := b.instance.Register(router); err != nil {
+			return fmt.Errorf("bridge: maintenance route: %w", err)
 		}
 	}
 	if err := router.Start(ctx); err != nil {
@@ -105,10 +115,12 @@ func (b *Bridge) subscribeCommands(ctx context.Context) error {
 // value, which is what makes the policy observable on its own.
 func (b *Bridge) commandConfig(ctx context.Context) publisher.CommandConfig {
 	return publisher.CommandConfig{
-		// Stated, never defaulted: publisher.QoS's zero value is
-		// QoSUnset, which resolves to QoS 1, so an operator's MQTT_QOS: 0
-		// would be silently upgraded here (F9).
-		QoS: haplane.QoS(b.cfg.QoSLevel()),
+		// QoS 1, stated rather than defaulted, and no longer MQTT_QOS:
+		// openccu-loom ADR 0083 subscribes `set` at QoS 1 in all six
+		// projects, because a lost write on a flaky link is the failure
+		// operators report. A subscription QoS is an upper bound, so a
+		// consumer that publishes at QoS 0 still gets QoS 0.
+		QoS: publisher.QoSAtLeastOnce,
 		// A retained command is somebody's `mosquitto_pub -r` left behind,
 		// and the broker replays it on every (re)subscribe.
 		DeliverRetained: false,
@@ -122,14 +134,14 @@ func (b *Bridge) commandConfig(ctx context.Context) publisher.CommandConfig {
 
 // onCommand is the routed-command handler. It runs on a router worker,
 // never on the transport's read loop, which is what makes the blocking
-// Home Connect cloud calls in handleSet safe: the old code had to spawn a
+// Home Connect calls in handleSet safe: the old code had to spawn a
 // goroutine per delivery for exactly that reason, and an unbounded one at
 // that. Order is preserved per topic, which the goroutine gave up.
-func (b *Bridge) onCommand(ctx context.Context, d *Device, cmd publisher.Command) {
+func (b *Bridge) onCommand(ctx context.Context, d *Device, cmd publisher.Command, v publisher.SetValue) {
 	if !shouldDispatch(d, cmd.Topic, cmd.Retained) {
 		return
 	}
-	b.handleSet(ctx, d, cmd.Topic, cmd.Payload)
+	b.handleSet(ctx, d, setRequest{topic: cmd.Topic, payload: string(cmd.Payload), value: v})
 }
 
 // shouldDispatch decides, without side effects, whether an inbound message
@@ -148,12 +160,7 @@ func (b *Bridge) onCommand(ctx context.Context, d *Device, cmd publisher.Command
 //     re-fired write on every reconnect is worth asserting twice. A
 //     retained delivery at subscribe time is not a forward, so MQTT 5.0
 //     No Local does not cover it either.
-//   - A command topic at all. The subscription is the whole device
-//     sub-tree (the feature path is variable-depth, so no fixed-arity
-//     filter fits), which matches every state, availability and
-//     connection-state topic this daemon publishes for the device. With
-//     MQTT_RETAIN: false the retained check never fires, and each of those
-//     used to spawn a goroutine whose only job was to return (F4).
+//   - A command topic of THIS device, with an item below it.
 func shouldDispatch(d *Device, topic string, retained bool) bool {
 	if retained {
 		return false
@@ -210,42 +217,121 @@ func (b *Bridge) subscribeBirth(ctx context.Context) error {
 	return err
 }
 
-// handleSet resolves an incoming "/set" command to a feature and applies
-// it, choosing the device-specific program-start path where applicable
-// (FK-4) and gating writes on the dynamic access window (FK-5).
-func (b *Bridge) handleSet(parent context.Context, d *Device, msgTopic string, payload []byte) {
-	rel, ok := d.topics.Relative(msgTopic)
-	if !ok {
-		return // a state/availability publish echoed back, ignore
-	}
-	value := strings.TrimSpace(string(payload))
+// setRequest is one normalised `set`: the value, and the topic and raw
+// payload every rejection is logged with (mqtt-smarthome 2.0 §3.3).
+type setRequest struct {
+	topic   string
+	payload string
+	value   publisher.SetValue
+}
 
-	if b.handleProgramControl(parent, d, rel) {
+// reject logs a `set` this daemon will not carry out, at warn, with its
+// topic and payload — the spec's MUST for a rejected or failed request.
+func (b *Bridge) reject(ctx context.Context, d *Device, req setRequest, msg string, attrs ...slog.Attr) {
+	all := append([]slog.Attr{
+		slog.String("device", d.name),
+		slog.String("topic", req.topic),
+		slog.String("payload", req.payload),
+	}, attrs...)
+	b.logger.LogAttrs(ctx, slog.LevelWarn, msg, all...)
+}
+
+// handleSet resolves an incoming `set` to a feature and applies it,
+// choosing the device-specific program-start path where applicable (FK-4)
+// and gating writes on the dynamic access window (FK-5).
+func (b *Bridge) handleSet(parent context.Context, d *Device, req setRequest) {
+	rel, ok := d.topics.Relative(req.topic)
+	if !ok {
+		return // not a command topic of this device
+	}
+
+	if b.handleProgramControl(parent, d, rel, req) {
 		return // a synthetic start/stop control, not a feature write
 	}
 
 	entity, ok := b.resolveEntity(d, rel)
 	if !ok {
-		b.logger.Warn("bridge.command_unknown_feature", slog.String("device", d.name), slog.String("topic", msgTopic))
+		b.reject(parent, d, req, "bridge.command_unknown_feature")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(parent, b.cfg.SendTimeoutDuration()+b.cmdRetryDelay*time.Duration(b.cmdRetries+1))
 	defer cancel()
 
-	switch entity.Desc.Kind {
-	case profile.KindProgram:
-		b.startProgram(ctx, d, entity.UID(), value)
-	case profile.KindSelectedProgram:
-		b.selectNamedProgram(ctx, d, value)
-	case profile.KindActiveProgram:
-		if isStopValue(value) {
-			b.runProgramCall(ctx, d, "stop", func() error { _, err := d.app.StopActiveProgram(ctx); return err })
+	if isProgramKind(entity.Desc.Kind) || entity.Desc.Kind == profile.KindProgram {
+		if req.value.Structured() {
+			b.reject(ctx, d, req, "bridge.command_rejected", slog.String("reason", "a program takes a plain value"))
 			return
 		}
-		b.startNamedProgram(ctx, d, value)
+	}
+	value := req.value.Text
+	switch entity.Desc.Kind {
+	case profile.KindProgram:
+		b.startProgram(ctx, d, req, entity.UID(), value)
+	case profile.KindSelectedProgram:
+		b.selectNamedProgram(ctx, d, req, value)
+	case profile.KindActiveProgram:
+		if isStopValue(value) {
+			b.runProgramCall(ctx, d, req, "stop", func() error { _, err := d.app.StopActiveProgram(ctx); return err })
+			return
+		}
+		b.startNamedProgram(ctx, d, req, value)
 	default:
-		b.writeWithWindow(ctx, d, entity, value)
+		v, err := b.writeValue(entity, req.value)
+		if err != nil {
+			b.reject(ctx, d, req, "bridge.command_rejected", slog.String("err", err.Error()))
+			return
+		}
+		b.writeWithWindow(ctx, d, req, entity, v)
+	}
+}
+
+// writeValue converts a normalised `set` into the value written to the
+// appliance, per mqtt-smarthome 2.0 §5.3:
+//
+//   - an enum by token, case-insensitively, or by a label in the configured
+//     language — the reverse mapping Home Assistant's dropdown has always
+//     relied on, kept because the spec allows it;
+//   - a boolean from true/false, 1/0, on/off or yes/no, in any case;
+//   - a number rounded to the feature's step and clamped to its range,
+//     where the appliance reported them;
+//   - an Object feature from a structured JSON body;
+//   - anything else as the plain text.
+func (b *Bridge) writeValue(e *homeconnect.Entity, v publisher.SetValue) (any, error) {
+	if v.Structured() {
+		if e.Desc.ProtocolType != profile.ProtocolObject {
+			return nil, errors.New("a structured value is only accepted by an object feature")
+		}
+		var body any
+		if err := json.Unmarshal(v.Params, &body); err != nil {
+			return nil, fmt.Errorf("structured value: %w", err)
+		}
+		return body, nil
+	}
+	if e.Desc.IsEnum() {
+		return i18n.EnumValue(v.Text, b.cfg.Language), nil // accept localized dropdown labels
+	}
+	switch e.Desc.ProtocolType {
+	case profile.ProtocolBoolean:
+		return v.Bool()
+	case profile.ProtocolInteger, profile.ProtocolFloat:
+		bd := e.Bounds()
+		lo, hi, step := math.Inf(-1), math.Inf(1), 0.0
+		if bd.HasMin {
+			lo = bd.Min
+		}
+		if bd.HasMax {
+			hi = bd.Max
+		}
+		switch {
+		case bd.HasStep && bd.Step > 0:
+			step = bd.Step
+		case e.Desc.ProtocolType == profile.ProtocolInteger:
+			step = 1
+		}
+		return v.Number(lo, hi, step)
+	default:
+		return v.Text, nil
 	}
 }
 
@@ -262,13 +348,10 @@ func (b *Bridge) resolveEntity(d *Device, rel string) (*homeconnect.Entity, bool
 	return d.app.EntityByName(name)
 }
 
-// writeWithWindow writes a scalar value, retrying within the dynamic access
+// writeWithWindow writes a value, retrying within the dynamic access
 // window: a not-yet-writable feature or a 541 ProcessStateNotCompliant is
 // retried a bounded number of times (FK-5, #384).
-func (b *Bridge) writeWithWindow(ctx context.Context, d *Device, e *homeconnect.Entity, value string) {
-	if e.Desc.IsEnum() {
-		value = i18n.EnumValue(value, b.cfg.Language) // accept localized dropdown labels
-	}
+func (b *Bridge) writeWithWindow(ctx context.Context, d *Device, req setRequest, e *homeconnect.Entity, value any) {
 	for attempt := 0; ; attempt++ {
 		if e.Writable() {
 			err := d.app.WriteValue(ctx, e.UID(), value)
@@ -276,12 +359,12 @@ func (b *Bridge) writeWithWindow(ctx context.Context, d *Device, e *homeconnect.
 				return
 			}
 			if !isWriteWindowError(err) || attempt >= b.cmdRetries {
-				b.logger.Warn("bridge.write_failed", slog.String("device", d.name),
+				b.reject(ctx, d, req, "bridge.write_failed",
 					slog.Int("uid", e.UID()), slog.String("err", err.Error()))
 				return
 			}
 		} else if attempt >= b.cmdRetries {
-			b.logger.Warn("bridge.write_not_writable", slog.String("device", d.name),
+			b.reject(ctx, d, req, "bridge.write_not_writable",
 				slog.Int("uid", e.UID()), slog.String("access", e.Access()))
 			return
 		}
@@ -294,8 +377,10 @@ func (b *Bridge) writeWithWindow(ctx context.Context, d *Device, e *homeconnect.
 }
 
 // handleProgramControl runs a synthetic start/stop control, reporting whether
-// rel was one (so the caller skips the feature-write path).
-func (b *Bridge) handleProgramControl(parent context.Context, d *Device, rel string) bool {
+// rel was one (so the caller skips the feature-write path). A control is an
+// action item: any non-empty payload fires it, and the router has already
+// dropped an empty one.
+func (b *Bridge) handleProgramControl(parent context.Context, d *Device, rel string, req setRequest) bool {
 	// The relative paths the discovery layer advertises as the two
 	// synthetic buttons' command_topic. Both sides read layout.ControlPath,
 	// so a press can never land on a path nothing handles (F3).
@@ -307,9 +392,9 @@ func (b *Bridge) handleProgramControl(parent context.Context, d *Device, rel str
 	defer cancel()
 	switch rel {
 	case start:
-		b.startSelectedProgram(ctx, d)
+		b.startSelectedProgram(ctx, d, req)
 	case stop:
-		b.runProgramCall(ctx, d, "stop", func() error { _, err := d.app.StopActiveProgram(ctx); return err })
+		b.runProgramCall(ctx, d, req, "stop", func() error { _, err := d.app.StopActiveProgram(ctx); return err })
 	}
 	return true
 }
@@ -317,54 +402,54 @@ func (b *Bridge) handleProgramControl(parent context.Context, d *Device, rel str
 // startSelectedProgram starts the program currently chosen in the
 // selected-program select (the appliances expose no start command; we post the
 // selected program to /ro/activeProgram via the device's start strategy).
-func (b *Bridge) startSelectedProgram(ctx context.Context, d *Device) {
+func (b *Bridge) startSelectedProgram(ctx context.Context, d *Device, req setRequest) {
 	sp, ok := d.app.EntityByName("BSH.Common.Root.SelectedProgram")
 	if !ok {
-		b.logger.Warn("bridge.no_selected_program", slog.String("device", d.name))
+		b.reject(ctx, d, req, "bridge.no_selected_program")
 		return
 	}
 	sel, ok := sp.Value().(string)
 	if !ok || sel == "" {
-		b.logger.Warn("bridge.no_program_selected", slog.String("device", d.name))
+		b.reject(ctx, d, req, "bridge.no_program_selected")
 		return
 	}
 	uid, ok := b.resolveProgramUID(d, sel)
 	if !ok {
-		b.logger.Warn("bridge.unknown_program", slog.String("device", d.name), slog.String("program", sel))
+		b.reject(ctx, d, req, "bridge.unknown_program", slog.String("program", sel))
 		return
 	}
-	b.startProgram(ctx, d, uid, sel)
+	b.startProgram(ctx, d, req, uid, sel)
 }
 
-func (b *Bridge) startProgram(ctx context.Context, d *Device, programUID int, value string) {
+func (b *Bridge) startProgram(ctx context.Context, d *Device, req setRequest, programUID int, value string) {
 	// A program feature may be toggled with an explicit stop.
 	if isStopValue(value) {
-		b.runProgramCall(ctx, d, "stop", func() error { _, err := d.app.StopActiveProgram(ctx); return err })
+		b.runProgramCall(ctx, d, req, "stop", func() error { _, err := d.app.StopActiveProgram(ctx); return err })
 		return
 	}
 	strategy := b.startStrategy(d)
-	b.runProgramCall(ctx, d, "start", func() error {
+	b.runProgramCall(ctx, d, req, "start", func() error {
 		_, err := d.app.StartProgram(ctx, programUID, nil, strategy)
 		return err
 	})
 }
 
-func (b *Bridge) startNamedProgram(ctx context.Context, d *Device, name string) {
+func (b *Bridge) startNamedProgram(ctx context.Context, d *Device, req setRequest, name string) {
 	uid, ok := b.resolveProgramUID(d, name)
 	if !ok {
-		b.logger.Warn("bridge.unknown_program", slog.String("device", d.name), slog.String("program", name))
+		b.reject(ctx, d, req, "bridge.unknown_program", slog.String("program", name))
 		return
 	}
-	b.startProgram(ctx, d, uid, name)
+	b.startProgram(ctx, d, req, uid, name)
 }
 
-func (b *Bridge) selectNamedProgram(ctx context.Context, d *Device, name string) {
+func (b *Bridge) selectNamedProgram(ctx context.Context, d *Device, req setRequest, name string) {
 	uid, ok := b.resolveProgramUID(d, name)
 	if !ok {
-		b.logger.Warn("bridge.unknown_program", slog.String("device", d.name), slog.String("program", name))
+		b.reject(ctx, d, req, "bridge.unknown_program", slog.String("program", name))
 		return
 	}
-	b.runProgramCall(ctx, d, "select", func() error { _, err := d.app.SelectProgram(ctx, uid, nil); return err })
+	b.runProgramCall(ctx, d, req, "select", func() error { _, err := d.app.SelectProgram(ctx, uid, nil); return err })
 }
 
 // resolveProgramUID maps a program reference to a uid: the full feature name, a
@@ -421,9 +506,9 @@ func (b *Bridge) startStrategy(d *Device) homeconnect.ProgramStartStrategy {
 }
 
 // runProgramCall runs a program control call and logs a device error.
-func (b *Bridge) runProgramCall(_ context.Context, d *Device, action string, fn func() error) {
+func (b *Bridge) runProgramCall(ctx context.Context, d *Device, req setRequest, action string, fn func() error) {
 	if err := fn(); err != nil {
-		b.logger.Warn("bridge.program_call_failed", slog.String("device", d.name),
+		b.reject(ctx, d, req, "bridge.program_call_failed",
 			slog.String("action", action), slog.String("err", err.Error()))
 	}
 }
