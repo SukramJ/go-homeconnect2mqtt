@@ -3163,8 +3163,13 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "battery",
+      "device_class": "enum",
       "name": "Battery Level",
+      "options": [
+        "Aus",
+        "Auto",
+        "Ein"
+      ],
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Status/BatteryLevel/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_status_batterylevel"
     }
@@ -3707,7 +3712,6 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "volume",
       "entity_category": "diagnostic",
       "name": "Füllmenge",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/FillQuantity/state",

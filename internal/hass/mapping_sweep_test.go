@@ -246,6 +246,9 @@ func TestEveryMappedFeatureInEveryShapeRendersAValidDocument(t *testing.T) {
 				if why := haRefuses(t, body); why != "" {
 					t.Errorf("%s/%s: %s: %s", s.name, lang, key, why)
 				}
+				if why := numericOnText(body, s); why != "" {
+					t.Errorf("%s/%s: %s: %s", s.name, lang, key, why)
+				}
 				components++
 			}
 		}
@@ -471,4 +474,25 @@ func TestNumberBoundsAreOnlyThoseHomeAssistantAccepts(t *testing.T) {
 			t.Errorf("%s: numberBounds = %+v, want %+v", c.name, got, c.want)
 		}
 	}
+}
+
+// numericOnText is the rule textSensorClass enforces, checked from the
+// outside: in a shape whose wire value is not a number (a string, a
+// boolean, an enumeration), no sensor may carry a unit, a state class or a
+// numeric device class — Home Assistant would then expect a number and
+// refuse every state (sensor/__init__.py:719-745). Only the status, setting
+// and option features take the shape's type; the others keep the pin's,
+// and none of them is a numeric sensor.
+func numericOnText(body map[string]any, s sweepShape) string {
+	if body["platform"] != platformSensor || (s.protocol == profile.ProtocolInteger && !s.enum) {
+		return ""
+	}
+	dc, _ := body["device_class"].(string)
+	_, unit := body["unit_of_measurement"]
+	_, sc := body["state_class"]
+	rel := sensorRelations()
+	if unit || sc || (dc != "" && rel != nil && rel.numeric[dc]) {
+		return fmt.Sprintf("a %s value rendered as a numeric sensor (device_class %q, unit %v, state_class %v)", s.protocol, dc, unit, sc)
+	}
+	return ""
 }

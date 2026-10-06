@@ -432,6 +432,10 @@ func (d *Discovery) hamqttModel(device, haID string, info profile.DeviceInfo, en
 		desc := d.describe(e, platform)
 		d.enrichDescription(e, desc, platform)
 		d.localizeDescriptionOptions(desc)
+		if platform == platformSensor && !numericValue(e) {
+			desc.DeviceClass = model.DeviceClass(textSensorClass(string(desc.DeviceClass), e.Desc.IsEnum()))
+			desc.Unit, desc.StateClass = "", ""
+		}
 		sanitizeDescriptionForPlatform(desc, platform)
 		if d.curated && desc.Enabled != nil && !*desc.Enabled {
 			curated++

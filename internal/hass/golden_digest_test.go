@@ -92,9 +92,21 @@ var goldenDigests = map[string]string{
 	// same change; they moved no further byte, because the heuristic
 	// already says `config` for a writable setting. No topic, unique_id,
 	// default_entity_id or platform moves: identity_en.json is UNCHANGED.
-	"discovery_full_en.json":    "89f1e968ec3b3392dd9cb0dc06cca678136c6168c87475b74d6ed82ae7561a34",
-	"discovery_full_de.json":    "5810f7192f6decf0ba85f9273161d6a4a2bf552f2daa80604c5e0e720e3f7dd4",
-	"discovery_curated_de.json": "3e0d81ab1f7ac98f7135eb35a57983c0f1aba0b3cf168dd1c907518759ad897c",
+	//
+	// Moved a seventh time by 0.15.2, in the three ENRICHED files only, on
+	// three rows (two in curated): a sensor whose wire value is not a
+	// number loses the numeric classes the catalogue gave it, because Home
+	// Assistant then expects a number and refuses every state
+	// (sensor/__init__.py:719-745). bsh_common_status_program_all_count_started
+	// (a String in the pin) loses "state_class"; consumerproducts_coffeemaker_
+	// option_fillquantity (a String) loses "device_class": "volume";
+	// bsh_common_status_batterylevel (an enumeration) goes from
+	// "device_class": "battery" back to "enum" and gets its "options" back.
+	// Found by TestEveryTemplateRendersAStateItsPlatformAccepts. No identity
+	// moves; discovery_plain_en.json is unchanged by it.
+	"discovery_full_en.json":    "e62d230d2fe2fa87a228f7f0c5c99425d6b6a5dad0bbff247fb3012719e47b55",
+	"discovery_full_de.json":    "f27360ffd379350efcb02ff68a7ffd9635d7da6fa6dbd5e4553493343bc6c754",
+	"discovery_curated_de.json": "7ddc5748cd344438b48dc9c47106fc34f3fa394a9ccefea5f9579912b36bcea3",
 	// UNCHANGED by F13 — the unenriched control. Moved by 0.15.2 (above).
 	"discovery_plain_en.json": "16b35f729b6a9034f0581128fb05872fc949462bd7a1854f473dbdf9612d749a",
 	// UNCHANGED by F13 and by 0.15.2 — no identity string moves.

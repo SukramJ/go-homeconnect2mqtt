@@ -628,6 +628,44 @@ func deviceClassAllowedIn(t map[string]map[string]bool, platform, dc string) boo
 	return t[platform][dc]
 }
 
+// numericValue reports whether an entity's state is a number on the wire:
+// an Integer or Float that is not an enumeration. Everything else — a
+// string, an enum token, a boolean, an object — is text to Home Assistant.
+func numericValue(e *homeconnect.Entity) bool {
+	if e.Desc.IsEnum() {
+		return false
+	}
+	return e.Desc.ProtocolType == profile.ProtocolInteger || e.Desc.ProtocolType == profile.ProtocolFloat
+}
+
+// textSensorClass is the device class a sensor whose state is NOT a number
+// may carry, and such a sensor carries no unit and no state class at all:
+// a device class survives only when it is itself non-numeric (date,
+// timestamp, enum).
+//
+// Home Assistant treats a sensor with a unit, a state class or a numeric
+// device class as numeric (sensor/__init__.py:126-145) and raises "has the
+// non-numeric value" on every state that does not parse as a number
+// (sensor/__init__.py:719-745): the entity exists and never shows a value.
+// The catalogue reaches this whenever it describes a feature by its usual
+// type — `state_class: total_increasing` on a counter, `device_class:
+// volume` on a fill quantity, `device_class: battery` on a level — and an
+// appliance models that feature as a string or an enumeration. An
+// enumeration goes back to the `enum` class, which keeps its options. A
+// table that fails to load fails CLOSED: the device class is dropped.
+func textSensorClass(dc string, enum bool) string {
+	if enum {
+		return deviceClassEnum
+	}
+	if dc == "" || dc == deviceClassEnum {
+		return dc
+	}
+	if t := sensorRelations(); t == nil || t.numeric[dc] {
+		return ""
+	}
+	return dc
+}
+
 // sanitizeForPlatform strips attributes the target platform rejects. It runs
 // last, after enrichment, so neither the heuristic nor an operator override can
 // produce a config Home Assistant refuses to load.

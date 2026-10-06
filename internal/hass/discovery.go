@@ -314,6 +314,17 @@ func (d *Discovery) PublishDevice(ctx context.Context, device string, info profi
 		payload := payloadFor(e, platform, device, d.topicsFor(device, e), dev)
 		d.applyEnrichment(e, payload, platform)
 		d.localizeOptions(payload)
+		if platform == platformSensor && !numericValue(e) {
+			dc, _ := payload["device_class"].(string)
+			dc = textSensorClass(dc, e.Desc.IsEnum())
+			delete(payload, "unit_of_measurement")
+			delete(payload, "state_class")
+			if dc == "" {
+				delete(payload, "device_class")
+			} else {
+				payload["device_class"] = dc
+			}
+		}
 		sanitizeForPlatform(payload, platform)
 		// Curated mode: only publish the enabled-by-default (primary) entities.
 		if d.curated && disabledByDefault(payload) {

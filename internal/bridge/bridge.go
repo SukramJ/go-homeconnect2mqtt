@@ -270,7 +270,7 @@ func (b *Bridge) PublishOnline(ctx context.Context) {
 		// broker last accepted, which for a value that changed during the
 		// outage is the value before it. See [Bridge.reassertLink].
 		for _, d := range b.devices {
-			b.reassertLink(d)
+			b.reassertLink(d) //nolint:contextcheck // each publish is bounded by publishTimeout on purpose, like onState's
 			b.requeueValues(d)
 		}
 		b.republishDiscovery(ctx)

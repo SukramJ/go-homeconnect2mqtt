@@ -7601,8 +7601,13 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "battery",
+      "device_class": "enum",
       "name": "Battery Level",
+      "options": [
+        "Auto",
+        "Off",
+        "On"
+      ],
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Status/BatteryLevel/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_status_batterylevel"
     }
@@ -7882,7 +7887,6 @@
       "enabled_by_default": false,
       "entity_category": "diagnostic",
       "name": "Programs started",
-      "state_class": "total_increasing",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Status/Program/All/Count/Started/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_status_program_all_count_started"
     }
@@ -8997,7 +9001,6 @@
         "model": "SMV6ZCX49E",
         "name": "Dishwasher"
       },
-      "device_class": "volume",
       "entity_category": "diagnostic",
       "name": "Fill quantity",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/FillQuantity/state",
