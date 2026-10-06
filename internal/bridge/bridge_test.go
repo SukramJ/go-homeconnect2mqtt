@@ -4,11 +4,13 @@
 package bridge
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -433,8 +435,9 @@ func TestNewRefusesAnApplianceWithoutAnHaIDOrTwiceTheSame(t *testing.T) {
 	_, err = New(Deps{Config: testCfg(), MQTT: stub, Plane: testPlane(stub), Devices: []DeviceSpec{
 		spec("dw", "SAME"), spec("dw2", "SAME"),
 	}})
-	if err == nil || !strings.Contains(err.Error(), "SAME") {
-		t.Errorf("two entries for one appliance: err = %v, want a refusal naming the haId", err)
+	if err == nil || !strings.Contains(err.Error(), "SAME") ||
+		!strings.Contains(err.Error(), `"dw"`) || !strings.Contains(err.Error(), `"dw2"`) {
+		t.Errorf("two entries for one appliance: err = %v, want a refusal naming the segment and both devices", err)
 	}
 	// The cached description's haId is the fallback hc-util provides.
 	withDesc := spec("dw", "")
@@ -445,5 +448,81 @@ func TestNewRefusesAnApplianceWithoutAnHaIDOrTwiceTheSame(t *testing.T) {
 	}
 	if got := b.devices[0].HaID(); got != "FROM-PROFILE" {
 		t.Errorf("HaID = %q, want the description's", got)
+	}
+}
+
+// oldInstall is a devices.yaml entry and description cache exactly as an
+// installation from before 0.15.0 has them: no `haid`, a cache without
+// HaID, at the path hc-util parse wrote and printed.
+func oldInstall(t *testing.T, name, path string) DeviceSpec {
+	t.Helper()
+	return DeviceSpec{
+		Config: profile.DeviceConfig{
+			Name: name, Host: "h", Description: path,
+			ConnectionType: profile.ConnectionAES, PSK64: b64(32), IV64: b64(16),
+		},
+		Description: smallDescription(t), // no HaID: the field did not exist
+	}
+}
+
+// TestAnExistingInstallationStartsAfterTheUpgrade is the upgrade promise:
+// an installation from before 0.15.0 changes nothing and still starts. The
+// segment comes from the description's file name, which hc-util parse has
+// always made <haId>.json, so its topics land under the real haId; a
+// renamed file starts too, under whatever it is called, and both are said
+// at warn with the remedy. Two entries that resolve to one segment are
+// refused, naming both.
+func TestAnExistingInstallationStartsAfterTheUpgrade(t *testing.T) {
+	for _, tc := range []struct {
+		name, path, want string
+	}{
+		{"the file hc-util wrote", "./profiles/0102030405.json", "0102030405"},
+		{"a renamed file", "/share/homeconnect/dishwasher.json", "dishwasher"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var logs bytes.Buffer
+			stub := newStubMQTT()
+			b, err := New(Deps{
+				Config: testCfg(), MQTT: stub, Plane: testPlane(stub),
+				Logger:  slog.New(slog.NewTextHandler(&logs, nil)),
+				Devices: []DeviceSpec{oldInstall(t, "Geschirrspüler", tc.path)},
+			})
+			if err != nil {
+				t.Fatalf("an existing installation refused to start: %v", err)
+			}
+			dev := b.devices[0]
+			if dev.HaID() != tc.want {
+				t.Errorf("segment = %q, want %q", dev.HaID(), tc.want)
+			}
+			if got, want := dev.topics.Online(), "homeconnect/status/"+tc.want+"/online"; got != want {
+				t.Errorf("online = %q, want %q", got, want)
+			}
+			line := logs.String()
+			for _, s := range []string{"level=WARN", "bridge.haid_from_description_filename", "Geschirrspüler", "haid=" + tc.want, "hc-util parse"} {
+				if !strings.Contains(line, s) {
+					t.Errorf("the warning lacks %q: %s", s, line)
+				}
+			}
+			// The sweep still finds the old tree, which is keyed by the NAME,
+			// and reads the new one back under the resolved segment.
+			plan := b.legacySweepPlan()
+			if !slices.Contains(plan.filters, "homeconnect/Geschirrspüler/#") ||
+				!slices.Contains(plan.filters, "homeconnect/status/"+tc.want+"/#") {
+				t.Errorf("sweep windows = %v", plan.filters)
+			}
+			if !plan.clears("homeconnect/Geschirrspüler/availability") ||
+				plan.clears("homeconnect/status/"+tc.want+"/online") {
+				t.Error("the sweep does not keep the old and the new tree of this install apart")
+			}
+		})
+	}
+
+	stub := newStubMQTT()
+	_, err := New(Deps{Config: testCfg(), MQTT: stub, Plane: testPlane(stub), Devices: []DeviceSpec{
+		oldInstall(t, "Spüler oben", "/a/dishwasher.json"),
+		oldInstall(t, "Spüler unten", "/b/dishwasher.json"),
+	}})
+	if err == nil || !strings.Contains(err.Error(), "Spüler oben") || !strings.Contains(err.Error(), "Spüler unten") {
+		t.Errorf("two descriptions of one file name: err = %v, want a refusal naming both devices", err)
 	}
 }

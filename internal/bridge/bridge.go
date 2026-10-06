@@ -161,10 +161,12 @@ func New(deps Deps) (*Bridge, error) {
 			return nil, err
 		}
 		// One appliance, one topic tree and one command route: two entries
-		// resolving to the same haId would publish over each other and the
-		// router would refuse the second, identical, route anyway.
+		// resolving to the same segment — an haid given twice, or two
+		// description files of the same name — would publish over each
+		// other, and the router would refuse the second route anyway.
 		if first, dup := byHaID[dev.haID]; dup {
-			return nil, fmt.Errorf("bridge: devices %q and %q are the same appliance (haid %q)", first, dev.name, dev.haID)
+			return nil, fmt.Errorf("bridge: devices %q and %q both resolve to the topic segment (haid) %q; "+
+				"set a distinct `haid:` for each in devices.yaml", first, dev.name, dev.haID)
 		}
 		byHaID[dev.haID] = dev.name
 		b.devices = append(b.devices, dev)

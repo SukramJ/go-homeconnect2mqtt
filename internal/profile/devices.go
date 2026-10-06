@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -134,33 +135,60 @@ func LoadDescriptionJSON(path string, logger *slog.Logger) (*Description, error)
 }
 
 // ErrNoHaID is returned by [ResolveHaID] for a device whose haId is known
-// neither from devices.yaml nor from its cached description.
+// from none of its sources.
 var ErrNoHaID = errors.New("profile: device has no haid")
 
+// HaIDSource says where [ResolveHaID] found a device's haId.
+type HaIDSource int
+
+// The sources, in the order they are consulted.
+const (
+	// HaIDFromConfig is the `haid` key of the devices.yaml entry.
+	HaIDFromConfig HaIDSource = iota + 1
+	// HaIDFromDescription is the haId hc-util parse 0.15.0 and later
+	// record in the cached description.
+	HaIDFromDescription
+	// HaIDFromFileName is the cached description's file name without its
+	// extension. hc-util parse has always written the cache as
+	// `<out>/<haId>.json` and printed `description: <out>/<haId>.json`, so
+	// on the documented setup path — and in the add-on, which builds the
+	// path the same way — this IS the haId. It is the only source every
+	// installation from before 0.15.0 has, and without it every one of them
+	// would refuse to start on upgrade. A renamed file yields whatever name
+	// it was given, which is why the caller says so.
+	HaIDFromFileName
+)
+
 // ResolveHaID is the appliance's haId, the device segment of every MQTT
-// topic: the `haid` from devices.yaml when set, else the one the cached
-// description recorded when hc-util parsed the profile archive.
+// topic, and where it came from: the `haid` from devices.yaml, else the one
+// the cached description recorded, else the description's file name when
+// that is a valid haId (see [HaIDFromFileName]).
 //
-// There is deliberately no third source. The device name is what the topic
-// segment used to be, and falling back to it would publish an appliance
-// under a name-derived segment now and move every topic again the day its
-// haId is filled in; a description file name and a host name only look
-// like an haId in the common case. A device with neither is refused at
-// start, with what to do about it — see [ErrNoHaID].
-func ResolveHaID(dc DeviceConfig, desc *Description) (string, error) {
-	id := dc.HaID
-	if id == "" && desc != nil {
-		id = desc.HaID
+// There is deliberately no fallback to the device name: a name-derived
+// segment would move every topic again the day the haId is filled in. A
+// device with no usable source is refused at start, with what to do about
+// it — see [ErrNoHaID].
+func ResolveHaID(dc DeviceConfig, desc *Description) (string, HaIDSource, error) {
+	switch {
+	case dc.HaID != "":
+		if !ValidHaID(dc.HaID) {
+			return "", 0, fmt.Errorf("profile: device %q has an invalid haid %q", dc.Name, dc.HaID)
+		}
+		return dc.HaID, HaIDFromConfig, nil
+	case desc != nil && desc.HaID != "":
+		if !ValidHaID(desc.HaID) {
+			return "", 0, fmt.Errorf("profile: device %q: its description records an invalid haid %q", dc.Name, desc.HaID)
+		}
+		return desc.HaID, HaIDFromDescription, nil
 	}
-	if id == "" {
-		return "", fmt.Errorf("%w: device %q — add `haid: <haId>` to its devices.yaml entry "+
-			"(the haId is the name of its <haId>.json in the profile archive), or re-run "+
-			"`hc-util parse` so its cached description records it", ErrNoHaID, dc.Name)
+	if base := filepath.Base(dc.Description); dc.Description != "" {
+		if id := strings.TrimSuffix(base, filepath.Ext(base)); id != "" && ValidHaID(id) {
+			return id, HaIDFromFileName, nil
+		}
 	}
-	if !ValidHaID(id) {
-		return "", fmt.Errorf("profile: device %q has an invalid haid %q", dc.Name, id)
-	}
-	return id, nil
+	return "", 0, fmt.Errorf("%w: device %q — add `haid: <haId>` to its devices.yaml entry "+
+		"(the haId is the name of its <haId>.json in the profile archive), or re-run "+
+		"`hc-util parse` so its cached description records it", ErrNoHaID, dc.Name)
 }
 
 // validateDeviceName rejects a device name that cannot safely become a

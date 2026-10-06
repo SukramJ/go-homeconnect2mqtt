@@ -267,33 +267,40 @@ func TestLoadDevicesValidation(t *testing.T) {
 }
 
 // TestResolveHaID pins where the topic's device segment comes from: the
-// explicit `haid` first, then the cached description, and nothing else — a
-// device with neither is refused with what to do about it, rather than
+// explicit `haid`, then the cached description, then the description's
+// file name — which hc-util parse has always written as <haId>.json, and
+// which is all an installation from before 0.15.0 has — and nothing else.
+// A device with none is refused with what to do about it, rather than
 // published under a segment that would move again once the haId is known.
 func TestResolveHaID(t *testing.T) {
 	desc := &Description{HaID: "FROM-PROFILE"}
+	old := &Description{} // a cache written before 0.15.0
 	cases := []struct {
-		name string
-		dc   DeviceConfig
-		desc *Description
-		want string
-		err  error
+		name   string
+		dc     DeviceConfig
+		desc   *Description
+		want   string
+		source HaIDSource
+		err    error
 	}{
-		{"explicit wins", DeviceConfig{Name: "dw", HaID: "EXPLICIT"}, desc, "EXPLICIT", nil},
-		{"from the description", DeviceConfig{Name: "dw"}, desc, "FROM-PROFILE", nil},
-		{"neither", DeviceConfig{Name: "dw"}, &Description{}, "", ErrNoHaID},
-		{"no description", DeviceConfig{Name: "dw"}, nil, "", ErrNoHaID},
+		{"explicit wins", DeviceConfig{Name: "dw", HaID: "EXPLICIT", Description: "p/FILE.json"}, desc, "EXPLICIT", HaIDFromConfig, nil},
+		{"from the description", DeviceConfig{Name: "dw", Description: "p/FILE.json"}, desc, "FROM-PROFILE", HaIDFromDescription, nil},
+		{"an existing install: the file hc-util named", DeviceConfig{Name: "dw", Description: "./profiles/0102030405.json"}, old, "0102030405", HaIDFromFileName, nil},
+		{"a renamed file still yields a segment", DeviceConfig{Name: "dw", Description: "/data/dishwasher.json"}, old, "dishwasher", HaIDFromFileName, nil},
+		{"a file name that is no haId", DeviceConfig{Name: "dw", Description: "/data/Geschirrspüler.json"}, old, "", 0, ErrNoHaID},
+		{"no description path", DeviceConfig{Name: "dw"}, old, "", 0, ErrNoHaID},
+		{"no description at all", DeviceConfig{Name: "dw"}, nil, "", 0, ErrNoHaID},
 	}
 	for _, c := range cases {
-		got, err := ResolveHaID(c.dc, c.desc)
-		if got != c.want || !errors.Is(err, c.err) {
-			t.Errorf("%s: ResolveHaID = (%q, %v), want (%q, %v)", c.name, got, err, c.want, c.err)
+		got, source, err := ResolveHaID(c.dc, c.desc)
+		if got != c.want || source != c.source || !errors.Is(err, c.err) {
+			t.Errorf("%s: ResolveHaID = (%q, %v, %v), want (%q, %v, %v)", c.name, got, source, err, c.want, c.source, c.err)
 		}
 	}
-	if _, err := ResolveHaID(DeviceConfig{Name: "dw"}, &Description{HaID: "../x"}); err == nil {
+	if _, _, err := ResolveHaID(DeviceConfig{Name: "dw"}, &Description{HaID: "../x"}); err == nil {
 		t.Error("an unsafe haId from the description was accepted")
 	}
-	_, err := ResolveHaID(DeviceConfig{Name: "Geschirrspüler"}, nil)
+	_, _, err := ResolveHaID(DeviceConfig{Name: "Geschirrspüler"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "Geschirrspüler") || !strings.Contains(err.Error(), "haid") {
 		t.Errorf("the refusal does not name the device and the key: %v", err)
 	}

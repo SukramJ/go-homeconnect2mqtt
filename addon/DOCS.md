@@ -48,7 +48,7 @@ For a standard Home Assistant install with the Mosquitto broker:
 | --- | --- | --- |
 | `name` | str | The appliance's name in Home Assistant, and the slug of its discovery document. **Required.** |
 | `host` | str | Appliance LAN IP (or hostname). **Required** (not in the profile). |
-| `haid` | str? | Appliance haId — the device segment of every MQTT topic. With the ZIP in `/share/homeconnect` this alone auto-fills `connection_type`, `psk64`/`iv64` and `description`. Needed unless `description` points at a file `hc-util parse` 0.15.0 or later wrote; without either the add-on refuses to start and names the device. |
+| `haid` | str? | Appliance haId — the device segment of every MQTT topic. With the ZIP in `/share/homeconnect` this alone auto-fills `connection_type`, `psk64`/`iv64` and `description`. Without it the haId is read from the description the add-on parsed, else from the description's file name (`<haId>.json`, logged at warn); only when none of these yields an haId does the add-on refuse to start, naming the device. |
 | `connection_type` | list(AES\|TLS)? | Optional; auto-filled from the ZIP via `haid`. `AES` (newer) or `TLS` (older). |
 | `psk64` | password? | Optional; auto-filled from the ZIP via `haid`. The pre-shared key. |
 | `iv64` | password? | Optional; AES only; auto-filled from the ZIP. |

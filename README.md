@@ -111,14 +111,20 @@ accepted. An Object feature takes a JSON object. Empty and retained messages
 are ignored, a rejected or failed request is logged at `warn` with its topic
 and payload, and `set` is subscribed at QoS 1.
 
-**The haId.** It is read from the `haid` key of a device entry in
-`devices.yaml`, or else from the cached description `hc-util parse` writes
-(0.15.0 and later record it there). A device for which neither is known is
-**refused at start**, with the device named in the error: add `haid:` to its
-entry — the haId is the name of the appliance's `<haId>.json` in the profile
-ZIP, and `hc-util parse` prints it — or re-run `hc-util parse`. It never
-falls back to the device name, because the topics would then move a second
-time once the haId is filled in.
+**The haId.** It is taken, in this order, from the `haid` key of a device
+entry in `devices.yaml`; from the cached description `hc-util parse` writes
+(0.15.0 and later record it there); or from that description's **file name**
+without its extension — `hc-util parse` has always written it as
+`<haId>.json`, so on the documented setup path that is the haId. The last
+source is logged once per device at `warn`
+(`bridge.haid_from_description_filename`), naming the device and the segment,
+because a renamed file yields whatever it was renamed to: pin the haId with
+`haid:` or by re-running `hc-util parse`, knowing that a different haId set
+later moves that appliance's topics once. Only a device none of the three
+yields a valid haId for is **refused at start**, with the device named; so are
+two devices that resolve to the same segment. It never falls back to the
+device name, because the topics would then move a second time once the haId is
+filled in.
 
 **The instance name.** `MQTT_TOPIC` is the only thing that keeps two
 instances on one broker apart, and nothing checks it: two instances with the
@@ -157,9 +163,13 @@ the discovery document re-points every entity to the new topics and keeps its
 - **`MQTT_QOS` now governs only** the discovery documents, `connected` and
   the Last Will. Status items are QoS 0 and `set` is subscribed at QoS 1, as
   the convention fixes them.
-- **Every appliance needs its haId** (see above). Entries written by
-  `hc-util parse` from 0.15.0 on carry `haid:`; the add-on fills it from the
-  `haid` option.
+- **An existing installation starts unchanged.** Its `devices.yaml` has no
+  `haid` and its cached descriptions do not record one, so the haId is taken
+  from the description's file name, which `hc-util parse` made `<haId>.json`;
+  the log says so once per appliance at `warn`. Add `haid:` (or re-run
+  `hc-util parse`) to silence it. Only an appliance whose description file was
+  renamed to something that is not an haId — e.g. `Geschirrspüler.json` — is
+  refused at start, naming the device.
 - **Rolling back to 0.14.x** needs no manual step: it republishes its own
   discovery document and its own topics. The 0.15.0 tree stays retained until
   the next 0.15.0 start, whose sweep clears the old one again.

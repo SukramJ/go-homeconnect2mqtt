@@ -66,8 +66,16 @@ new topics side by side.
   and the discovery prefix) or switch maintenance off.
 - **`haid` in `devices.yaml`**: the appliance's haId, the new device segment.
   `hc-util parse` prints it in its snippet and records it in the cached
-  description, which the daemon reads when the key is missing. A device whose
-  haId is known from neither is refused at start with the device named.
+  description. The daemon takes the key, else the description's record, else
+  the description's file name without extension (`hc-util parse` has always
+  named it `<haId>.json`). **An upgrading installation starts unchanged**: it
+  has neither of the first two, so its topics land under the file name — the
+  real haId on the documented setup path — and the log says
+  `bridge.haid_from_description_filename` once per appliance at `warn`, with
+  the remedy (add `haid:` or re-run `hc-util parse`; a different haid set
+  later moves that appliance's topics once). Only a device none of the three
+  yields a valid haId for, or two devices resolving to the same one, are
+  refused at start, naming the devices.
 - **The migration sweep**: on every start the daemon reads back, for a few
   seconds, what the broker retains under the old tree and clears exactly the
   topics the old release published for the configured appliances, plus the
@@ -88,8 +96,10 @@ new topics side by side.
   add-on that exits cleanly, so a restart over MQTT is refused rather than
   stopping the add-on; restart it from Home Assistant.
 - A device's `haid` is written to `devices.yaml` and is now the device segment
-  of its topics. It is required unless the device's `description` was written
-  by `hc-util parse` 0.15.0 or later.
+  of its topics. An add-on installation needs no change: the add-on re-parses
+  the profile ZIPs on every start, so the description records the haId, and
+  a device without `haid` falls back to its description's file name as
+  above.
 
 ## [0.14.0] - 2026-10-02
 

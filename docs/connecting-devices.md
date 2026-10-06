@@ -220,7 +220,10 @@ Publish to a feature's `homeconnect/set/<haId>/…` topic; a plain value or
 mosquitto_pub -h <broker> -t 'homeconnect/set/0102030405/BSH/Common/Setting/PowerState' -m 'On'
 ```
 
-**The device segment is the appliance's haId**, not its name in `devices.yaml`.
+**The device segment is the appliance's haId**, not its name in `devices.yaml`:
+the `haid` key, else the haId the cached description records, else the
+description's file name (`<haId>.json`, logged at `warn`) — so an installation
+set up before 0.15.0 keeps working without edits.
 The name is what Home Assistant shows, and the slug of the name addresses the
 discovery document (`homeassistant/device/geschirrspuler/config`); neither
 appears in a state or command topic. A rejected command is logged at `warn`

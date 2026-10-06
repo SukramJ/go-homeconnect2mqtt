@@ -76,9 +76,21 @@ func buildDevice(b *Bridge, spec DeviceSpec) (*Device, error) {
 	if host == "" {
 		return nil, fmt.Errorf("bridge: device %q has no host", dc.Name)
 	}
-	haID, err := profile.ResolveHaID(dc, spec.Description)
+	haID, source, err := profile.ResolveHaID(dc, spec.Description)
 	if err != nil {
 		return nil, fmt.Errorf("bridge: %w", err)
+	}
+	if source == profile.HaIDFromFileName {
+		// Exact on the documented setup path (hc-util parse names the cache
+		// <haId>.json), and the only source an installation from before
+		// 0.15.0 has — but a renamed file is not an haId, so say where the
+		// segment came from and how to pin it. Once per device per start.
+		b.logger.Warn("bridge.haid_from_description_filename",
+			slog.String("device", dc.Name),
+			slog.String("haid", haID),
+			slog.String("description", dc.Description),
+			slog.String("remedy", "add `haid: <haId>` to this device in devices.yaml, or re-run `hc-util parse`"),
+			slog.String("note", "the topics are <name>/status/"+haID+"/…; setting a different haid later moves them once"))
 	}
 	psk, err := homeconnect.DecodeKey(dc.PSK64)
 	if err != nil {
