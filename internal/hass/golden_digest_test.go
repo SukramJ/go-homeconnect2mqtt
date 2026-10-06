@@ -79,12 +79,37 @@ var goldenDigests = map[string]string{
 	// whole device document. No topic, unique_id, default_entity_id or
 	// platform moves: identity_en.json and discovery_plain_en.json are
 	// UNCHANGED.
-	"discovery_full_en.json":    "138e9b92012c355b00df3d357c1976a3d4eeab0b23611a586cf7a006ff9b4e18",
-	"discovery_full_de.json":    "51e77f10c51d8b8bf8a68b5564c3b2e89eb516a780b93611d993e98447650d56",
-	"discovery_curated_de.json": "7c6a30e7a82b82bd9e58a6e362aaed78b665f656e5db0e69f30e316fac087ac3",
-	// UNCHANGED by F13 — the unenriched control.
-	"discovery_plain_en.json": "9120a86322c7b308df91ef82fd4b96ee6e6f99f3d5add77eb431de074f963c78",
-	// UNCHANGED by F13 — no identity string moves.
+	//
+	// Moved a sixth time by 0.15.2, in all four PAYLOAD files, and in one
+	// key only: "entity_category" goes from "config" to "diagnostic" on
+	// every `sensor` row that carried "config" — 187 rows in each full file
+	// (enriched and plain alike, because the heuristic produced most of
+	// them) and 59 in the curated one. Home Assistant refuses `config` on a
+	// sensor and a binary_sensor and never creates the entity
+	// (sensor/__init__.py:309-313, binary_sensor/__init__.py:79-83), so
+	// every one of these rows described an entity that did not exist.
+	// mapping.yaml lost its eight `entity_category: config` lines in the
+	// same change; they moved no further byte, because the heuristic
+	// already says `config` for a writable setting. No topic, unique_id,
+	// default_entity_id or platform moves: identity_en.json is UNCHANGED.
+	//
+	// Moved a seventh time by 0.15.2, in the three ENRICHED files only, on
+	// three rows (two in curated): a sensor whose wire value is not a
+	// number loses the numeric classes the catalogue gave it, because Home
+	// Assistant then expects a number and refuses every state
+	// (sensor/__init__.py:719-745). bsh_common_status_program_all_count_started
+	// (a String in the pin) loses "state_class"; consumerproducts_coffeemaker_
+	// option_fillquantity (a String) loses "device_class": "volume";
+	// bsh_common_status_batterylevel (an enumeration) goes from
+	// "device_class": "battery" back to "enum" and gets its "options" back.
+	// Found by TestEveryTemplateRendersAStateItsPlatformAccepts. No identity
+	// moves; discovery_plain_en.json is unchanged by it.
+	"discovery_full_en.json":    "e62d230d2fe2fa87a228f7f0c5c99425d6b6a5dad0bbff247fb3012719e47b55",
+	"discovery_full_de.json":    "f27360ffd379350efcb02ff68a7ffd9635d7da6fa6dbd5e4553493343bc6c754",
+	"discovery_curated_de.json": "7ddc5748cd344438b48dc9c47106fc34f3fa394a9ccefea5f9579912b36bcea3",
+	// UNCHANGED by F13 — the unenriched control. Moved by 0.15.2 (above).
+	"discovery_plain_en.json": "16b35f729b6a9034f0581128fb05872fc949462bd7a1854f473dbdf9612d749a",
+	// UNCHANGED by F13 and by 0.15.2 — no identity string moves.
 	"identity_en.json": "a725b3b2f3072047d8f2f95bdc7b078ae0f34aadb3b3e74c6cf46d72a9e7eb93",
 }
 

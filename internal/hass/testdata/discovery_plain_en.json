@@ -6407,7 +6407,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Base Program",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Option/BaseProgram/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_option_baseprogram"
@@ -6441,7 +6441,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Bluetooth Presence Token",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Option/BluetoothPresenceToken/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_option_bluetoothpresencetoken"
@@ -6475,7 +6475,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Current Step Remaining Time",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Option/CurrentStepRemainingTime/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_option_currentstepremainingtime"
@@ -6509,7 +6509,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Duration",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Option/Duration/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_option_duration"
@@ -6543,7 +6543,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Elapsed Program Time",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Option/ElapsedProgramTime/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_option_elapsedprogramtime"
@@ -6577,7 +6577,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Energy Forecast",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Option/EnergyForecast/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_option_energyforecast"
@@ -6611,7 +6611,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Estimated Total Program Time",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Option/EstimatedTotalProgramTime/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_option_estimatedtotalprogramtime"
@@ -6645,7 +6645,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Finish In Relative",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Option/FinishInRelative/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_option_finishinrelative"
@@ -6679,7 +6679,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Program Name",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Option/ProgramName/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_option_programname"
@@ -6777,7 +6777,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Remaining Program Time Is Estimated",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Option/RemainingProgramTimeIsEstimated/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_option_remainingprogramtimeisestimated"
@@ -6843,7 +6843,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Water Forecast",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Option/WaterForecast/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_option_waterforecast"
@@ -7019,7 +7019,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Allow Backend Connection",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/AllowBackendConnection/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_allowbackendconnection"
@@ -7053,7 +7053,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Ambient Light Brightness",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/AmbientLightBrightness/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_ambientlightbrightness"
@@ -7087,7 +7087,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Ambient Light Color",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/AmbientLightColor/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_ambientlightcolor"
@@ -7121,7 +7121,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Ambient Light Custom Color",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/AmbientLightCustomColor/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_ambientlightcustomcolor"
@@ -7155,7 +7155,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Appliance Date Time",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/ApplianceDateTime/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_appliancedatetime"
@@ -7189,7 +7189,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Appliance Time",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/ApplianceTime/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_appliancetime"
@@ -7223,7 +7223,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Functionality",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/Favorite/001/Functionality/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_favorite_001_functionality"
@@ -7257,7 +7257,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/Favorite/001/Name/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_favorite_001_name"
@@ -7291,7 +7291,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Program",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/Favorite/001/Program/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_favorite_001_program"
@@ -7325,7 +7325,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Functionality",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/Favorite/002/Functionality/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_favorite_002_functionality"
@@ -7359,7 +7359,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/Favorite/002/Name/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_favorite_002_name"
@@ -7393,7 +7393,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Program",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/Favorite/002/Program/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_favorite_002_program"
@@ -7427,7 +7427,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Language",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/Language/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_language"
@@ -7461,7 +7461,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Liquid Volume Unit",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/LiquidVolumeUnit/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_liquidvolumeunit"
@@ -7495,7 +7495,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Synchronize With Time Server",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/SynchronizeWithTimeServer/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_synchronizewithtimeserver"
@@ -7529,7 +7529,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Temperature Unit",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/TemperatureUnit/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_temperatureunit"
@@ -7563,7 +7563,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Time Format",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/TimeFormat/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_timeformat"
@@ -7597,7 +7597,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Timezone",
       "state_topic": "homeconnect/Dishwasher/BSH/Common/Setting/Timezone/state",
       "unique_id": "homeconnect_dishwasher_bsh_common_setting_timezone"
@@ -8234,7 +8234,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Process Phase",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CleaningRobot/Option/ProcessPhase/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_cleaningrobot_option_processphase"
@@ -8268,7 +8268,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Reference Map Id",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CleaningRobot/Option/ReferenceMapId/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_cleaningrobot_option_referencemapid"
@@ -8302,7 +8302,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Suction Power",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CleaningRobot/Option/SuctionPower/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_cleaningrobot_option_suctionpower"
@@ -8336,7 +8336,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Current Map",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CleaningRobot/Setting/CurrentMap/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_cleaningrobot_setting_currentmap"
@@ -8370,7 +8370,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name Of Map 1",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CleaningRobot/Setting/NameOfMap1/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_cleaningrobot_setting_nameofmap1"
@@ -8404,7 +8404,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name Of Map 2",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CleaningRobot/Setting/NameOfMap2/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_cleaningrobot_setting_nameofmap2"
@@ -8438,7 +8438,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name Of Map 3",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CleaningRobot/Setting/NameOfMap3/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_cleaningrobot_setting_nameofmap3"
@@ -8472,7 +8472,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name Of Map 4",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CleaningRobot/Setting/NameOfMap4/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_cleaningrobot_setting_nameofmap4"
@@ -8506,7 +8506,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name Of Map 5",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CleaningRobot/Setting/NameOfMap5/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_cleaningrobot_setting_nameofmap5"
@@ -8676,7 +8676,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Aroma Select",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/AromaSelect/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_aromaselect"
@@ -8710,7 +8710,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Bean Amount",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/BeanAmount/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_beanamount"
@@ -8744,7 +8744,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Bean Container Selection",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/BeanContainerSelection/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_beancontainerselection"
@@ -8778,7 +8778,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Beverage Size",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/BeverageSize/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_beveragesize"
@@ -8812,7 +8812,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Beverages Remaining",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/BeveragesRemaining/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_beveragesremaining"
@@ -8846,7 +8846,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Coarsness",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/Coarsness/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_coarsness"
@@ -8880,7 +8880,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Recommendation",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/Coarsness/Recommendation/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_coarsness_recommendation"
@@ -8914,7 +8914,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Coffee Milk Ratio",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/CoffeeMilkRatio/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_coffeemilkratio"
@@ -8948,7 +8948,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Coffee Strength",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/CoffeeStrength/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_coffeestrength"
@@ -8982,7 +8982,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Recommendation",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/CoffeeStrength/Recommendation/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_coffeestrength_recommendation"
@@ -9016,7 +9016,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Coffee Temperature",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/CoffeeTemperature/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_coffeetemperature"
@@ -9050,7 +9050,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Recommendation",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/CoffeeTemperature/Recommendation/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_coffeetemperature_recommendation"
@@ -9084,7 +9084,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Fill Quantity",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/FillQuantity/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_fillquantity"
@@ -9118,7 +9118,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Recommendation",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/FillQuantity/Recommendation/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_fillquantity_recommendation"
@@ -9152,7 +9152,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Flow Rate",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/FlowRate/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_flowrate"
@@ -9186,7 +9186,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Recommendation",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/FlowRate/Recommendation/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_flowrate_recommendation"
@@ -9220,7 +9220,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hot Water Temperature",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/HotWaterTemperature/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_hotwatertemperature"
@@ -9254,7 +9254,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Multiple Beverages",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Option/MultipleBeverages/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_option_multiplebeverages"
@@ -9288,7 +9288,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Cup Warmer",
       "state_topic": "homeconnect/Dishwasher/ConsumerProducts/CoffeeMaker/Setting/CupWarmer/state",
       "unique_id": "homeconnect_dishwasher_consumerproducts_coffeemaker_setting_cupwarmer"
@@ -9637,7 +9637,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Boost",
       "state_topic": "homeconnect/Dishwasher/Cooking/Common/Option/Hood/Boost/state",
       "unique_id": "homeconnect_dishwasher_cooking_common_option_hood_boost"
@@ -9671,7 +9671,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Lighting",
       "state_topic": "homeconnect/Dishwasher/Cooking/Common/Setting/Lighting/state",
       "unique_id": "homeconnect_dishwasher_cooking_common_setting_lighting"
@@ -9705,7 +9705,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Lighting Brightness",
       "state_topic": "homeconnect/Dishwasher/Cooking/Common/Setting/LightingBrightness/state",
       "unique_id": "homeconnect_dishwasher_cooking_common_setting_lightingbrightness"
@@ -9739,7 +9739,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Signal Volume",
       "state_topic": "homeconnect/Dishwasher/Cooking/Common/Setting/SignalVolume/state",
       "unique_id": "homeconnect_dishwasher_cooking_common_setting_signalvolume"
@@ -9773,7 +9773,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Join Zone",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hob/Option/JoinZone/state",
       "unique_id": "homeconnect_dishwasher_cooking_hob_option_joinzone"
@@ -9807,7 +9807,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Zone Selector",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hob/Option/ZoneSelector/state",
       "unique_id": "homeconnect_dishwasher_cooking_hob_option_zoneselector"
@@ -9841,7 +9841,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Automatic Timer",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hob/Setting/AutomaticTimer/state",
       "unique_id": "homeconnect_dishwasher_cooking_hob_setting_automatictimer"
@@ -9875,7 +9875,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Automatic Zone Selection",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hob/Setting/AutomaticZoneSelection/state",
       "unique_id": "homeconnect_dishwasher_cooking_hob_setting_automaticzoneselection"
@@ -9909,7 +9909,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Energy Consumption Indication",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hob/Setting/EnergyConsumptionIndication/state",
       "unique_id": "homeconnect_dishwasher_cooking_hob_setting_energyconsumptionindication"
@@ -9943,7 +9943,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hood After Run",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hob/Setting/HoodAfterRun/state",
       "unique_id": "homeconnect_dishwasher_cooking_hob_setting_hoodafterrun"
@@ -9977,7 +9977,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hood Automatic Light Off",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hob/Setting/HoodAutomaticLightOff/state",
       "unique_id": "homeconnect_dishwasher_cooking_hob_setting_hoodautomaticlightoff"
@@ -10011,7 +10011,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hood Automatic Light On",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hob/Setting/HoodAutomaticLightOn/state",
       "unique_id": "homeconnect_dishwasher_cooking_hob_setting_hoodautomaticlighton"
@@ -10045,7 +10045,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hood Automatic Start",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hob/Setting/HoodAutomaticStart/state",
       "unique_id": "homeconnect_dishwasher_cooking_hob_setting_hoodautomaticstart"
@@ -10079,7 +10079,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Power Management",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hob/Setting/PowerManagement/state",
       "unique_id": "homeconnect_dishwasher_cooking_hob_setting_powermanagement"
@@ -10113,7 +10113,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Timer Selection",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hob/Setting/TimerSelection/state",
       "unique_id": "homeconnect_dishwasher_cooking_hob_setting_timerselection"
@@ -10147,7 +10147,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "UPDTest Position",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hob/Setting/UPDTestPosition/state",
       "unique_id": "homeconnect_dishwasher_cooking_hob_setting_updtestposition"
@@ -18369,7 +18369,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Color Temperature",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hood/Setting/ColorTemperature/state",
       "unique_id": "homeconnect_dishwasher_cooking_hood_setting_colortemperature"
@@ -18403,7 +18403,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Color Temperature Percent",
       "state_topic": "homeconnect/Dishwasher/Cooking/Hood/Setting/ColorTemperaturePercent/state",
       "unique_id": "homeconnect_dishwasher_cooking_hood_setting_colortemperaturepercent"
@@ -18437,7 +18437,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Air Exchange",
       "state_topic": "homeconnect/Dishwasher/Cooking/Oven/Option/AirExchange/state",
       "unique_id": "homeconnect_dishwasher_cooking_oven_option_airexchange"
@@ -18471,7 +18471,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Cavity Selector",
       "state_topic": "homeconnect/Dishwasher/Cooking/Oven/Option/CavitySelector/state",
       "unique_id": "homeconnect_dishwasher_cooking_oven_option_cavityselector"
@@ -18505,7 +18505,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Fast Pre Heat",
       "state_topic": "homeconnect/Dishwasher/Cooking/Oven/Option/FastPreHeat/state",
       "unique_id": "homeconnect_dishwasher_cooking_oven_option_fastpreheat"
@@ -18539,7 +18539,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Heatup Progress",
       "state_topic": "homeconnect/Dishwasher/Cooking/Oven/Option/HeatupProgress/state",
       "unique_id": "homeconnect_dishwasher_cooking_oven_option_heatupprogress"
@@ -18573,7 +18573,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Meat Probe Temperature V 2",
       "state_topic": "homeconnect/Dishwasher/Cooking/Oven/Option/MeatProbeTemperatureV2/state",
       "unique_id": "homeconnect_dishwasher_cooking_oven_option_meatprobetemperaturev2"
@@ -18607,7 +18607,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Microwave Power",
       "state_topic": "homeconnect/Dishwasher/Cooking/Oven/Option/MicrowavePower/state",
       "unique_id": "homeconnect_dishwasher_cooking_oven_option_microwavepower"
@@ -18641,7 +18641,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Steam Boost",
       "state_topic": "homeconnect/Dishwasher/Cooking/Oven/Option/SteamBoost/state",
       "unique_id": "homeconnect_dishwasher_cooking_oven_option_steamboost"
@@ -18712,7 +18712,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Brilliance Dry",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/BrillianceDry/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_brilliancedry"
@@ -18746,7 +18746,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Delicate Basket",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/DelicateBasket/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_delicatebasket"
@@ -18780,7 +18780,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Eco Dry",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/EcoDry/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_ecodry"
@@ -18814,7 +18814,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Energy Safe",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/EnergySafe/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_energysafe"
@@ -18848,7 +18848,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Extra Dry",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/ExtraDry/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_extradry"
@@ -18882,7 +18882,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Extra Rinse",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/ExtraRinse/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_extrarinse"
@@ -18916,7 +18916,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Back Left",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/FlexSpray/BackLeft/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_flexspray_backleft"
@@ -18950,7 +18950,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Back Right",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/FlexSpray/BackRight/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_flexspray_backright"
@@ -18984,7 +18984,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Front Left",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/FlexSpray/FrontLeft/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_flexspray_frontleft"
@@ -19018,7 +19018,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Front Right",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/FlexSpray/FrontRight/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_flexspray_frontright"
@@ -19052,7 +19052,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Half Load",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/HalfLoad/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_halfload"
@@ -19086,7 +19086,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hygiene Plus",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/HygienePlus/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_hygieneplus"
@@ -19120,7 +19120,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Intensiv Zone",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/IntensivZone/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_intensivzone"
@@ -19154,7 +19154,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Pretreatment",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/Pretreatment/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_pretreatment"
@@ -19188,7 +19188,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Sanitation UC",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/SanitationUC/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_sanitationuc"
@@ -19222,7 +19222,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Silence On Demand",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/SilenceOnDemand/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_silenceondemand"
@@ -19256,7 +19256,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Storage Function",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/StorageFunction/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_storagefunction"
@@ -19290,7 +19290,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Turbo",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/Turbo/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_turbo"
@@ -19324,7 +19324,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Vario Speed",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/VarioSpeed/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_variospeed"
@@ -19358,7 +19358,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Vario Speed Plus",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/VarioSpeedPlus/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_variospeedplus"
@@ -19392,7 +19392,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Zeolite Dry",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Option/ZeoliteDry/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_option_zeolitedry"
@@ -19426,7 +19426,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Drying Assistant All Programs",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Setting/DryingAssistantAllPrograms/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_setting_dryingassistantallprograms"
@@ -19460,7 +19460,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Eco As Default",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Setting/EcoAsDefault/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_setting_ecoasdefault"
@@ -19494,7 +19494,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Extra Dry",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Setting/ExtraDry/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_setting_extradry"
@@ -19528,7 +19528,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hot Water",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Setting/HotWater/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_setting_hotwater"
@@ -19562,7 +19562,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Info Light",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Setting/InfoLight/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_setting_infolight"
@@ -19596,7 +19596,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Rinse Aid",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Setting/RinseAid/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_setting_rinseaid"
@@ -19630,7 +19630,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Sensitivity Turbidity",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Setting/SensitivityTurbidity/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_setting_sensitivityturbidity"
@@ -19664,7 +19664,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Silence On Demand Default Time",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Setting/SilenceOnDemandDefaultTime/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_setting_silenceondemanddefaulttime"
@@ -19698,7 +19698,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Sound Level Signal",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Setting/SoundLevelSignal/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_setting_soundlevelsignal"
@@ -19732,7 +19732,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Speed On Demand",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Setting/SpeedOnDemand/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_setting_speedondemand"
@@ -19766,7 +19766,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Water Hardness",
       "state_topic": "homeconnect/Dishwasher/Dishcare/Dishwasher/Setting/WaterHardness/state",
       "unique_id": "homeconnect_dishwasher_dishcare_dishwasher_setting_waterhardness"
@@ -19902,7 +19902,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Fan Speed Percentage",
       "state_topic": "homeconnect/Dishwasher/HeatingVentilationAirConditioning/AirConditioner/Option/FanSpeedPercentage/state",
       "unique_id": "homeconnect_dishwasher_heatingventilationairconditioning_airconditioner_option_fanspeedpercentage"
@@ -19936,7 +19936,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Setpoint Temperature",
       "state_topic": "homeconnect/Dishwasher/HeatingVentilationAirConditioning/AirConditioner/Option/SetpointTemperature/state",
       "unique_id": "homeconnect_dishwasher_heatingventilationairconditioning_airconditioner_option_setpointtemperature"
@@ -19970,7 +19970,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Load Recommendation",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Option/LoadRecommendation/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_option_loadrecommendation"
@@ -20004,7 +20004,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Low Temperature Hygiene",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Option/LowTemperatureHygiene/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_option_lowtemperaturehygiene"
@@ -20038,7 +20038,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Process Phase",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Option/ProcessPhase/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_option_processphase"
@@ -20072,7 +20072,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Refer To Program",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Option/ReferToProgram/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_option_refertoprogram"
@@ -20106,7 +20106,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Speed Perfect",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Option/SpeedPerfect/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_option_speedperfect"
@@ -20140,7 +20140,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Vario Perfect",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Option/VarioPerfect/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_option_varioperfect"
@@ -20174,7 +20174,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Auto Power Off",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Setting/AutoPowerOff/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_setting_autopoweroff"
@@ -20208,7 +20208,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Brightness",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Setting/Brightness/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_setting_brightness"
@@ -20242,7 +20242,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Brightness",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Setting/DoorLightRing/Brightness/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_setting_doorlightring_brightness"
@@ -20276,7 +20276,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "End Signal",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Setting/EndSignal/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_setting_endsignal"
@@ -20310,7 +20310,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "End Signal Volume",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Setting/EndSignalVolume/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_setting_endsignalvolume"
@@ -20344,7 +20344,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Key Signal Volume",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Setting/KeySignalVolume/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_setting_keysignalvolume"
@@ -20378,7 +20378,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Mute",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Setting/Sound/Mute/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_setting_sound_mute"
@@ -20412,7 +20412,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Volume",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Setting/Sound/Volume/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_setting_sound_volume"
@@ -20446,7 +20446,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Power Rating",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Setting/SupplyPower/PowerRating/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_setting_supplypower_powerrating"
@@ -20480,7 +20480,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Wrinkle Guard",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Common/Setting/WrinkleGuard/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_common_setting_wrinkleguard"
@@ -20990,7 +20990,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Original Program Time",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Dryer/Option/ConnectedDry/OriginalProgramTime/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_dryer_option_connecteddry_originalprogramtime"
@@ -21024,7 +21024,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Drying Target",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Dryer/Option/DryingTarget/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_dryer_option_dryingtarget"
@@ -21058,7 +21058,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Drying Target Adjustment",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Dryer/Option/DryingTargetAdjustment/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_dryer_option_dryingtargetadjustment"
@@ -21092,7 +21092,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Gentle",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Dryer/Option/Gentle/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_dryer_option_gentle"
@@ -21126,7 +21126,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Half Load",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Dryer/Option/HalfLoad/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_dryer_option_halfload"
@@ -21160,7 +21160,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Process Phase",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Dryer/Option/ProcessPhase/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_dryer_option_processphase"
@@ -21194,7 +21194,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Refresher",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Dryer/Option/Refresher/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_dryer_option_refresher"
@@ -21228,7 +21228,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Wrinkle Guard",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Dryer/Option/WrinkleGuard/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_dryer_option_wrinkleguard"
@@ -21262,7 +21262,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Disinfectant",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/Disinfectant/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_disinfectant"
@@ -21296,7 +21296,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "EISA",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/EISA/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_eisa"
@@ -21330,7 +21330,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hand Soak",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/HandSoak/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_handsoak"
@@ -21364,7 +21364,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hygienic Steam",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/HygienicSteam/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_hygienicsteam"
@@ -21398,7 +21398,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hygienic Steam Intensity",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/HygienicSteamIntensity/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_hygienicsteamintensity"
@@ -21432,7 +21432,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Intensive Plus",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/IntensivePlus/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_intensiveplus"
@@ -21466,7 +21466,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Less Ironing",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/LessIroning/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_lessironing"
@@ -21500,7 +21500,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Mini Load",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/MiniLoad/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_miniload"
@@ -21534,7 +21534,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Multiple Soak",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/MultipleSoak/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_multiplesoak"
@@ -21568,7 +21568,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Pre Treatment",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/PreTreatment/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_pretreatment"
@@ -21602,7 +21602,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Prewash",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/Prewash/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_prewash"
@@ -21636,7 +21636,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Process Phase",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/ProcessPhase/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_processphase"
@@ -21670,7 +21670,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Rinse Hold",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/RinseHold/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_rinsehold"
@@ -21704,7 +21704,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Rinse Plus",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/RinsePlus/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_rinseplus"
@@ -21738,7 +21738,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Rinse Plus 1",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/RinsePlus1/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_rinseplus1"
@@ -21772,7 +21772,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Rinse Plus 3",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/RinsePlus3/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_rinseplus3"
@@ -21806,7 +21806,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Silent Wash",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/SilentWash/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_silentwash"
@@ -21840,7 +21840,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Smart Soak",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/SmartSoak/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_smartsoak"
@@ -21874,7 +21874,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Soak",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/Soak/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_soak"
@@ -21908,7 +21908,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Soak Duration",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/SoakDuration/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_soakduration"
@@ -21942,7 +21942,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Soak Pause",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/SoakPause/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_soakpause"
@@ -21976,7 +21976,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Soak Temperature",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/SoakTemperature/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_soaktemperature"
@@ -22010,7 +22010,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Speed Perfect",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/SpeedPerfect/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_speedperfect"
@@ -22044,7 +22044,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Spin Speed",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/SpinSpeed/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_spinspeed"
@@ -22078,7 +22078,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Stains",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/Stains/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_stains"
@@ -22112,7 +22112,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Temperature",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/Temperature/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_temperature"
@@ -22146,7 +22146,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Water And Rinse Plus",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/WaterAndRinsePlus/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_waterandrinseplus"
@@ -22180,7 +22180,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Water And Rinse Plus 1",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/WaterAndRinsePlus1/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_waterandrinseplus1"
@@ -22214,7 +22214,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Water Plus",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Option/WaterPlus/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_option_waterplus"
@@ -22248,7 +22248,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Enable Drum Clean Reminder",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/Washer/Setting/EnableDrumCleanReminder/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washer_setting_enabledrumcleanreminder"
@@ -22662,7 +22662,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Drying Target",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/WasherDryer/Option/DryingTarget/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washerdryer_option_dryingtarget"
@@ -22696,7 +22696,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Low Temperature Hygiene",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/WasherDryer/Option/LowTemperatureHygiene/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washerdryer_option_lowtemperaturehygiene"
@@ -22730,7 +22730,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Wrinkle Guard Boost",
       "state_topic": "homeconnect/Dishwasher/LaundryCare/WasherDryer/Option/WrinkleGuardBoost/state",
       "unique_id": "homeconnect_dishwasher_laundrycare_washerdryer_option_wrinkleguardboost"
@@ -22764,7 +22764,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistant Force Freezer",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Setting/Door/AssistantForceFreezer/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_common_setting_door_assistantforcefreezer"
@@ -22798,7 +22798,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistant Force Fridge",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Setting/Door/AssistantForceFridge/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_common_setting_door_assistantforcefridge"
@@ -22832,7 +22832,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistant Freezer",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Setting/Door/AssistantFreezer/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_common_setting_door_assistantfreezer"
@@ -22866,7 +22866,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistant Fridge",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Setting/Door/AssistantFridge/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_common_setting_door_assistantfridge"
@@ -22900,7 +22900,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistant Timeout Freezer",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Setting/Door/AssistantTimeoutFreezer/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_common_setting_door_assistanttimeoutfreezer"
@@ -22934,7 +22934,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistant Timeout Fridge",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Setting/Door/AssistantTimeoutFridge/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_common_setting_door_assistanttimeoutfridge"
@@ -22968,7 +22968,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistant Trigger Freezer",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Setting/Door/AssistantTriggerFreezer/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_common_setting_door_assistanttriggerfreezer"
@@ -23002,7 +23002,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistant Trigger Fridge",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Setting/Door/AssistantTriggerFridge/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_common_setting_door_assistanttriggerfridge"
@@ -23036,7 +23036,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Brightness",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Setting/Light/External/Brightness/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_common_setting_light_external_brightness"
@@ -23070,7 +23070,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Power",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Setting/Light/External/Power/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_common_setting_light_external_power"
@@ -23104,7 +23104,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Brightness",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Setting/Light/Internal/Brightness/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_common_setting_light_internal_brightness"
@@ -23138,7 +23138,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Power",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/Common/Setting/Light/Internal/Power/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_common_setting_light_internal_power"
@@ -23546,7 +23546,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Super Mode Freezer",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/FridgeFreezer/Setting/SuperModeFreezer/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_fridgefreezer_setting_supermodefreezer"
@@ -23580,7 +23580,7 @@
         "name": "Dishwasher"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Super Mode Refrigerator",
       "state_topic": "homeconnect/Dishwasher/Refrigeration/FridgeFreezer/Setting/SuperModeRefrigerator/state",
       "unique_id": "homeconnect_dishwasher_refrigeration_fridgefreezer_setting_supermoderefrigerator"

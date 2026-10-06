@@ -434,13 +434,12 @@ func TestHamqttTopicFormIsTheFiveSegmentNodeIDForm(t *testing.T) {
 // to `delete(p, "options")` and lost its options list too. Fixing the
 // override at the point it is applied fixes that half by construction:
 // bsh_common_status_batterychargingstate keeps `enum` and keeps its three
-// options. The OTHER half is deliberately left, and is not a defect —
-// BSH.Common.Status.BatteryLevel is an enum sensor whose catalogue class is
-// `battery`, which the sensor platform DOES declare. Home Assistant's sensor
-// schema permits `options` only alongside device_class `enum`, so keeping
-// both would produce exactly the refused config this finding is about.
-// Dropping `options` is the only legal resolution of an override the operator
-// is entitled to make. TestValidDeviceClassOverrideStillDropsOptions pins it.
+// options. The OTHER half — BSH.Common.Status.BatteryLevel, an enum sensor
+// whose catalogue class is `battery`, which the sensor platform declares —
+// was left here as "not a defect", with `options` dropped. It was one: a
+// numeric class on an enumeration refuses every state. 0.15.2 resolves it to
+// `enum` with its options; TestANumericOverrideOnAnEnumSensorFallsBackToEnum
+// pins it.
 var f13RefusedOverrides = map[string]string{
 	"bsh_common_status_batterychargingstate":           "battery_charging",
 	"bsh_common_status_chargingconnection":             "plug",
@@ -569,16 +568,20 @@ func TestEveryRefusedOverrideIsDroppedAndNothingElseMoves(t *testing.T) {
 	}
 }
 
-// TestValidDeviceClassOverrideStillDropsOptions pins the half of the rider
-// that is NOT a defect, so a later reader does not "fix" it.
+// TestANumericOverrideOnAnEnumSensorFallsBackToEnum pins what an enum
+// sensor does with a catalogue class that is NUMERIC.
 //
-// BSH.Common.Status.BatteryLevel is an enum sensor whose catalogue class is
-// `battery` — a class the sensor platform DOES declare, so the override
-// applies. Home Assistant's sensor schema accepts `options` only alongside
-// device_class `enum`; keeping both would be the very refused config F13 is
-// about. So the options list is dropped and the operator's class wins, and
-// that is the only legal resolution rather than an oversight.
-func TestValidDeviceClassOverrideStillDropsOptions(t *testing.T) {
+// BSH.Common.Status.BatteryLevel is an enum sensor in the pin whose
+// catalogue class is `battery` — a class the sensor platform declares, so
+// until 0.15.2 the override applied and the options list was dropped, and
+// this test called that "the only legal resolution". It was not: a
+// `battery` sensor is numeric to Home Assistant, which raises "has the
+// non-numeric value" on every state an enumeration publishes
+// (sensor/__init__.py:719-745). The entity existed and never showed a
+// value. TestEveryTemplateRendersAStateItsPlatformAccepts in internal/bridge
+// is what found it. The legal resolution is the enumeration's own: device
+// class `enum`, with its options.
+func TestANumericOverrideOnAnEnumSensorFallsBackToEnum(t *testing.T) {
 	const key = "bsh_common_status_batterylevel"
 	found := false
 	for _, r := range publishPin(t, "en", goldenDeviceEN, false, true) {
@@ -586,12 +589,11 @@ func TestValidDeviceClassOverrideStillDropsOptions(t *testing.T) {
 			continue
 		}
 		found = true
-		if got := r.Payload["device_class"]; got != "battery" {
-			t.Errorf("%s: device_class %v, want \"battery\" — a VALID override must still apply", r.Topic, got)
+		if got := r.Payload["device_class"]; got != deviceClassEnum {
+			t.Errorf("%s: device_class %v, want \"enum\" — a numeric class on an enumeration refuses every state", r.Topic, got)
 		}
-		if _, has := r.Payload["options"]; has {
-			t.Errorf("%s: carries options alongside device_class \"battery\"; "+
-				"Home Assistant's sensor schema permits options only with device_class \"enum\"", r.Topic)
+		if opts, ok := r.Payload["options"].([]any); !ok || len(opts) != 3 {
+			t.Errorf("%s: options %v, want the enumeration's three", r.Topic, r.Payload["options"])
 		}
 		var body map[string]any
 		if err := json.Unmarshal(mustJSON(t, r.Payload), &body); err != nil {

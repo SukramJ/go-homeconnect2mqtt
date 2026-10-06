@@ -221,7 +221,11 @@ func (d *Discovery) applyEnrichment(e *homeconnect.Entity, payload map[string]an
 		payload["state_class"] = sc
 	}
 	if ec, ok := d.enrich.EntityCategory(f); ok {
-		payload["entity_category"] = ec
+		if entityCategoryAllowed(platform, ec) {
+			payload["entity_category"] = ec
+		} else {
+			d.logRefusedEntityCategory(f, platform, ec)
+		}
 	}
 	if val, ok := d.enrich.EnabledByDefault(f); ok {
 		if val {
@@ -242,6 +246,19 @@ func (d *Discovery) logRefusedDeviceClass(feature, platform, dc string) {
 		slog.String("platform", platform),
 		slog.String("device_class", dc),
 		slog.String("action", "override dropped, heuristic class kept"))
+}
+
+// logRefusedEntityCategory names an operator entity_category the target
+// platform cannot carry — `config` on a sensor or binary_sensor, or a value
+// that is not a category at all. Home Assistant refuses the entity with one
+// line in its own log naming an entity id the user has never seen; this is
+// the place that knows which catalogue line caused it.
+func (d *Discovery) logRefusedEntityCategory(feature, platform, ec string) {
+	d.logger.Warn("hass.entity_category_refused",
+		slog.String("feature", feature),
+		slog.String("platform", platform),
+		slog.String("entity_category", ec),
+		slog.String("action", "override dropped, heuristic category kept"))
 }
 
 // localizeOptions translates a select's enum options to the configured display
@@ -297,6 +314,17 @@ func (d *Discovery) PublishDevice(ctx context.Context, device string, info profi
 		payload := payloadFor(e, platform, device, d.topicsFor(device, e), dev)
 		d.applyEnrichment(e, payload, platform)
 		d.localizeOptions(payload)
+		if platform == platformSensor && !numericValue(e) {
+			dc, _ := payload["device_class"].(string)
+			dc = textSensorClass(dc, e.Desc.IsEnum())
+			delete(payload, "unit_of_measurement")
+			delete(payload, "state_class")
+			if dc == "" {
+				delete(payload, "device_class")
+			} else {
+				payload["device_class"] = dc
+			}
+		}
 		sanitizeForPlatform(payload, platform)
 		// Curated mode: only publish the enabled-by-default (primary) entities.
 		if d.curated && disabledByDefault(payload) {
@@ -472,15 +500,12 @@ func (d *Discovery) BundleNodeIDOf(topic string) (string, bool) {
 //     classified to zero entities — is a fault somewhere upstream, and
 //     writing it to the broker turns that fault into a fleet-wide deletion
 //     the moment the sweep runs.
-//   - A BLOCKING discovery.Validate. Home Assistant validates a document as
-//     one unit and drops the whole thing, so a single refused component
-//     would cost the appliance all of its entities — which is exactly why F13
-//     had to be fixed before this step (#43). Since 0.15.1 a finding that
-//     names a component withholds THAT component (omitted, never
-//     tombstoned) and publishes the rest; only a finding about the document
-//     itself withholds the document. See [Discovery.validateBundle]. An
-//     advisory ValidationError is logged and published, because advisory
-//     means Home Assistant accepts it.
+//   - A BLOCKING discovery.Validate. A finding that names a component
+//     withholds THAT component (omitted, never tombstoned) and publishes
+//     the rest; only a finding about the document itself — the kind Home
+//     Assistant refuses a whole document for — withholds the document. See
+//     [Discovery.validateBundle]. An advisory ValidationError is logged and
+//     published, because advisory means Home Assistant accepts it.
 //   - A packet the broker will not take. That refusal lives in
 //     haplane.Plane.PublishBundle, before the retraction, and is reported
 //     here as haplane.ErrDocumentTooLarge.
@@ -585,22 +610,34 @@ func (d *Discovery) publishBundle(ctx context.Context, device string, b *discove
 
 // validateBundle runs discovery.Validate and decides what a finding costs.
 //
-// Blocking refuses the publish; advisory logs and continues. The split
-// matters because the two are not degrees of the same thing: Home Assistant
-// drops a document it cannot validate in its entirety, so "blocking" means
-// zero entities for the appliance, while "advisory" means Home Assistant
-// accepts the document as it is.
+// # What Home Assistant refuses whole, and what it refuses per entity
+//
+// Home Assistant validates a device document as a whole against
+// DEVICE_DISCOVERY_SCHEMA (components/mqtt/discovery.py:304-313): the device
+// block, the origin, the availability keys, and for each component only its
+// `platform` (one of SUPPORTED_COMPONENTS) and, unless it is a removal, its
+// `unique_id` (components/mqtt/schemas.py:199-227). A failure there drops
+// the document. Everything else — keys, device class, unit and state class,
+// entity category, a number's bounds — is validated per component by the
+// platform's own schema when the component is set up, and a failure costs
+// THAT entity only (components/mqtt/entity.py:324-347).
+//
+// So the whole-document loss 0.15.0 suffered — three real appliances
+// without a single entity over one catalogue line — was this daemon's own
+// gate, which until 0.15.1 withheld the document for any blocking finding.
+// Home Assistant would have dropped one entity.
 //
 // # Containment
 //
-// Until 0.15.1 one refused component withheld the whole document, which on
-// 0.15.0 cost three real appliances every entity they had over a single
-// catalogue line. A blocking finding that names a LIVE component is now
-// contained instead: that component is taken out of the document, an ERROR
-// names it with its findings, and the rest is validated again and
-// published. Only a finding that names no component — the node id, the
-// origin, the device block — or a document that is still refused after the
-// removal withholds the whole document, as before.
+// Every blocking finding discovery.Validate attributes to a component (its
+// issue begins with the component's key) is contained: that component is
+// taken out of the document, an ERROR names it with its findings, and the
+// rest is validated again and published. That includes the two findings
+// Home Assistant WOULD refuse the document for — a missing or unsupported
+// platform, a missing unique_id — because omitting the one component cures
+// the document. Only a finding that names no component (the node id, the
+// origin, the device block, an empty document), or a document still refused
+// after the removal, withholds the whole document.
 //
 // The removed component is OMITTED, never tombstoned, and that is the whole
 // safety argument. Home Assistant reads a platform-only entry as "delete
@@ -648,7 +685,8 @@ func (d *Discovery) validateBundle(device, topic string, b *discovery.Bundle) ([
 			slog.Int("components", len(b.Components)),
 			slog.String("err", err.Error()),
 			slog.String("consequence",
-				"withheld; Home Assistant drops a device document whole, so publishing it would cost the appliance every entity"))
+				"withheld; the finding is about the document itself, which Home Assistant refuses as a whole, "+
+					"so the per-entity configs or the previous document stay in place"))
 		return nil, err
 	}
 	if ve != nil {
@@ -658,18 +696,26 @@ func (d *Discovery) validateBundle(device, topic string, b *discovery.Bundle) ([
 	return withheld, nil
 }
 
-// invalidComponents attributes every blocking finding to the live component
-// it names. discovery.Validate prefixes a component's findings with the
-// component's key; a finding about the document itself carries no such
-// prefix. ok is false when any finding names no live component, because
-// then removing components cannot make the document valid, and when there
-// is nothing to remove.
+// invalidComponents attributes every blocking finding to the component it
+// names. discovery.Validate (go-hamqtt v0.36.0) prefixes every finding of a
+// component with the component's key — availability without a topic, an
+// unencodable component, a missing or non-MQTT platform, a missing or
+// duplicate unique_id, an unknown or missing key, a device class the
+// platform does not declare, and the sensor relations (state class against
+// device class, options against enum, unit and state class) — and a finding
+// about the document itself (node id, origin, device, no components) with
+// nothing of the kind. ok is false when any finding names no component,
+// because then removing components cannot make the document valid, and when
+// there is nothing to remove.
+//
+// A component is attributed whatever it is: a live one, one without a
+// platform or a unique_id, or a removal entry. Omitting any of them is inert
+// in Home Assistant (TestOmittingAComponentDoesNotRemoveIt).
 func invalidComponents(b *discovery.Bundle, ve *discovery.ValidationError) (map[string][]string, bool) {
 	out := map[string][]string{}
 	for _, issue := range ve.Issues {
 		key, _, found := strings.Cut(issue, ": ")
-		comp, exists := b.Components[key]
-		if !found || !exists || comp.Platform == "" || comp.UniqueID == "" {
+		if _, exists := b.Components[key]; !found || !exists {
 			return nil, false
 		}
 		out[key] = append(out[key], issue)
@@ -678,8 +724,11 @@ func invalidComponents(b *discovery.Bundle, ve *discovery.ValidationError) (map[
 }
 
 // withholdComponents takes the given components out of b — omitted, never
-// tombstoned; see [Discovery.validateBundle] — and returns their per-entity
-// config topics, sorted.
+// tombstoned; see [Discovery.validateBundle] — and returns the per-entity
+// config topics the orphan sweep must leave alone, sorted: one per withheld
+// component that declared a unique_id on a platform this daemon publishes.
+// A removal entry has no entity to keep, and a component on any other
+// platform never had a per-entity config of ours.
 func (d *Discovery) withholdComponents(device, topic string, b *discovery.Bundle, bad map[string][]string) []string {
 	keys := make([]string, 0, len(bad))
 	for key := range bad {
@@ -697,7 +746,9 @@ func (d *Discovery) withholdComponents(device, topic string, b *discovery.Bundle
 				"left out of the device document so the appliance's other entities are published; "+
 					"not removed: Home Assistant keeps the entity it already has, unchanged and no longer updated, "+
 					"until a release renders it validly"))
-		out = append(out, publisher.EntityConfigTopic(d.baseTopic, string(comp.Platform), b.NodeID, key))
+		if comp.UniqueID != "" && publishedPlatforms[string(comp.Platform)] {
+			out = append(out, publisher.EntityConfigTopic(d.baseTopic, string(comp.Platform), b.NodeID, key))
+		}
 		delete(b.Components, key)
 	}
 	return out
