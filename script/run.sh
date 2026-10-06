@@ -40,6 +40,12 @@ else
 fi
 export HC2M_MQTT_TOPIC="$(bashio::config 'mqtt_topic')"
 
+# Custom CA for broker TLS verification (tls://, ssl://, mqtts://). The file
+# lives under /ssl (mapped read-only) or /share (mapped read-write).
+if bashio::config.has_value 'mqtt_ca'; then
+  export HC2M_MQTT_CA="$(bashio::config 'mqtt_ca')"
+fi
+
 # --- mqtt-smarthome maintenance topics (<mqtt_topic>/maintenance/...) ---
 export HC2M_MQTT_MAINTENANCE="$(bashio::config 'maintenance')"
 export HC2M_MQTT_STATS_INTERVAL="$(bashio::config 'stats_interval')"

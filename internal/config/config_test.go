@@ -53,6 +53,23 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	}
 }
 
+// TestLoadReadsMQTTCAFromEnv pins the MQTT_CA option at the loader layer:
+// it exists so an operator whose broker certificate is signed by a private
+// CA can verify it, and the environment override is the path the add-on
+// uses (run.sh maps the mqtt_ca option onto HC2M_MQTT_CA).
+func TestLoadReadsMQTTCAFromEnv(t *testing.T) {
+	t.Parallel()
+	cfg, err := Load(strings.NewReader("MQTT_SERVER: tcp://localhost:1883\n"), mapEnv{
+		"HC2M_MQTT_CA": "/ssl/ca.crt",
+	})
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.MQTTCA != "/ssl/ca.crt" {
+		t.Errorf("MQTTCA = %q, want /ssl/ca.crt", cfg.MQTTCA)
+	}
+}
+
 // TestMQTTQoSZeroSurvivesTheLoader is F9's pin one layer below where it was
 // pinned before, and the layer that actually defeated it.
 //

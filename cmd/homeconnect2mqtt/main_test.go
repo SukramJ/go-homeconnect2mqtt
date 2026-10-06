@@ -6,8 +6,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -169,7 +172,11 @@ func testWill(t *testing.T, cfg *config.Config) publisher.Will {
 func TestWillIsTheAvailabilitySourceEveryEntityReads(t *testing.T) {
 	t.Parallel()
 	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: new(1)}
-	will := mqttClientConfig(cfg, testWill(t, cfg), slog.New(slog.DiscardHandler)).Will
+	tcpCfg, err := mqttClientConfig(cfg, testWill(t, cfg), slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatalf("mqttClientConfig: %v", err)
+	}
+	will := tcpCfg.Will
 	if will == nil {
 		t.Fatal("no Last Will configured: a killed daemon would leave every entity available forever")
 	}
@@ -210,7 +217,11 @@ func TestWillIsCopiedFromTheRuntimeNotSpelledAgain(t *testing.T) {
 		QoS:     2,
 		Retain:  false,
 	}
-	got := mqttClientConfig(cfg, perturbed, slog.New(slog.DiscardHandler)).Will
+	tcpCfg, err := mqttClientConfig(cfg, perturbed, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatalf("mqttClientConfig: %v", err)
+	}
+	got := tcpCfg.Will
 	if got.Topic != perturbed.Topic || !bytes.Equal(got.Payload, perturbed.Payload) ||
 		byte(got.QoS) != perturbed.QoS || got.Retain != perturbed.Retain {
 		t.Errorf("will = %+v, want every field copied from the runtime's %+v — "+
@@ -234,9 +245,101 @@ func TestMQTTQoSZeroStaysQoSZero(t *testing.T) {
 		if got := mqtt.QoS(will.QoS); got != want {
 			t.Errorf("MQTT_QOS: %d -> runtime will qos %v, want %v", in, got, want)
 		}
-		if got := mqttClientConfig(cfg, will, slog.New(slog.DiscardHandler)).Will.QoS; got != want {
+		clientCfg, err := mqttClientConfig(cfg, will, slog.New(slog.DiscardHandler))
+		if err != nil {
+			t.Fatalf("mqttClientConfig: %v", err)
+		}
+		if got := clientCfg.Will.QoS; got != want {
 			t.Errorf("MQTT_QOS: %d -> client will qos %v, want %v", in, got, want)
 		}
+	}
+}
+
+// testCACertPEM is a self-signed certificate used to prove that loadCAPool
+// accepts a real PEM bundle. It carries no private key and is trusted by
+// nothing but these tests.
+const testCACertPEM = `-----BEGIN CERTIFICATE-----
+MIIBODCB36ADAgECAhRiBOAR3ZJKTlOw4cqAaNA2qQTqvTAKBggqhkjOPQQDAjAS
+MRAwDgYDVQQDDAd0ZXN0LWNhMB4XDTI2MTAwNjIxMDQ1OFoXDTI3MTAwNjIyMDQ1
+OFowEjEQMA4GA1UEAwwHdGVzdC1jYTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IA
+BMIu8826PwRWC2W0VLGupZ7uAhzGBfnk92KXijcAr1x7h8n+Iz0moxmDn4S3LRXc
+Qza0eiAAMfy2CEJPRZvH5U2jEzARMA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0E
+AwIDSAAwRQIgY9WY7WOsABZexFKFxnq5+SLQCuzookpD35W/SiXZklwCIQDexExZ
+QyE5OOl/pjN06+yzSVg872LPiZ7N52GsxyvwWQ==
+-----END CERTIFICATE-----
+`
+
+func writeTempFile(t *testing.T, name, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), name)
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// TestMQTTClientConfigWithoutCAUsesTheSystemStore pins that leaving MQTT_CA
+// empty changes nothing: the transport keeps a nil TLSConfig and verifies
+// against the system trust store, exactly as before this option existed.
+func TestMQTTClientConfigWithoutCAUsesTheSystemStore(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{MQTTServer: "ssl://b:8883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: new(1)}
+	got, err := mqttClientConfig(cfg, testWill(t, cfg), slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatalf("mqttClientConfig: %v", err)
+	}
+	if got.TLSConfig != nil {
+		t.Errorf("TLSConfig = %+v, want nil when MQTT_CA is empty", got.TLSConfig)
+	}
+}
+
+// TestMQTTClientConfigLoadsCustomCA is the option's whole reason to exist: a
+// broker certificate signed by a private CA can only be verified if that CA
+// reaches RootCAs. Without it the handshake fails on an unknown authority,
+// which is why such a broker had to stay on a plaintext port.
+func TestMQTTClientConfigLoadsCustomCA(t *testing.T) {
+	t.Parallel()
+	path := writeTempFile(t, "ca.crt", testCACertPEM)
+	cfg := &config.Config{
+		MQTTServer: "ssl://b:8883", MQTTTopic: "homeconnect",
+		HASSBaseTopic: "homeassistant", MQTTQoS: new(1), MQTTCA: path,
+	}
+	got, err := mqttClientConfig(cfg, testWill(t, cfg), slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatalf("mqttClientConfig: %v", err)
+	}
+	if got.TLSConfig == nil || got.TLSConfig.RootCAs == nil {
+		t.Fatal("TLSConfig.RootCAs not set from MQTT_CA: the broker would be verified against the system store alone")
+	}
+	if got.TLSConfig.MinVersion != tls.VersionTLS12 {
+		t.Errorf("MinVersion = %#x, want TLS 1.2", got.TLSConfig.MinVersion)
+	}
+}
+
+// TestMQTTClientConfigRefusesABadCA proves the fail-fast half: MQTT_CA is an
+// explicit operator choice, so a path that cannot be read, or a file that
+// holds no certificate, stops the daemon at start with a message naming the
+// file — rather than letting the TLS handshake fail later with no trace of
+// the cause.
+func TestMQTTClientConfigRefusesABadCA(t *testing.T) {
+	t.Parallel()
+	base := func() *config.Config {
+		return &config.Config{
+			MQTTServer: "ssl://b:8883", MQTTTopic: "homeconnect",
+			HASSBaseTopic: "homeassistant", MQTTQoS: new(1),
+		}
+	}
+
+	cfg := base()
+	cfg.MQTTCA = filepath.Join(t.TempDir(), "absent.crt")
+	if _, err := mqttClientConfig(cfg, testWill(t, cfg), slog.New(slog.DiscardHandler)); err == nil {
+		t.Error("a missing MQTT_CA file was accepted")
+	}
+
+	cfg = base()
+	cfg.MQTTCA = writeTempFile(t, "garbage.crt", "not a certificate")
+	if _, err := mqttClientConfig(cfg, testWill(t, cfg), slog.New(slog.DiscardHandler)); err == nil {
+		t.Error("an MQTT_CA file holding no certificate was accepted")
 	}
 }
 

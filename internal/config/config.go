@@ -34,6 +34,12 @@ type Config struct {
 	MQTTLogin    string `yaml:"MQTT_LOGIN"`
 	MQTTPassword string `yaml:"MQTT_PASSWORD"`
 	MQTTTopic    string `yaml:"MQTT_TOPIC"`
+	// MQTTCA is the path to a PEM file with the CA certificate(s) used to
+	// verify the broker's TLS certificate. Empty uses the system trust
+	// store. Read only when MQTT_SERVER selects a TLS scheme (tls://,
+	// ssl://, mqtts://); on a plaintext scheme the library ignores it and
+	// logs a warning.
+	MQTTCA string `yaml:"MQTT_CA"`
 	// MQTTQoS is a pointer for the same reason MQTTRetain is, and the
 	// reason is not symmetry: 0 is a LEVEL an operator can ask for, and a
 	// bare int cannot tell `MQTT_QOS: 0` from "the key is absent".

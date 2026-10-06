@@ -32,6 +32,7 @@ For a standard Home Assistant install with the Mosquitto broker:
 | `mqtt_port` | int | `1883` | MQTT broker port (only used when `mqtt_server` is a bare host). |
 | `mqtt_login` | str | `""` | MQTT username (only when `mqtt_server` is set). |
 | `mqtt_password` | password | `""` | MQTT password (only when `mqtt_server` is set). |
+| `mqtt_ca` | str | `""` | Path to a PEM file with the CA certificate(s) that signed the broker's TLS certificate, used as the trust anchor for a `tls://`, `ssl://` or `mqtts://` broker. Place the file under **`/ssl`** (mapped read-only; e.g. `/ssl/ca.crt`) or **`/share`** (read-write). Empty uses the system trust store. A missing or certificate-less file is refused at start with a message naming it. |
 | `mqtt_topic` | str | `homeconnect` | The instance name: every topic is `<mqtt_topic>/<function>/…` (mqtt-smarthome 2.0). It is the **only** thing that keeps two instances on one broker apart — give each its own. The default `homeconnect` is also the default instance name of hobbyquaker's Node.js adapter `homeconnect2mqtt`; running both on one broker needs one of them renamed. One topic level: no `/`, `+` or `#`. |
 | `maintenance` | bool | `true` | The maintenance topics `<mqtt_topic>/maintenance/…` (runtime log level, process stats). See *Maintenance* below — and its security note. |
 | `stats_interval` | int | `60` | Seconds between `<mqtt_topic>/maintenance/stats`; `0` switches them off. |
