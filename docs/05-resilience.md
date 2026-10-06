@@ -26,7 +26,7 @@ websocket #41 (permanently offline → 1000s of errors, **no backoff** in the co
 
 **Go countermeasures:**
 - Reconnect with **exponential backoff + jitter** (e.g. 1 s → 30 s, ±500 ms). Python has none.
-- **Offline = normal state**, not an error: device sleeping/off → MQTT `availability=offline` + LWT,
+- **Offline = normal state**, not an error: device sleeping/off → MQTT `<name>/status/<haId>/online` = `false` (and `<name>/connected` = `1` once no appliance is reachable; `0` by LWT),
   keep polling with backoff, **never** crash the tool/worker.
 - **Connect timeout** at startup (an off device must not block tool startup — see #339).
 - **Log rate limiting** for recurring connect errors.

@@ -292,17 +292,24 @@ crashes with `NoneType.start` if nothing is preselected (#385). On-device confir
 
 ### 6.1 Topic Schema (dot notation → slash)
 
+Since 0.15.0 the schema is mqtt-smarthome 2.0 (`<name>/<function>/<item…>`,
+openccu-loom ADR 0083); the device segment is the appliance's haId:
+
 ```
-Base:     <mqtt_topic>/<device>           # device = haId or configured name
-State:    <base>/<feature-path>/state     # e.g. .../BSH/Common/Setting/PowerState/state
-Command:  <base>/<feature-path>/set       # only for writable features
-Avail.:   <base>/availability             # "online"/"offline" (LWT)
-Conn:     <base>/connection_state         # connecting/handshake/connected/reconnecting/...
+Bridge:   <mqtt_topic>/connected                        # 0 LWT / 1 no appliance / 2 operational
+State:    <mqtt_topic>/status/<haId>/<feature-path>     # {"val","ts","lc"}, e.g. …/BSH/Common/Setting/PowerState
+Command:  <mqtt_topic>/set/<haId>/<feature-path>        # only for writable features; plain or {"val":…}
+Avail.:   <mqtt_topic>/status/<haId>/online             # val true/false
+Conn:     <mqtt_topic>/status/<haId>/connection_state   # val connecting/connected/reconnecting/offline/...
 ```
 
+Before 0.15.0 it was `<mqtt_topic>/<device name>/<feature-path>/state` and
+`…/set`, `…/availability` (online/offline) and `<mqtt_topic>/status` for the LWT.
+
 `<feature-path>` = feature name with `.` → `/` (e.g. `BSH.Common.Status.OperationState`
-→ `BSH/Common/Status/OperationState`). Publish enum values as resolved names; raw value
-optionally as an additional attribute.
+→ `BSH/Common/Status/OperationState`), every segment topic-safe. Enum values are
+published as their resolved member names (tokens); the localized labels live in the
+discovery payload only.
 
 ### 6.2 Generic vs. Curated Approach
 
@@ -320,9 +327,10 @@ One discovery payload per entity under `<hass_base_topic>/<platform>/<unique_id>
 {
   "unique_id": "homeconnect_<haId>_<feature>",
   "name": "<readable name>",
-  "state_topic": "<base>/<feature-path>/state",
-  "command_topic": "<base>/<feature-path>/set",   // writable only
-  "availability_topic": "<base>/availability",
+  "state_topic": "<mqtt_topic>/status/<haId>/<feature-path>",
+  "value_template": "{{ value_json.val }}",
+  "command_topic": "<mqtt_topic>/set/<haId>/<feature-path>",   // writable only
+  "availability": [{"topic": "<mqtt_topic>/connected", …}, {"topic": "<mqtt_topic>/status/<haId>/online", …}],
   "device_class": "<from catalogue>",
   "unit_of_measurement": "<from catalogue>",
   "options": ["..."],                                // select/enum
