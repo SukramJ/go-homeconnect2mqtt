@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -55,6 +56,7 @@ func Load(r io.Reader, env Env) (*Config, error) {
 	if env != nil {
 		applyEnvOverrides(raw, env)
 	}
+	removed := removedIn(raw)
 
 	// Round-trip through yaml.v3 so the typed Config sees the merged
 	// view (file + env). Marshal cannot fail on a sanitised dict.
@@ -67,11 +69,26 @@ func Load(r io.Reader, env Env) (*Config, error) {
 		return nil, fmt.Errorf("config: decode merged config: %w", err)
 	}
 
+	cfg.Removed = removed
 	applyDefaults(&cfg)
 	if err := Validate(&cfg); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+// removedIn lists the keys of raw that this release no longer reads,
+// sorted. yaml.v3 ignores an unknown key, so without this an operator who
+// set one would never learn that it stopped doing anything.
+func removedIn(raw map[string]any) []string {
+	var out []string
+	for key := range raw {
+		if _, ok := removedKeys[key]; ok {
+			out = append(out, key)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // LoadFile is a convenience wrapper around [Load] that opens path

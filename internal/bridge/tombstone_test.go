@@ -389,7 +389,7 @@ func TestThePreflightMeasuresTheDocumentTheRemovalsProduced(t *testing.T) {
 	b, dev, rec := smallBridge(t, func() (uint32, bool) { return limit, true })
 	defer drainReconciles(t, b)
 
-	live, err := b.hass.BundleFor(dev.name, dev.app.Info(), dev.app.Entities())
+	live, err := b.hass.BundleFor(dev.name, dev.haID, dev.app.Info(), dev.app.Entities())
 	if err != nil {
 		t.Fatalf("BundleFor: %v", err)
 	}
@@ -409,7 +409,7 @@ func TestThePreflightMeasuresTheDocumentTheRemovalsProduced(t *testing.T) {
 	}
 	priorFixtureOn(t, b, dev, rec, extra)
 
-	marked, err := b.hass.BundleFor(dev.name, dev.app.Info(), dev.app.Entities())
+	marked, err := b.hass.BundleFor(dev.name, dev.haID, dev.app.Info(), dev.app.Entities())
 	if err != nil {
 		t.Fatalf("BundleFor: %v", err)
 	}
@@ -458,7 +458,7 @@ func priorFixtureOn(
 	t *testing.T, b *Bridge, dev *Device, rec *subRecorder, extra map[string]string,
 ) (*Bridge, *Device, *subRecorder, *discovery.Bundle) {
 	t.Helper()
-	live, err := b.hass.BundleFor(dev.name, dev.app.Info(), dev.app.Entities())
+	live, err := b.hass.BundleFor(dev.name, dev.haID, dev.app.Info(), dev.app.Entities())
 	if err != nil {
 		t.Fatalf("BundleFor: %v", err)
 	}

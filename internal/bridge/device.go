@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/SukramJ/go-hamqtt/discovery"
+
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/state"
@@ -50,6 +52,7 @@ const (
 // Device is one appliance worker: appliance + reconnect manager + topics.
 type Device struct {
 	name    string
+	haID    string
 	app     *homeconnect.Appliance
 	manager *homeconnect.Manager
 	topics  deviceTopics
@@ -62,6 +65,9 @@ type Device struct {
 // Name returns the logical device name.
 func (d *Device) Name() string { return d.name }
 
+// HaID returns the appliance's haId, its device segment in every topic.
+func (d *Device) HaID() string { return d.haID }
+
 // buildDevice constructs the appliance, session and reconnect manager for a
 // device spec and wires the publish callbacks into b.
 func buildDevice(b *Bridge, spec DeviceSpec) (*Device, error) {
@@ -69,6 +75,10 @@ func buildDevice(b *Bridge, spec DeviceSpec) (*Device, error) {
 	host := dc.Host
 	if host == "" {
 		return nil, fmt.Errorf("bridge: device %q has no host", dc.Name)
+	}
+	haID, err := profile.ResolveHaID(dc, spec.Description)
+	if err != nil {
+		return nil, fmt.Errorf("bridge: %w", err)
 	}
 	psk, err := homeconnect.DecodeKey(dc.PSK64)
 	if err != nil {
@@ -101,8 +111,9 @@ func buildDevice(b *Bridge, spec DeviceSpec) (*Device, error) {
 
 	dev := &Device{
 		name:   dc.Name,
+		haID:   haID,
 		app:    app,
-		topics: newDeviceTopics(b.cfg.MQTTTopic, dc.Name),
+		topics: newDeviceTopics(b.layout, haID),
 		pub:    newDevicePublisher(b.logger.With(slog.String("device", dc.Name))),
 	}
 	app.OnUpdate(func(e *homeconnect.Entity) { b.onUpdate(dev, e) })
@@ -166,8 +177,9 @@ func (d *Device) runOnce(ctx context.Context, logger *slog.Logger) (panicked boo
 const maxQueuedPublishes = 1024
 
 type queuedPublish struct {
-	topic   string
-	payload []byte
+	topic string
+	// value is the status object's `val`; nil clears the item.
+	value any
 }
 
 // devicePublisher decouples entity-state publishes from the appliance
@@ -193,7 +205,7 @@ func newDevicePublisher(logger *slog.Logger) *devicePublisher {
 // enqueue appends an update and wakes the drain goroutine. It never
 // blocks; when the backlog cap is reached the oldest update is dropped
 // and logged.
-func (p *devicePublisher) enqueue(topic string, payload []byte) {
+func (p *devicePublisher) enqueue(topic string, value any) {
 	p.mu.Lock()
 	if len(p.queue) >= maxQueuedPublishes {
 		dropped := p.queue[0]
@@ -204,7 +216,7 @@ func (p *devicePublisher) enqueue(topic string, payload []byte) {
 				slog.String("topic", dropped.topic), slog.Int("dropped", p.dropped))
 		}
 	}
-	p.queue = append(p.queue, queuedPublish{topic: topic, payload: payload})
+	p.queue = append(p.queue, queuedPublish{topic: topic, value: value})
 	p.mu.Unlock()
 	select {
 	case p.wake <- struct{}{}:
@@ -232,7 +244,7 @@ func (p *devicePublisher) next() (q queuedPublish, ok bool) {
 
 // run drains the queue until ctx is cancelled. Nothing is flushed after
 // cancel so shutdown never hangs on a wedged broker.
-func (p *devicePublisher) run(ctx context.Context, publish func(topic string, payload []byte)) {
+func (p *devicePublisher) run(ctx context.Context, publish func(topic string, value any)) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -247,7 +259,7 @@ func (p *devicePublisher) run(ctx context.Context, publish func(topic string, pa
 			if !ok {
 				break
 			}
-			publish(q.topic, q.payload)
+			publish(q.topic, q.value)
 		}
 	}
 }
@@ -260,7 +272,7 @@ func (b *Bridge) onUpdate(d *Device, e *homeconnect.Entity) {
 	if !e.HasValue() {
 		return
 	}
-	d.pub.enqueue(d.topics.state(e), []byte(payloadFor(e, b.cfg.Language)))
+	d.pub.enqueue(d.topics.state(e), statusValue(e))
 	if b.state != nil {
 		b.state.UpdateFeature(d.name, b.featureView(d, e))
 	}
@@ -298,18 +310,50 @@ func (b *Bridge) featureView(d *Device, e *homeconnect.Entity) state.Feature {
 	return f
 }
 
-// onState publishes the connection state and availability of a device and,
-// on a fresh connection, (re)publishes Home Assistant discovery.
+// onState publishes the connection state and reachability of a device, on
+// a fresh connection (re)publishes Home Assistant discovery, and moves
+// `<name>/connected` with the fleet.
 func (b *Bridge) onState(d *Device, s homeconnect.ConnectionState) {
-	b.publish(d.topics.ConnectionState(), []byte(s))
-	avail := availOffline
-	if s == homeconnect.StateConnected {
-		avail = availOnline
+	connected := s == homeconnect.StateConnected
+	b.publish(d.topics.ConnectionState(), string(s))
+	if connected {
 		b.publishDiscovery(context.Background(), d)
 	}
-	b.publish(d.topics.Availability(), []byte(avail))
+	b.publish(d.topics.Online(), connected)
+	b.setDeviceConnected(d, connected)
 	if b.state != nil {
-		b.state.SetConnectionState(d.name, string(s), s == homeconnect.StateConnected)
+		b.state.SetConnectionState(d.name, string(s), connected)
+	}
+}
+
+// setDeviceConnected records one appliance's link and moves
+// `<name>/connected` to the level the fleet now warrants.
+//
+// The upstream of this bridge is its appliances: there is no hub or cloud
+// between the daemon and them, each is a local connection of its own. So
+// the instance is operational (2) while at least one appliance is
+// reachable, and merely on the broker (1) while none is — which is also the
+// level the daemon announces at start, before the first appliance has
+// connected. The reachability of each single appliance is its own `online`
+// item (mqtt-smarthome 2.0 §3.1), and every entity reads both.
+//
+// The lock is held across the publish so two workers' transitions reach
+// the broker in the order their levels were computed in.
+func (b *Bridge) setDeviceConnected(d *Device, connected bool) {
+	b.linkMu.Lock()
+	defer b.linkMu.Unlock()
+	b.linked[d.haID] = connected
+	level := discovery.ConnectedBroker
+	for _, up := range b.linked {
+		if up {
+			level = discovery.ConnectedOperational
+			break
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), publishTimeout)
+	defer cancel()
+	if err := b.plane.SetConnected(ctx, level); err != nil {
+		b.logger.Warn("bridge.connected_failed", slog.Int("level", level), slog.String("err", err.Error()))
 	}
 }
 
@@ -353,7 +397,7 @@ func (b *Bridge) publishDiscovery(parent context.Context, d *Device) {
 	// this asks about. Every failure direction of the read produces fewer
 	// tombstones and never different ones — see internal/hass/tombstone.go.
 	prior := b.prior.forConnection(ctx, rt, node, b.readPriorDocuments)
-	topic, live, err := b.hass.PublishDeviceBundle(ctx, d.name, d.app.Info(), d.app.Entities(), prior)
+	topic, live, err := b.hass.PublishDeviceBundle(ctx, d.name, d.haID, d.app.Info(), d.app.Entities(), prior)
 	cancel()
 	if err != nil {
 		// Every failure path in PublishDeviceBundle has already logged what
@@ -389,30 +433,29 @@ func (b *Bridge) documentIsDeclared(topic string) bool {
 // safePublish is publish with panic isolation: a panic in the MQTT client
 // drops that one publish instead of the whole process, mirroring the device
 // worker's recover (docs/05-resilience.md).
-func (b *Bridge) safePublish(topic string, payload []byte) {
+func (b *Bridge) safePublish(topic string, value any) {
 	defer func() {
 		if r := recover(); r != nil {
 			b.logger.Error("bridge.publish_panic", slog.String("topic", topic), slog.Any("panic", r))
 		}
 	}()
-	b.publish(topic, payload)
+	b.publish(topic, value)
 }
 
-// publish writes one state-plane payload through publisher.StatePublisher,
-// logging (never failing) on error so a transient MQTT issue can't crash a
-// worker.
+// publish writes one status item through publisher.StatePublisher, logging
+// (never failing) on error so a transient MQTT issue can't crash a worker.
 //
-// The QoS and the retain flag are no longer arguments: they are the
-// plane's stated policy, MQTT_QOS and MQTT_RETAIN, resolved once in
-// internal/haplane. What the plane adds over the bare client call it
-// replaces is the dedup gate — an appliance re-reporting an unchanged
-// value costs one byte comparison instead of one retained broker write
-// and one Home Assistant state evaluation, and this daemon's appliances
-// re-report on every NOTIFY whether or not anything moved.
-func (b *Bridge) publish(topic string, payload []byte) {
+// The QoS and the retain flag are not arguments: status items are retained
+// at QoS 0 (mqtt-smarthome 2.0 §3.2, §4), the plane's stated policy. What
+// the plane adds over the bare client call is the status object and its
+// dedup gate — an appliance re-reporting an unchanged value costs one byte
+// comparison of `val` instead of one retained broker write and one Home
+// Assistant state evaluation, and this daemon's appliances re-report on
+// every NOTIFY whether or not anything moved.
+func (b *Bridge) publish(topic string, value any) {
 	ctx, cancel := context.WithTimeout(context.Background(), publishTimeout)
 	defer cancel()
-	if err := b.plane.PublishState(ctx, topic, payload); err != nil {
+	if err := b.plane.PublishStatus(ctx, topic, value); err != nil {
 		b.logger.Warn("bridge.publish", slog.String("topic", topic), slog.String("err", err.Error()))
 	}
 }

@@ -5,6 +5,7 @@ package bridge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -20,6 +21,7 @@ import (
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/state"
 )
@@ -44,6 +46,9 @@ type Deps struct {
 	// worker publishes through, and the discovery plane the orphan sweep
 	// reads. Required.
 	Plane *haplane.Plane
+	// Instance publishes `<name>/info` and the maintenance topics
+	// (mqtt-smarthome 2.0 §6, §7). Nil publishes neither.
+	Instance *publisher.Instance
 }
 
 // Bridge owns the per-device workers and the shared MQTT publish settings.
@@ -56,6 +61,16 @@ type Bridge struct {
 	hass    *hass.Discovery
 	state   *state.Store
 	plane   *haplane.Plane
+	layout  layout.Instance
+
+	// instance is `<name>/info` and the maintenance topics; nil disables
+	// both.
+	instance *publisher.Instance
+
+	// linked is each appliance's link state, keyed by haId, from which
+	// `<name>/connected` is derived. See [Bridge.setDeviceConnected].
+	linkMu sync.Mutex
+	linked map[string]bool
 
 	// commands is the inbound half: one route per device, handlers run on
 	// router workers rather than on the transport's read loop.
@@ -119,6 +134,10 @@ func New(deps Deps) (*Bridge, error) {
 	if logger == nil {
 		logger = slog.Default()
 	}
+	inst, err := layout.New(deps.Config.MQTTTopic)
+	if err != nil {
+		return nil, fmt.Errorf("bridge: MQTT_TOPIC: %w", err)
+	}
 	b := &Bridge{
 		cfg:           deps.Config,
 		mqtt:          deps.MQTT,
@@ -127,20 +146,31 @@ func New(deps Deps) (*Bridge, error) {
 		hass:          deps.HASS,
 		state:         deps.State,
 		plane:         deps.Plane,
+		layout:        inst,
+		instance:      deps.Instance,
+		linked:        map[string]bool{},
 		cmdRetries:    3,
 		cmdRetryDelay: time.Second,
 		reconciling:   map[string]bool{},
 		started:       make(chan struct{}),
 	}
-	for _, spec := range deps.Devices {
-		dev, err := buildDevice(b, spec)
+	byHaID := map[string]string{}
+	for i := range deps.Devices {
+		dev, err := buildDevice(b, deps.Devices[i])
 		if err != nil {
 			return nil, err
 		}
+		// One appliance, one topic tree and one command route: two entries
+		// resolving to the same haId would publish over each other and the
+		// router would refuse the second, identical, route anyway.
+		if first, dup := byHaID[dev.haID]; dup {
+			return nil, fmt.Errorf("bridge: devices %q and %q are the same appliance (haid %q)", first, dev.name, dev.haID)
+		}
+		byHaID[dev.haID] = dev.name
 		b.devices = append(b.devices, dev)
 		if b.state != nil {
 			info := dev.app.Info()
-			b.state.RegisterDevice(dev.name, "", info.Brand, info.Type, "", map[string]any{
+			b.state.RegisterDevice(dev.name, dev.haID, info.Brand, info.Type, "", map[string]any{
 				"brand": info.Brand, "type": info.Type, "model": info.Model, "version": info.Version,
 			})
 		}
@@ -161,7 +191,7 @@ func (b *Bridge) Run(ctx context.Context) error {
 	if err := b.subscribeCommands(ctx); err != nil {
 		return fmt.Errorf("bridge: subscribe commands: %w", err)
 	}
-	// Stopped before the daemon's "offline" marker goes out: a command
+	// Stopped before the daemon's `connected` 0 marker goes out: a command
 	// accepted after this daemon has announced itself gone would be
 	// executed by nobody and acknowledged by nothing. Stop drains, so it
 	// blocks on whatever a handler is doing.
@@ -172,6 +202,21 @@ func (b *Bridge) Run(ctx context.Context) error {
 	// window HASS_DISCOVERY_REFRESH is about to clear.
 	b.startOne.Do(func() { close(b.started) })
 	g, gctx := errgroup.WithContext(ctx)
+	// The pre-0.15.0 layout's retained leftovers. Its own goroutine: the
+	// window is seconds long and nothing the workers publish depends on it,
+	// because the old and the new tree are disjoint by construction.
+	g.Go(func() error {
+		b.sweepLegacy(gctx)
+		return nil
+	})
+	if b.instance != nil {
+		g.Go(func() error {
+			if err := b.instance.RunStats(gctx); err != nil && !errors.Is(err, publisher.ErrStatsOff) && !errors.Is(err, context.Canceled) {
+				b.logger.Warn("bridge.stats", slog.String("err", err.Error()))
+			}
+			return nil
+		})
+	}
 	for _, d := range b.devices {
 		// One drain goroutine per device: entity-state publishes are
 		// decoupled from the appliance receive loop and one device's
@@ -193,9 +238,11 @@ func (b *Bridge) Run(ctx context.Context) error {
 }
 
 // PublishOnline is the (re)connect hook: it rebuilds the Home Assistant
-// plane for the new broker connection and announces this daemon online.
+// plane for the new broker connection, announces `<name>/connected` at the
+// level the appliances warrant and `<name>/info`, and replays the status
+// items.
 //
-// Both halves belong to the connection rather than to the process. The
+// All of it belongs to the connection rather than to the process. The
 // discovery runtime's superseded/declared/announced maps and the state
 // plane's dedup cache are statements about a BROKER, and a reconnect may
 // be to one that applied none of them — see haplane.Plane.Reconnect.
@@ -204,11 +251,31 @@ func (b *Bridge) PublishOnline(ctx context.Context) {
 	if err := b.plane.AnnounceOnline(ctx); err != nil {
 		b.logger.Warn("bridge.online_failed", slog.String("err", err.Error()))
 	}
+	if b.instance != nil {
+		if err := b.instance.AnnounceInfo(ctx); err != nil {
+			b.logger.Warn("bridge.info_failed", slog.String("err", err.Error()))
+		}
+	}
 	// Off the hook's goroutine: mqtt.Lifecycle runs OnConnect callbacks
 	// inline on the reconnect loop, and a callback that blocks stalls every
-	// later reconnect attempt. The republish is a snapshot window and a
-	// ~460 KB document per appliance.
-	go b.republishDiscovery(ctx)
+	// later reconnect attempt. The status replay is one publish per item,
+	// and the discovery republish is a snapshot window and a ~460 KB
+	// document per appliance.
+	go func() {
+		b.republishStatus(ctx)
+		b.republishDiscovery(ctx)
+	}()
+}
+
+// republishStatus re-sends every status item on the new connection, with
+// its original `ts` (mqtt-smarthome 2.0 §3.2: "again after every broker
+// reconnect, so the broker's retained state is complete").
+func (b *Bridge) republishStatus(ctx context.Context) {
+	rctx, cancel := context.WithTimeout(ctx, bundlePublishTimeout)
+	defer cancel()
+	if n, err := b.plane.RepublishStatus(rctx); err != nil {
+		b.logger.Warn("bridge.status_replay", slog.Int("sent", n), slog.String("err", err.Error()))
+	}
 }
 
 // republishDiscovery re-publishes every appliance's device document.
@@ -271,7 +338,7 @@ func (b *Bridge) republishDiscovery(ctx context.Context) {
 
 // StopDiscovery stops this daemon writing discovery, permanently.
 //
-// Call it before the final retained "offline" marker. That marker is the
+// Call it before the final retained `connected` 0 marker. That marker is the
 // only availability signal a graceful shutdown produces at all — a clean
 // DISCONNECT suppresses the Last Will — and two things here START a
 // discovery pass that outlives the call that started it: the Home

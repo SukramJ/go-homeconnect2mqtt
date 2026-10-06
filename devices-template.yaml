@@ -7,7 +7,10 @@
 # generate these entries plus the cached device descriptions.
 
 devices:
-  - name: dishwasher                 # logical name; used in MQTT topics
+  - name: dishwasher                 # display name in Home Assistant; also its discovery node id
+    haid: "<haId>"                   # appliance id from the profile ZIP (<haId>.json); the device
+                                     # segment of every MQTT topic. May be omitted when the cached
+                                     # description below was written by hc-util parse >= 0.15.0.
     host: ""                         # IP or mDNS name; empty -> default host from profile
     manual_host: false               # true suppresses mDNS host updates
     connection_type: AES             # AES | TLS

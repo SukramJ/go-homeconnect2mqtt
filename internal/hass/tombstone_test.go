@@ -65,7 +65,7 @@ var pinBundles = sync.OnceValues(func() (*discovery.Bundle, *discovery.Bundle) {
 			panic("pincatalog: " + err.Error())
 		}
 		app := homeconnect.NewAppliance(nil, &profile.Description{Info: pincatalog.Info, Entries: entries}, nil)
-		b, err := d.BundleFor(goldenDeviceEN, pincatalog.Info, app.Entities())
+		b, err := d.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, app.Entities())
 		if err != nil {
 			panic("BundleFor: " + err.Error())
 		}
@@ -399,7 +399,7 @@ func TestThePublishedDocumentReportsWhatItRemoved(t *testing.T) {
 	d := New(rec, goldenPrefix, goldenRoot, "en", true, slog.New(slog.DiscardHandler))
 	d.SetEnricher(pinEnricher(t))
 
-	topic, live, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, pincatalog.Info,
+	topic, live, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, goldenHaID, pincatalog.Info,
 		pinEntities(t), LiveComponents(full))
 	if err != nil {
 		t.Fatalf("PublishDeviceBundle: %v", err)
@@ -431,7 +431,7 @@ func TestThePublishedDocumentReportsWhatItRemoved(t *testing.T) {
 	// A refusal returns no live set at all: a document that was not
 	// written did not become anybody's previous document.
 	rec.err = errors.New("the broker refused the packet")
-	_, live, err = d.PublishDeviceBundle(t.Context(), goldenDeviceEN, pincatalog.Info,
+	_, live, err = d.PublishDeviceBundle(t.Context(), goldenDeviceEN, goldenHaID, pincatalog.Info,
 		pinEntities(t), LiveComponents(full))
 	if err == nil {
 		t.Fatal("the stub accepted a document it was told to refuse")
@@ -494,7 +494,7 @@ func TestTheCuratedWarningDescribesTheBehaviourThisReleaseHas(t *testing.T) {
 	d := New(nil, goldenPrefix, goldenRoot, "en", true,
 		slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))
 	d.SetEnricher(pinEnricher(t))
-	if _, err := d.BundleFor(goldenDeviceEN, pincatalog.Info, pinEntities(t)); err != nil {
+	if _, err := d.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, pinEntities(t)); err != nil {
 		t.Fatalf("BundleFor: %v", err)
 	}
 	line := buf.String()
@@ -547,7 +547,7 @@ func TestTheValidatorIsShownTheDocumentTheRemovalsProduced(t *testing.T) {
 	control := &bundleRecorder{}
 	d := New(control, goldenPrefix, goldenRoot, "en", true, slog.New(slog.DiscardHandler))
 	d.SetEnricher(pinEnricher(t))
-	if _, _, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, pincatalog.Info, entities, nil); err != nil {
+	if _, _, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, goldenHaID, pincatalog.Info, entities, nil); err != nil {
 		t.Fatalf("the control publish was refused, so nothing below is attributable: %v", err)
 	}
 	if control.written() == 0 {
@@ -565,7 +565,7 @@ func TestTheValidatorIsShownTheDocumentTheRemovalsProduced(t *testing.T) {
 	rec := &bundleRecorder{}
 	d2 := New(rec, goldenPrefix, goldenRoot, "en", true, slog.New(slog.DiscardHandler))
 	d2.SetEnricher(pinEnricher(t))
-	_, live, err := d2.PublishDeviceBundle(t.Context(), goldenDeviceEN, pincatalog.Info, entities, prior)
+	_, live, err := d2.PublishDeviceBundle(t.Context(), goldenDeviceEN, goldenHaID, pincatalog.Info, entities, prior)
 	if err == nil {
 		t.Fatal("a document whose REMOVAL entry is blocking was published: Home Assistant drops " +
 			"the whole document, so the appliance loses every entity it has")

@@ -24,20 +24,39 @@
 // and nothing in Home Assistant's registry to notice. See
 // notes/adr0070-phase7-measurement.md, findings F1, F3 and F6.
 //
-// Every function here is a pure function of the bridge root, the operator's
-// device name and the feature name. Nothing is slugified: the state and
-// command tree preserves the device name and the feature's original dotted
-// casing exactly as it has always been published. The discovery *config*
-// topic, which does slugify the device name, is not part of this layout —
-// it is identity-bearing and belongs to internal/hass (see F2).
+// # The grammar (0.15.0, openccu-loom ADR 0083)
 //
-// At ADR 0070 phase 7 step 4 this package is what a go-hamqtt topic.Layout
-// will be written against.
+// The tree follows mqtt-smarthome 2.0, `<name>/<function>/<item...>`, built
+// on go-hamqtt's topic.SmartHome:
+//
+//	<name>/connected                           0/1/2, the Last Will
+//	<name>/status/<haId>/<Feature/Path>        a feature's value
+//	<name>/set/<haId>/<Feature/Path>           a feature write, same item path
+//	<name>/status/<haId>/online                the appliance's reachability
+//	<name>/status/<haId>/connection_state      the appliance link state
+//	<name>/set/<haId>/_control/<key>           a synthetic program control
+//
+// The device segment is the appliance's haId, a stable hardware identifier,
+// rather than the operator's device name: the name used to go into the topic
+// unsanitised, spaces, `/` and umlauts included, and moved every topic of an
+// appliance when it was renamed. The name stays where Home Assistant shows
+// it, and in the discovery identities, which must not move.
+//
+// Feature paths stay verbatim (Home Connect's own identifiers,
+// `BSH/Common/Setting/PowerState`), every segment made topic-safe by
+// topic.Safe. The discovery *config* topic, which slugifies the device name,
+// is not part of this layout — it is identity-bearing and belongs to
+// internal/hass (see F2).
+//
+// The layout the daemon published before 0.15.0 lives on in legacy.go, for
+// the one job left to it: finding what the old release left retained.
 package layout
 
 import (
 	"strconv"
 	"strings"
+
+	hatopic "github.com/SukramJ/go-hamqtt/topic"
 )
 
 // Synthetic program-control keys. They back no appliance feature: the
@@ -58,75 +77,116 @@ const controlPrefix = "_control"
 // description does not name; the uid follows (FK-8).
 const unnamedPrefix = "_uid"
 
-// Bridge is the daemon-level status topic: the one the Last Will writes
-// and the one OnConnect writes "online" to.
-//
-// It is a single function so the will/birth publisher (cmd/…/main.go) and
-// the discovery builder (internal/hass) cannot drift. Before F1 was fixed
-// only the former knew this topic existed, so the Last Will landed on a
-// topic no entity referenced and a killed daemon left every entity showing
-// its last value forever.
+// The two per-appliance status items that are not features.
+const (
+	itemOnline          = "online"
+	itemConnectionState = "connection_state"
+)
+
+// Instance is the topic layout of one bridge instance, `<name>/…`.
+type Instance struct{ sh hatopic.SmartHome }
+
+// New builds the layout for the instance name (MQTT_TOPIC). It refuses a
+// name mqtt-smarthome 2.0 §3 forbids: empty, or containing `/`, `+` or `#`.
+func New(name string) (Instance, error) {
+	sh, err := hatopic.NewSmartHome(name)
+	if err != nil {
+		return Instance{}, err
+	}
+	return Instance{sh: sh}, nil
+}
+
+// Name is the instance name.
+func (i Instance) Name() string { return i.sh.Name() }
+
+// SmartHome is the go-hamqtt layout this one is built on, for the
+// instance-level topics (`info`, `maintenance/…`) this package does not
+// spell itself.
+func (i Instance) SmartHome() hatopic.SmartHome { return i.sh }
+
+// Connected is `<name>/connected`: the one topic the Last Will writes, the
+// one the daemon moves between 1 and 2 with its appliances, and what every
+// discovery payload declares as its bridge-level availability source.
 //
 // It is bridge-level, not device-level: this daemon mirrors several
 // appliances over one broker connection, so there is no device to put it
-// under. (The sibling go-mtec2mqtt had the inverse constraint — one device,
-// but its status went out at CONNECT before its serial was known.)
-func Bridge(root string) string { return trimRoot(root) + "/status" }
+// under.
+func (i Instance) Connected() string { return i.sh.Connected() }
 
-// Device is the topic layout of one appliance under the bridge root.
-type Device struct{ base string }
+// SetFilter is the subscription that covers every command topic of this
+// instance, `<name>/set/#`. It is disjoint from every status topic by its
+// second level, which is what the state plane's collision guard is told.
+func (i Instance) SetFilter() string { return i.sh.Name() + "/" + hatopic.FunctionSet + "/#" }
 
-// NewDevice builds the layout for device under root.
-func NewDevice(root, device string) Device {
-	return Device{base: trimRoot(root) + "/" + device}
+// Device is the layout of one appliance.
+func (i Instance) Device(haID string) Device { return Device{sh: i.sh, haID: haID} }
+
+// Device is the topic layout of one appliance under the instance.
+type Device struct {
+	sh   hatopic.SmartHome
+	haID string
 }
 
-func trimRoot(root string) string { return strings.TrimRight(root, "/") }
+// HaID is the appliance's device segment.
+func (d Device) HaID() string { return d.haID }
 
-// Base is the device sub-tree prefix, "<root>/<device>".
-func (d Device) Base() string { return d.base }
+// Status is `<name>/status/<haId>/<item...>`.
+func (d Device) Status(item ...string) string {
+	return d.sh.Status(append([]string{d.haID}, item...)...)
+}
 
-// Availability is where the device worker writes online/offline, and what
-// every discovery payload declares as its device-level availability.
-func (d Device) Availability() string { return d.base + "/availability" }
+// Set is `<name>/set/<haId>/<item...>`.
+func (d Device) Set(item ...string) string {
+	return d.sh.Set(append([]string{d.haID}, item...)...)
+}
+
+// Online is where the device worker writes the appliance's reachability,
+// and what every discovery payload declares as its device-level
+// availability.
+func (d Device) Online() string { return d.Status(itemOnline) }
 
 // ConnectionState is the appliance link state. It is published retained
 // and referenced by no discovery payload (F7, deliberately left).
-func (d Device) ConnectionState() string { return d.base + "/connection_state" }
+func (d Device) ConnectionState() string { return d.Status(itemConnectionState) }
 
 // State is where a feature's value is published and what the discovery
 // payload advertises as state_topic.
 func (d Device) State(feature string, uid int) string {
-	return d.base + "/" + FeaturePath(feature, uid) + "/state"
+	return d.Status(FeatureItem(feature, uid)...)
 }
 
 // Command is where a feature is written and what the discovery payload
 // advertises as command_topic.
 func (d Device) Command(feature string, uid int) string {
-	return d.base + "/" + FeaturePath(feature, uid) + "/set"
+	return d.Set(FeatureItem(feature, uid)...)
 }
 
 // ControlCommand is the command_topic of a synthetic program control.
-func (d Device) ControlCommand(key string) string {
-	return d.base + "/" + ControlPath(key) + "/set"
-}
+func (d Device) ControlCommand(key string) string { return d.Set(controlPrefix, key) }
 
 // CommandFilter is the subscription that covers every command topic of
-// this device. The feature path is variable-depth, so no fixed-arity
-// filter fits; see F4 for what the daemon does about the echo this
-// implies.
-func (d Device) CommandFilter() string { return d.base + "/#" }
+// this device, `<name>/set/<haId>/#`. The feature path is variable-depth,
+// so no fixed-arity filter fits — but unlike the old `<root>/<device>/#`
+// it no longer matches a single state topic of the daemon's own (F4).
+func (d Device) CommandFilter() string { return d.setBase() + "#" }
 
-// Relative strips the device prefix and the "/set" suffix from an inbound
-// command topic, yielding the value ControlPath or FeaturePath produced.
-// ok is false when topic is not a command topic of this device.
+func (d Device) setBase() string {
+	return d.sh.Name() + "/" + hatopic.FunctionSet + "/" + hatopic.Safe(d.haID) + "/"
+}
+
+// StatusPrefix is `<name>/status/<haId>/`, the prefix every status item of
+// this appliance starts with — and, with `#` appended, the filter that
+// reads them back.
+func (d Device) StatusPrefix() string {
+	return d.sh.Name() + "/" + hatopic.FunctionStatus + "/" + hatopic.Safe(d.haID) + "/"
+}
+
+// Relative strips the device's set prefix from an inbound command topic,
+// yielding the value ControlPath or FeaturePath produced. ok is false when
+// topic is not a command topic of this device.
 func (d Device) Relative(topic string) (rel string, ok bool) {
-	rest, ok := strings.CutPrefix(topic, d.base+"/")
-	if !ok {
-		return "", false
-	}
-	rest, ok = strings.CutSuffix(rest, "/set")
-	if !ok {
+	rest, ok := strings.CutPrefix(topic, d.setBase())
+	if !ok || rest == "" {
 		return "", false
 	}
 	return rest, true
@@ -135,14 +195,19 @@ func (d Device) Relative(topic string) (rel string, ok bool) {
 // ControlPath is the relative path of a synthetic control.
 func ControlPath(key string) string { return controlPrefix + "/" + key }
 
-// FeaturePath maps a dotted feature name to its slash-separated MQTT path.
-// An unnamed feature falls back to a uid-based path so nothing is lost.
-func FeaturePath(name string, uid int) string {
+// FeatureItem maps a dotted feature name to its item segments. An unnamed
+// feature falls back to a uid-based path so nothing is lost. The segments
+// are made topic-safe where they are rendered, by topic.SmartHome.
+func FeatureItem(name string, uid int) []string {
 	if name == "" {
-		return unnamedPrefix + "/" + strconv.Itoa(uid)
+		return []string{unnamedPrefix, strconv.Itoa(uid)}
 	}
-	return strings.ReplaceAll(name, ".", "/")
+	return strings.Split(name, ".")
 }
+
+// FeaturePath maps a dotted feature name to its slash-separated, topic-safe
+// relative path — the path below `<name>/status/<haId>/`.
+func FeaturePath(name string, uid int) string { return hatopic.Join(FeatureItem(name, uid)...) }
 
 // FeatureName is FeaturePath's inverse: it maps a relative path back to
 // either a dotted feature name or a uid. Exactly one of the two results is

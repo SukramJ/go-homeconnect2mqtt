@@ -14,6 +14,7 @@ import (
 
 	"github.com/SukramJ/go-hamqtt/discovery"
 	"github.com/SukramJ/go-hamqtt/publisher"
+	hatopic "github.com/SukramJ/go-hamqtt/topic"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
@@ -66,7 +67,8 @@ type Enricher interface {
 type Discovery struct {
 	mqtt      ConfigWriter
 	baseTopic string // discovery prefix, e.g. "homeassistant"
-	rootTopic string // bridge MQTT root, e.g. "homeconnect"
+	rootTopic string // instance name (MQTT_TOPIC), e.g. "homeconnect"
+	inst      layout.Instance
 	lang      string // display language for friendly names ("de"/"en")
 	curated   bool   // publish only the enabled-by-default (primary) set
 	logger    *slog.Logger
@@ -89,10 +91,18 @@ func New(pub ConfigWriter, baseTopic, rootTopic, lang string, curated bool, logg
 	if logger == nil {
 		logger = slog.Default()
 	}
+	// The name is validated by internal/config long before this; a name
+	// that still fails here renders no topic at all, which every payload
+	// would show, and is said once rather than silently.
+	inst, err := layout.New(rootTopic)
+	if err != nil {
+		logger.Error("hass.layout", slog.String("err", err.Error()))
+	}
 	return &Discovery{
 		mqtt:      pub,
 		baseTopic: strings.TrimRight(baseTopic, "/"),
 		rootTopic: strings.TrimRight(rootTopic, "/"),
+		inst:      inst,
 		lang:      lang,
 		curated:   curated,
 		logger:    logger,
@@ -112,6 +122,18 @@ func New(pub ConfigWriter, baseTopic, rootTopic, lang string, curated bool, logg
 // construction too; the library call is the second lock.
 func (d *Discovery) BirthTopic() string { return publisher.BirthTopic(d.baseTopic) }
 
+// entityTopics are the topics a per-entity payload names.
+//
+// The per-entity builders below (PublishDevice, payloadFor, basePayload)
+// publish nothing in production since ADR 0070 step 6; they are the ORACLE
+// the device document is proved against, and the pins in testdata/ are
+// their output. They render the layout every release before 0.15.0
+// published — layout.LegacyDevice and layout.LegacyBridge — and that is
+// deliberate rather than stale: what they prove is that 0.15.0 moved the
+// topic-bearing keys of every component and nothing else, and the
+// identities in particular not at all.
+// TestHamqttReproducesEveryPinnedPayloadOutsideTheConvention is where that
+// comparison runs.
 type entityTopics struct {
 	state        string
 	command      string
@@ -128,12 +150,12 @@ type deviceBlock struct {
 }
 
 func (d *Discovery) topicsFor(device string, e *homeconnect.Entity) entityTopics {
-	dt := layout.NewDevice(d.rootTopic, device)
+	dt := layout.NewLegacyDevice(d.rootTopic, device)
 	return entityTopics{
 		state:        dt.State(e.Name(), e.UID()),
 		command:      dt.Command(e.Name(), e.UID()),
 		availability: dt.Availability(),
-		bridge:       layout.Bridge(d.rootTopic),
+		bridge:       layout.LegacyBridge(d.rootTopic),
 	}
 }
 
@@ -328,7 +350,7 @@ func (d *Discovery) publishProgramControls(ctx context.Context, device string, e
 	if !hasProgram {
 		return
 	}
-	dt := layout.NewDevice(d.rootTopic, device)
+	dt := layout.NewLegacyDevice(d.rootTopic, device)
 	controls := []struct{ key, nameEN, nameDE string }{
 		{layout.ControlStartProgram, "Start program", "Programm starten"},
 		{layout.ControlStopProgram, "Stop program", "Programm stoppen"},
@@ -336,7 +358,7 @@ func (d *Discovery) publishProgramControls(ctx context.Context, device string, e
 	t := entityTopics{
 		command:      "", // no feature behind it; the control topic is its own
 		availability: dt.Availability(),
-		bridge:       layout.Bridge(d.rootTopic),
+		bridge:       layout.LegacyBridge(d.rootTopic),
 	}
 	for _, c := range controls {
 		name := c.nameEN
@@ -479,12 +501,12 @@ func (d *Discovery) BundleNodeIDOf(topic string) (string, bool) {
 // become anybody's previous document.
 func (d *Discovery) PublishDeviceBundle(
 	ctx context.Context,
-	device string,
+	device, haID string,
 	info profile.DeviceInfo,
 	entities []*homeconnect.Entity,
 	prior map[string]discovery.Component,
 ) (topic string, live map[string]discovery.Component, err error) {
-	b, err := d.BundleFor(device, info, entities)
+	b, err := d.BundleFor(device, haID, info, entities)
 	if err != nil {
 		d.logger.Error("hass.bundle_render", slog.String("device", device), slog.String("err", err.Error()))
 		return "", nil, err
@@ -709,9 +731,25 @@ func (d *Discovery) ConfigTopicFor(t publisher.ConfigTopic) string {
 // # The rule
 //
 // Attribution is an EXACT match against a topic that only this instance
-// renders, not a prefix that every instance nested under it also satisfies:
+// renders, not a prefix that every instance nested under it also satisfies.
+// There are four such topics, two per layout, because a payload of either
+// layout can be on the broker: every config and document a release before
+// 0.15.0 published names the old ones, and every document 0.15.0 publishes
+// names the new ones. The orphan sweep and the tombstone read-back must
+// recognise both, or the first would stop clearing this instance's own
+// stale configs and the second would stop removing what it dropped.
 //
-//   - `<root>/status` — [layout.Bridge], the daemon's own status topic,
+// The two of 0.15.0 (openccu-loom ADR 0083):
+//
+//   - `<root>/connected` — the instance's `connected` topic, the Last Will
+//     and the first availability source of every component. The instance
+//     name is one topic level, so no other instance renders it.
+//   - `<root>/status/<haId>/online` with `<haId>` a SINGLE level — the
+//     appliance's `online` item, the second availability source.
+//
+// The two of every earlier release:
+//
+//   - `<root>/status` — [layout.LegacyBridge], the daemon's own status topic,
 //     carried by every payload since F1 as the first of its two
 //     availability sources. `homeconnect/kitchen/status` is a different
 //     string from `homeconnect/status`, so no nesting can produce it.
@@ -772,19 +810,26 @@ func (d *Discovery) IsOwnConfig(payload []byte) bool {
 // attribution needs an exact match rather than a prefix, and why there are
 // two anchors rather than one.
 func (d *Discovery) isIdentityAnchor(topic string) bool {
-	if topic == layout.Bridge(d.rootTopic) {
+	if topic == layout.LegacyBridge(d.rootTopic) || topic == d.inst.Connected() {
 		return true
 	}
 	rel, ok := strings.CutPrefix(topic, d.rootTopic+"/")
 	if !ok {
 		return false
 	}
+	if item, ok := strings.CutPrefix(rel, hatopic.FunctionStatus+"/"); ok {
+		if haID, ok := strings.CutSuffix(item, "/online"); ok && singleLevel(haID) {
+			return true
+		}
+	}
 	device, ok := strings.CutSuffix(rel, "/availability")
 	if !ok {
 		return false
 	}
-	return device != "" && !strings.Contains(device, "/")
+	return singleLevel(device)
 }
+
+func singleLevel(s string) bool { return s != "" && !strings.Contains(s, "/") }
 
 // retainedConfig is the part of a retained per-entity discovery config
 // [Discovery.IsOwnConfig] reads: the identity string, and every MQTT topic

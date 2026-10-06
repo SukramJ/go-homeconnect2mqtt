@@ -30,7 +30,7 @@ func hamqttPin(t *testing.T, tc goldenCase) []goldenRow {
 	if tc.enriched {
 		d.SetEnricher(pinEnricher(t))
 	}
-	rows, err := d.hamqttComponents(tc.device, pincatalog.Info, pinEntities(t))
+	rows, err := d.hamqttComponents(tc.device, goldenHaID, pincatalog.Info, pinEntities(t))
 	if err != nil {
 		t.Fatalf("hamqttComponents: %v", err)
 	}
@@ -62,35 +62,136 @@ func readGoldenRows(t *testing.T, name string) []goldenRow {
 	return rows
 }
 
-// TestHamqttReproducesEveryPinnedPayloadByteForByte is ADR 0070 phase 7,
-// step 4 — the decisive experiment, and the reason this PR exists.
+// conventionKeys are the keys 0.15.0 re-pointed onto mqtt-smarthome 2.0
+// (openccu-loom ADR 0083), and the only keys of a component that may differ
+// from the pins. Each is asserted on its own by [checkRepointed]; every
+// other key — the identities above all, but also names, classes, units,
+// categories, the options list and its order — is compared byte for byte.
+var conventionKeys = []string{"state_topic", "command_topic", "availability", "value_template", "command_template"}
+
+// withoutConvention is a row minus [conventionKeys].
+func withoutConvention(r goldenRow) goldenRow {
+	p := make(map[string]any, len(r.Payload))
+	for k, v := range r.Payload {
+		p[k] = v
+	}
+	for _, k := range conventionKeys {
+		delete(p, k)
+	}
+	r.Payload = p
+	return r
+}
+
+// repointed is the 0.15.0 form of a pre-0.15.0 state or command topic:
+// `<root>/<device>/<Path>/state` becomes `<root>/status/<haId>/<Path>` and
+// `…/set` becomes `<root>/set/<haId>/<Path>` — the same feature path, the
+// function moved from the suffix to the second level, the device segment
+// from the name to the haId.
+func repointed(t *testing.T, device, old string) string {
+	t.Helper()
+	rest, ok := strings.CutPrefix(old, goldenRoot+"/"+device+"/")
+	if !ok {
+		t.Fatalf("pinned topic %q is not under %s/%s/", old, goldenRoot, device)
+	}
+	if path, ok := strings.CutSuffix(rest, "/state"); ok {
+		return goldenRoot + "/status/" + goldenHaID + "/" + path
+	}
+	if path, ok := strings.CutSuffix(rest, "/set"); ok {
+		return goldenRoot + "/set/" + goldenHaID + "/" + path
+	}
+	t.Fatalf("pinned topic %q is neither a state nor a command topic", old)
+	return ""
+}
+
+// checkRepointed asserts every convention key of one rendered component
+// against its pinned predecessor.
+func checkRepointed(t *testing.T, device string, w, g goldenRow) {
+	t.Helper()
+	for _, k := range []string{"state_topic", "command_topic"} {
+		old, had := w.Payload[k].(string)
+		now, has := g.Payload[k].(string)
+		if had != has {
+			t.Errorf("%s: %s present before=%v after=%v", g.Topic, k, had, has)
+			continue
+		}
+		if had && now != repointed(t, device, old) {
+			t.Errorf("%s: %s = %q, want %q (re-pointed from %q)", g.Topic, k, now, repointed(t, device, old), old)
+		}
+	}
+	wantAvail := []map[string]any{
+		{
+			"topic": goldenRoot + "/connected", "value_template": discovery.ConnectedTemplate(discovery.ConnectedOperational),
+			"payload_available": "online", "payload_not_available": "offline",
+		},
+		{
+			"topic": goldenRoot + "/status/" + goldenHaID + "/online", "value_template": discovery.StatusBoolValueTemplate,
+			"payload_available": "true", "payload_not_available": "false",
+		},
+	}
+	if got, want := canonicalString(t, g.Payload["availability"]), canonicalString(t, wantAvail); got != want {
+		t.Errorf("%s: availability = %s, want %s", g.Topic, got, want)
+	}
+	vt, hasVT := g.Payload["value_template"].(string)
+	if _, hasState := g.Payload["state_topic"]; hasState != hasVT {
+		t.Errorf("%s: state_topic present=%v but value_template present=%v", g.Topic, hasState, hasVT)
+	}
+	if hasVT && !strings.Contains(vt, "value_json.val") {
+		t.Errorf("%s: value_template %q does not read the status object's val", g.Topic, vt)
+	}
+	if ct, ok := g.Payload["command_template"].(string); ok {
+		// Only a labelled enum maps a label back to its token.
+		if _, cmd := g.Payload["command_topic"]; !cmd || !strings.Contains(ct, "m.get(") {
+			t.Errorf("%s: unexpected command_template %q", g.Topic, ct)
+		}
+	}
+}
+
+// TestHamqttReproducesEveryPinnedPayloadOutsideTheConvention is ADR 0070
+// phase 7 step 4's decisive experiment, carried through the 0.15.0 move.
 //
-// It renders all four pinned configurations through go-hamqtt v0.32.0 and
-// compares the result against internal/hass/testdata/*.json: the bytes the
-// hand-built path produced, pinned by #40 and moved deliberately by #41's
-// eight defect fixes. The goldens are READ, never regenerated — the update
-// flags are not reachable from this file — so a mismatch is a finding about
-// the library or about this bridge, and never a file that quietly moved.
+// It renders all four pinned configurations through go-hamqtt and compares
+// the result against internal/hass/testdata/*.json: the bytes the
+// hand-built path produced before the library existed, under the layout
+// every release before 0.15.0 published. The goldens are READ, never
+// regenerated — the update flags are not reachable from this file — so a
+// mismatch is a finding about the library or about this bridge, and never a
+// file that quietly moved.
 //
-// If it passes, every later step of the phase is a switch-over with a test
-// behind it. If it fails, the failure surfaces here, at zero risk, instead
-// of at step 6 against a live Home Assistant where the only evidence is one
-// WARNING line and no entities.
-func TestHamqttReproducesEveryPinnedPayloadByteForByte(t *testing.T) {
+// What the convention move is allowed to change is enumerated
+// ([conventionKeys]) and each of those keys is asserted against its exact
+// expected form ([checkRepointed]); everything else must be byte for byte
+// what it was. That is the proof that 0.15.0 re-points Home Assistant's
+// entities without touching a single identity string.
+func TestHamqttReproducesEveryPinnedPayloadOutsideTheConvention(t *testing.T) {
 	total := 0
 	for _, tc := range goldenCases {
 		t.Run(strings.TrimSuffix(tc.file, ".json"), func(t *testing.T) {
 			want := readGoldenRows(t, tc.file)
 			got := hamqttPin(t, tc)
-			compareRows(t, want, got)
+			gotBy := make(map[string]goldenRow, len(got))
+			for _, g := range got {
+				gotBy[g.Topic] = g
+			}
+			strippedWant := make([]goldenRow, 0, len(want))
+			for _, w := range want {
+				if g, ok := gotBy[w.Topic]; ok {
+					checkRepointed(t, tc.device, w, g)
+				}
+				strippedWant = append(strippedWant, withoutConvention(w))
+			}
+			strippedGot := make([]goldenRow, 0, len(got))
+			for _, g := range got {
+				strippedGot = append(strippedGot, withoutConvention(g))
+			}
+			compareRows(t, strippedWant, strippedGot)
 			if len(want) != len(got) {
 				t.Errorf("%s: golden has %d rows, go-hamqtt rendered %d", tc.file, len(want), len(got))
 			}
-			t.Logf("%s: %d payloads reproduced byte for byte", tc.file, len(got))
+			t.Logf("%s: %d payloads reproduced outside the convention's keys", tc.file, len(got))
 		})
 		total += len(readGoldenRows(t, tc.file))
 	}
-	t.Logf("byte-equality proved over %d pinned payloads across %d configurations", total, len(goldenCases))
+	t.Logf("equality proved over %d pinned payloads across %d configurations", total, len(goldenCases))
 }
 
 // TestHamqttReproducesTheIdentityPlane is the same proof narrowed to the
@@ -134,29 +235,38 @@ func TestHamqttReproducesTheIdentityPlane(t *testing.T) {
 // either side alone.
 func TestHamqttLayoutAgreesWithTheDaemonsOwnBuilders(t *testing.T) {
 	const device = goldenDeviceDE
-	l := NewLayout(goldenRoot)
-	dt := layout.NewDevice(goldenRoot, device)
+	l := NewLayout(goldenInstance())
+	dt := goldenInstance().Device(goldenHaID)
 	dev := hamqttDevice(device, pincatalog.Info)
 
-	if got, want := l.Bridge(), layout.Bridge(goldenRoot); got != want {
+	if got, want := l.Bridge(), goldenInstance().Connected(); got != want {
 		t.Errorf("Bridge() = %q, want %q", got, want)
+	}
+	if got, want := l.Connected(), l.Bridge(); got != want {
+		t.Errorf("Connected() = %q, Bridge() = %q — the runtime refuses a layout where they differ", got, want)
+	}
+	if got, want := l.Info(), goldenRoot+"/info"; got != want {
+		t.Errorf("Info() = %q, want %q", got, want)
+	}
+	if got, want := l.Maintenance("set", "loglevel"), goldenRoot+"/maintenance/set/loglevel"; got != want {
+		t.Errorf("Maintenance() = %q, want %q", got, want)
 	}
 	n := 0
 	for _, e := range pinEntities(t) {
-		slot := hamqttSlot(dev, device, strings.Split(layout.FeaturePath(e.Name(), e.UID()), "/")...)
+		slot := hamqttSlot(dev, goldenHaID, layout.FeatureItem(e.Name(), e.UID())...)
 		if got, want := l.State(slot), dt.State(e.Name(), e.UID()); got != want {
 			t.Errorf("State: %q, want %q", got, want)
 		}
 		if got, want := l.Command(slot), dt.Command(e.Name(), e.UID()); got != want {
 			t.Errorf("Command: %q, want %q", got, want)
 		}
-		if got, want := l.Availability(slot), dt.Availability(); got != want {
+		if got, want := l.Availability(slot), dt.Online(); got != want {
 			t.Errorf("Availability: %q, want %q", got, want)
 		}
 		n++
 	}
 	for _, key := range []string{layout.ControlStartProgram, layout.ControlStopProgram} {
-		slot := hamqttSlot(dev, device, strings.Split(layout.ControlPath(key), "/")...)
+		slot := hamqttSlot(dev, goldenHaID, strings.Split(layout.ControlPath(key), "/")...)
 		if got, want := l.Command(slot), dt.ControlCommand(key); got != want {
 			t.Errorf("ControlCommand(%q): %q, want %q", key, got, want)
 		}
@@ -175,12 +285,13 @@ func TestHamqttLayoutAgreesWithTheDaemonsOwnBuilders(t *testing.T) {
 // deliberately ignored or silently dropped. go-mtec2mqtt's equivalent step
 // found three such fields and gave each an assertion rather than leaving the
 // gap; this is the same. Address in particular is NOT the device's topic
-// segment here — it is the slug-derived identity — and a layout that started
-// reading it would move every state topic of a non-ASCII device name.
+// segment here — it is the slug-derived identity, from the operator's device
+// name — and a layout that started reading it would move every topic of an
+// appliance whenever it was renamed.
 func TestHamqttLayoutIgnoresAddressChannelAndBucket(t *testing.T) {
-	l := NewLayout(goldenRoot)
+	l := NewLayout(goldenInstance())
 	base := model.Slot{
-		Scope:   []string{goldenDeviceDE},
+		Scope:   []string{goldenHaID},
 		Address: "homeconnect_geschirrspuler",
 		Bucket:  model.BucketValues,
 		Path:    []string{"BSH", "Common", "Status", "OperationState"},
@@ -193,24 +304,25 @@ func TestHamqttLayoutIgnoresAddressChannelAndBucket(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		render     func(model.Slot) string
+		wantPrefix string
 		wantSuffix string
 	}{
-		{"State", l.State, "/state"},
-		{"Command", l.Command, "/set"},
-		{"Availability", l.Availability, "/availability"},
+		{"State", l.State, goldenRoot + "/status/" + goldenHaID + "/", "/OperationState"},
+		{"Command", l.Command, goldenRoot + "/set/" + goldenHaID + "/", "/OperationState"},
+		{"Availability", l.Availability, goldenRoot + "/status/" + goldenHaID + "/", "/online"},
 	} {
 		a, b := tc.render(base), tc.render(perturbed)
 		if a != b {
 			t.Errorf("%s reads Address, Channel or Bucket: %q vs %q", tc.name, a, b)
 		}
-		if !strings.HasSuffix(a, tc.wantSuffix) || !strings.HasPrefix(a, goldenRoot+"/"+goldenDeviceDE+"/") {
-			t.Errorf("%s = %q, want <root>/<raw device>/…%s", tc.name, a, tc.wantSuffix)
+		if !strings.HasSuffix(a, tc.wantSuffix) || !strings.HasPrefix(a, tc.wantPrefix) {
+			t.Errorf("%s = %q, want %s…%s", tc.name, a, tc.wantPrefix, tc.wantSuffix)
 		}
 	}
 	// The inverse: Scope and Path ARE read, so this test cannot pass by the
 	// layout ignoring everything.
 	moved := base
-	moved.Scope = []string{"Waschmaschine"}
+	moved.Scope = []string{"OTHER-HAID"}
 	if l.State(moved) == l.State(base) {
 		t.Error("State ignores Scope — the layout reads nothing at all")
 	}
@@ -360,7 +472,7 @@ func TestHamqttPayloadsPassDiscoveryValidate(t *testing.T) {
 			if tc.enriched {
 				d.SetEnricher(pinEnricher(t))
 			}
-			rows, err := d.hamqttComponents(tc.device, pincatalog.Info, pinEntities(t))
+			rows, err := d.hamqttComponents(tc.device, goldenHaID, pincatalog.Info, pinEntities(t))
 			if err != nil {
 				t.Fatalf("hamqttComponents: %v", err)
 			}
@@ -874,7 +986,7 @@ func TestHamqttBundleValidates(t *testing.T) {
 			if tc.enriched {
 				d.SetEnricher(pinEnricher(t))
 			}
-			b, err := d.BundleFor(tc.device, pincatalog.Info, pinEntities(t))
+			b, err := d.BundleFor(tc.device, goldenHaID, pincatalog.Info, pinEntities(t))
 			if err != nil {
 				t.Fatalf("BundleFor: %v", err)
 			}
@@ -950,7 +1062,9 @@ func TestHamqttReproducesBothButtonPaths(t *testing.T) {
 			t.Errorf("go-hamqtt rendered a button the golden does not have: %s", r.Topic)
 			continue
 		}
-		if wb, gb := canonical(t, w), canonical(t, r.Payload); !bytes.Equal(wb, gb) {
+		checkRepointed(t, goldenDeviceEN, goldenRow{Topic: r.Topic, Payload: w}, r)
+		w = withoutConvention(goldenRow{Payload: w}).Payload
+		if wb, gb := canonical(t, w), canonical(t, withoutConvention(r).Payload); !bytes.Equal(wb, gb) {
 			t.Errorf("%s:\n golden: %s\n  built: %s", r.Topic, wb, gb)
 			continue
 		}
@@ -1061,10 +1175,10 @@ func TestHamqttRenderPathPublishesNothing(t *testing.T) {
 		if tc.enriched {
 			d.SetEnricher(pinEnricher(t))
 		}
-		if _, err := d.hamqttComponents(tc.device, pincatalog.Info, pinEntities(t)); err != nil {
+		if _, err := d.hamqttComponents(tc.device, goldenHaID, pincatalog.Info, pinEntities(t)); err != nil {
 			t.Fatalf("hamqttComponents: %v", err)
 		}
-		if _, err := d.BundleFor(tc.device, pincatalog.Info, pinEntities(t)); err != nil {
+		if _, err := d.BundleFor(tc.device, goldenHaID, pincatalog.Info, pinEntities(t)); err != nil {
 			t.Fatalf("BundleFor: %v", err)
 		}
 	}
@@ -1162,5 +1276,69 @@ func TestGoHamqttRefusesAStateTopicOnAWriteOnlyPlatform(t *testing.T) {
 	}
 	if _, has := decoded["state_topic"]; has {
 		t.Error("the rendered button payload carries a state_topic")
+	}
+}
+
+// TestTokensOnTheWireLabelsInDiscovery pins how the status object meets
+// Home Assistant (openccu-loom ADR 0083): the state topic carries an enum's
+// TOKEN, and the document maps it to the label in the display language —
+// `options` lists the labels, the value template maps token to label and
+// the command template label to token. Booleans read `val` lowered, and an
+// event — whose state is a token, not a boolean — reads it as it is, so
+// its Present/Off payloads match in every language. Before 0.15.0 a German
+// installation published "Vorhanden" and the event never matched.
+func TestTokensOnTheWireLabelsInDiscovery(t *testing.T) {
+	d := New(nil, goldenPrefix, goldenRoot, "de", false, slog.New(slog.DiscardHandler))
+	d.SetEnricher(pinEnricher(t))
+	b, err := d.BundleFor(goldenDeviceDE, goldenHaID, pincatalog.Info, pinEntities(t))
+	if err != nil {
+		t.Fatalf("BundleFor: %v", err)
+	}
+	comp := func(key string) discovery.Component {
+		t.Helper()
+		c, ok := b.Components[key]
+		if !ok {
+			t.Fatalf("no component %s", key)
+		}
+		return c
+	}
+
+	power := comp("bsh_common_setting_powerstate")
+	if got := strings.Join(power.Options, ","); got != "Aus,Auto,Ein" {
+		t.Errorf("select options = %s, want the German labels in German order", got)
+	}
+	for _, pair := range []string{"'On': 'Ein'", "'Off': 'Aus'"} {
+		if !strings.Contains(power.ValueTemplate, pair) {
+			t.Errorf("select value_template %q does not map %s", power.ValueTemplate, pair)
+		}
+	}
+	for _, pair := range []string{"'Ein': 'On'", "'Aus': 'Off'"} {
+		if !strings.Contains(power.CommandTemplate, pair) {
+			t.Errorf("select command_template %q does not map %s back", power.CommandTemplate, pair)
+		}
+	}
+
+	event := comp("bsh_common_event_programfinished")
+	if event.ValueTemplate != discovery.StatusValueTemplate {
+		t.Errorf("event value_template = %q, want %q", event.ValueTemplate, discovery.StatusValueTemplate)
+	}
+	if event.Extra["payload_on"] != "Present" || event.Extra["payload_off"] != "Off" {
+		t.Errorf("event payloads = %v/%v, want the tokens Present/Off", event.Extra["payload_on"], event.Extra["payload_off"])
+	}
+
+	for key, c := range b.Components {
+		if c.Platform == "switch" && c.ValueTemplate != discovery.StatusBoolValueTemplate {
+			t.Errorf("%s: switch value_template = %q, want %q", key, c.ValueTemplate, discovery.StatusBoolValueTemplate)
+		}
+	}
+
+	// English labels are the tokens themselves, so no mapping is rendered.
+	en := New(nil, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
+	be, err := en.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, pinEntities(t))
+	if err != nil {
+		t.Fatalf("BundleFor(en): %v", err)
+	}
+	if c := be.Components["bsh_common_setting_powerstate"]; c.ValueTemplate != discovery.StatusValueTemplate || c.CommandTemplate != "" {
+		t.Errorf("en select templates = %q / %q, want the plain val and none", c.ValueTemplate, c.CommandTemplate)
 	}
 }

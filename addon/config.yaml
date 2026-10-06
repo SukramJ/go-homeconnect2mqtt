@@ -50,6 +50,8 @@ options:
   mqtt_login: ""
   mqtt_password: ""
   mqtt_topic: homeconnect
+  maintenance: true
+  stats_interval: 60
   hass_enable: true
   hass_discovery: curated
   hass_discovery_refresh: false
@@ -72,6 +74,8 @@ schema:
   mqtt_login: "str?"
   mqtt_password: "password?"
   mqtt_topic: str
+  maintenance: bool
+  stats_interval: "int(0,86400)"
   hass_enable: bool
   hass_discovery: "list(full|curated)"
   hass_discovery_refresh: "bool?"

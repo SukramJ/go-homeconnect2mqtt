@@ -131,10 +131,9 @@ func bundlePlane(t *testing.T, tr publisher.Transport, brokerMax func() (uint32,
 	t.Helper()
 	p := New(tr, Config{
 		Prefix:              testPrefix,
-		StatusTopic:         "homeconnect/status",
-		Layout:              testLayout{},
+		StatusTopic:         testConnected,
+		Layout:              testLayout(),
 		QoS:                 QoS(1),
-		Retain:              true,
 		BrokerMaxPacketSize: brokerMax,
 		Logger:              slog.New(slog.DiscardHandler),
 	})

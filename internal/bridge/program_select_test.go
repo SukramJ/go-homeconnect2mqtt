@@ -46,7 +46,9 @@ func TestProgNorm(t *testing.T) {
 // TestProgramPayloadNone pins the idle case: an appliance reports its
 // active/selected program as a raw uid (0 when nothing runs), which is not one
 // of the select's program options — publishing it made HA log "Invalid option",
-// so an unresolved program publishes HA's "None" and clears the entity.
+// so an unresolved program publishes HA's "None" as its `val` and clears the
+// entity. A known program carries its token, the feature name, and never
+// the localized label it published before 0.15.0.
 func TestProgramPayloadNone(t *testing.T) {
 	dev, _ := connectedDevice(t, "Dishwasher")
 	active, ok := dev.app.EntityByName("BSH.Common.Root.ActiveProgram")
@@ -59,12 +61,12 @@ func TestProgramPayloadNone(t *testing.T) {
 	}{
 		{0, payloadNone},      // idle
 		{0x9999, payloadNone}, // a uid the profile does not name
-		{0x1015, "Eco 50 °C"}, // the one known program, localized
+		{0x1015, "Eco50"},     // the one known program: its token, not the label "Eco 50 °C"
 	}
 	for _, c := range cases {
 		dev.app.ApplyValues([]map[string]any{{"uid": active.UID(), "value": c.value}})
-		if got := payloadFor(active, "de"); got != c.want {
-			t.Errorf("payloadFor(program=%v) = %q, want %q", c.value, got, c.want)
+		if got := statusValue(active); got != c.want {
+			t.Errorf("statusValue(program=%v) = %v, want %q", c.value, got, c.want)
 		}
 	}
 }

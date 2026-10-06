@@ -75,18 +75,29 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 		return err
 	}
 
-	level := slog.LevelInfo
+	// A LevelVar rather than a level, because the level is no longer fixed
+	// for the life of the process: `<name>/maintenance/set/loglevel`
+	// (mqtt-smarthome 2.0 §7) moves it at runtime.
+	var level slog.LevelVar
 	if cfg.Debug {
-		level = slog.LevelDebug
+		level.Set(slog.LevelDebug)
 	}
 	// RedactAttr enforces the redaction contract at the handler: attrs
 	// keyed like secrets (psk/iv/serialNumber/mac/shipSki/deviceID,
 	// docs/03-profile-format.md §6) are masked before they reach the log.
-	logger := slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: level, ReplaceAttr: profile.RedactAttr}))
+	logger := slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: &level, ReplaceAttr: profile.RedactAttr}))
 	// Route slog.Default() through the same guard: library fallbacks (e.g.
 	// a nil SessionConfig.Logger) must not bypass redaction.
 	slog.SetDefault(logger)
 	logger.Info("starting", slog.String("version", version.Version))
+	for _, key := range cfg.Removed {
+		logger.Warn("config.key_removed", slog.String("key", key),
+			slog.String("note", config.RemovedKeyNote(key)+"; the key is ignored"))
+	}
+	inst, err := layout.New(cfg.MQTTTopic)
+	if err != nil {
+		return fmt.Errorf("config: MQTT_TOPIC: %w", err)
+	}
 
 	specs, err := loadDeviceSpecs(devicesPath, logger)
 	if err != nil {
@@ -96,7 +107,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// The daemon's own availability topic and the whole Home Assistant
+	// The daemon's own `connected` topic and the whole Home Assistant
 	// publish plane.
 	//
 	// The ordering here is a knot and the placeholder transport is what
@@ -106,12 +117,12 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	// built over haplane.Transport and the real adapter wired into it
 	// below, before the lifecycle starts.
 	//
-	// The status topic stays at <MQTT_TOPIC>/status, where it has always
-	// been: already in the daemon's own publish root rather than in Home
-	// Assistant's discovery tree, so there is nothing to move and no
-	// retained copy to retract, and an operator automation watching it
-	// keeps working. It is bridge-level and not under a device because
-	// this daemon mirrors several appliances over one broker connection.
+	// The status topic is <MQTT_TOPIC>/connected (mqtt-smarthome 2.0
+	// §3.1): 0 by the Last Will and on a graceful stop, 1 while no
+	// appliance is reachable, 2 while one is. It moved there from
+	// <MQTT_TOPIC>/status in 0.15.0, and the migration sweep clears the old
+	// one. It is bridge-level and not under a device because this daemon
+	// mirrors several appliances over one broker connection.
 	//
 	// Both StatusTopic and Layout are stated, and that IS the assertion:
 	// publisher.New fills an empty StatusTopic from the layout and refuses
@@ -128,7 +139,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 	// is still wiring; it answers "not known" until the client exists,
 	// which is the same answer as a link that has not connected.
 	var clientRef atomic.Pointer[mqtt.TCPClient]
-	plane := haplane.New(haLink, haPlaneConfig(cfg, func() (uint32, bool) {
+	plane := haplane.New(haLink, haPlaneConfig(cfg, inst, func() (uint32, bool) {
 		return brokerMaxPacketSize(clientRef.Load())
 	}, logger))
 	will, err := plane.Will()
@@ -179,9 +190,16 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 		store = state.New()
 	}
 
+	// `<name>/info` and the maintenance topics. The restart is the same
+	// graceful shutdown SIGTERM starts — stop cancels ctx, the deferred
+	// shutdown publishes `connected` 0, and run exits 0 — and it is only
+	// honoured where a supervisor restarts the process afterwards.
+	instance := publisher.NewInstance(haLink, instanceConfig(cfg, inst, len(specs), &level, stop, logger))
+
 	br, err := bridge.New(bridge.Deps{
 		Config: cfg, MQTT: session, Logger: logger,
 		Devices: specs, HASS: disc, State: store, Plane: plane,
+		Instance: instance,
 	})
 	if err != nil {
 		return err
@@ -246,8 +264,8 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 // publisher.New has already reconciled haplane.Config.StatusTopic against
 // the layout and refused them if they disagreed, so the plane's answer is
 // the one string that cannot drift from the one the Last Will writes and
-// every discovery payload names. Spelling layout.Bridge(cfg.MQTTTopic) here
-// a second time is how the two come apart — and when they do, the
+// every discovery payload names. Spelling the `connected` topic here a
+// second time is how the two come apart — and when they do, the
 // availability markers silently rejoin the circuit breaker, a drop opens
 // it, the reconnect's first act is refused with ErrCircuitOpen, and every
 // entity sits unavailable under `availability_mode: all`. #44 caught
@@ -273,7 +291,7 @@ type discoveryStopper interface{ StopDiscovery() }
 // shutdownHAPlane takes the Home Assistant plane down in the order the
 // order matters in.
 //
-// Stop discovery FIRST. The retained "offline" marker is the only
+// Stop discovery FIRST. The retained `connected` 0 marker is the only
 // availability signal a graceful shutdown produces at all — a clean
 // DISCONNECT suppresses the Last Will — and a discovery publish landing
 // after it writes "online"-era retained configs to a broker this daemon has
@@ -324,14 +342,55 @@ func shutdownHAPlane(ctx context.Context, br discoveryStopper, plane *haplane.Pl
 // well-meant addition of a second shape would silently stop retracting the
 // first. TestThePlaneStatesTheDefaultLegacyTopicForm reads that back off
 // this value.
-func haPlaneConfig(cfg *config.Config, brokerMax func() (uint32, bool), logger *slog.Logger) haplane.Config {
+func haPlaneConfig(cfg *config.Config, inst layout.Instance, brokerMax func() (uint32, bool), logger *slog.Logger) haplane.Config {
 	return haplane.Config{
 		Prefix:              cfg.HASSBaseTopic,
-		StatusTopic:         layout.Bridge(cfg.MQTTTopic),
-		Layout:              hass.NewLayout(cfg.MQTTTopic),
+		StatusTopic:         inst.Connected(),
+		Layout:              hass.NewLayout(inst),
 		QoS:                 haplane.QoS(cfg.QoSLevel()),
-		Retain:              cfg.RetainEnabled(),
+		SetFilter:           inst.SetFilter(),
 		BrokerMaxPacketSize: brokerMax,
+		Logger:              logger,
+	}
+}
+
+// projectName is `info.name`: the Go project, deliberately not
+// `homeconnect2mqtt`, which is hobbyquaker's npm package — a management
+// tool would offer its npm releases as updates for this daemon
+// (openccu-loom ADR 0083).
+const projectName = "go-homeconnect2mqtt"
+
+// supervisedEnv is the operator's explicit answer to "does something
+// restart this process after a clean exit": 1/true or 0/false. Unset
+// leaves it to detection (systemd, Kubernetes, a container marker).
+const supervisedEnv = config.EnvPrefix + "SUPERVISED"
+
+// instanceConfig builds `<name>/info` and the maintenance topics' policy.
+// A function rather than a literal inside serve() for the reason every
+// other policy here is one: serve() cannot be driven by a test.
+func instanceConfig(
+	cfg *config.Config,
+	inst layout.Instance,
+	appliances int,
+	level *slog.LevelVar,
+	shutdown func(),
+	logger *slog.Logger,
+) publisher.InstanceConfig {
+	return publisher.InstanceConfig{
+		Layout:  hass.NewLayout(inst),
+		Name:    projectName,
+		Version: version.Version,
+		Extra: map[string]any{
+			"commit":     version.Commit,
+			"build_date": version.BuildDate,
+			"appliances": appliances,
+			"language":   cfg.Language,
+		},
+		MaintenanceDisabled: !cfg.MaintenanceEnabled(),
+		SetLogLevel:         publisher.LevelVarSetter(level),
+		Supervised:          publisher.DetectSupervised(supervisedEnv),
+		Shutdown:            shutdown,
+		StatsInterval:       publisher.StatsInterval(cfg.StatsIntervalSeconds()),
 		Logger:              logger,
 	}
 }

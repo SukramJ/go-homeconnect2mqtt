@@ -40,6 +40,16 @@ else
 fi
 export HC2M_MQTT_TOPIC="$(bashio::config 'mqtt_topic')"
 
+# --- mqtt-smarthome maintenance topics (<mqtt_topic>/maintenance/...) ---
+export HC2M_MQTT_MAINTENANCE="$(bashio::config 'maintenance')"
+export HC2M_MQTT_STATS_INTERVAL="$(bashio::config 'stats_interval')"
+# maintenance/set/restart is a graceful exit 0, which is a restart only where
+# something starts the process again. The Supervisor does not restart an
+# add-on that exits cleanly, so the restart is refused here (and logged) rather
+# than stopping the add-on for good — the container marker the daemon would
+# otherwise detect says nothing about a restart policy.
+export HC2M_SUPERVISED=0
+
 # --- Home Assistant discovery + misc ---
 export HC2M_HASS_ENABLE="$(bashio::config 'hass_enable')"
 export HC2M_HASS_DISCOVERY="$(bashio::config 'hass_discovery')"
@@ -123,6 +133,7 @@ if [ -n "$(bashio::config 'devices|keys')" ]; then
 
     {
       echo "  - name: \"${name}\""
+      if [ -n "${haid}" ]; then echo "    haid: \"${haid}\""; fi
       echo "    host: \"${host}\""
       if [ -n "${ctype}" ]; then echo "    connection_type: ${ctype}"; fi
       echo "    psk64: \"${psk}\""

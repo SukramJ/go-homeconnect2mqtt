@@ -105,6 +105,17 @@ func TestIsOwnConfig(t *testing.T) {
 		// be asserting a promise the rule does not make.
 		{"topics that disagree about their root", `{"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/dw/X/state","command_topic":"other/dw/X/set"}`, false},
 		{"not json", `not-json`, false},
+		// The 0.15.0 document (mqtt-smarthome 2.0). Its components name
+		// `<name>/connected` and `<name>/status/<haId>/online`, nothing of
+		// the old layout; each anchors on its own, and each is exact.
+		{"ours, a 0.15.0 component", `{"availability":[{"topic":"homeconnect/connected"},{"topic":"homeconnect/status/HAID/online"}],` +
+			`"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/status/HAID/X"}`, true},
+		{"the connected topic alone", `{"unique_id":"homeconnect_dw_op","availability":[{"topic":"homeconnect/connected"}]}`, true},
+		{"the online item alone", `{"unique_id":"homeconnect_dw_op","availability":[{"topic":"homeconnect/status/HAID/online"}]}`, true},
+		{"a sibling's 0.15.0 component", `{"availability":[{"topic":"other/connected"},{"topic":"other/status/HAID/online"}],` +
+			`"unique_id":"homeconnect_dw_op","state_topic":"other/status/HAID/X"}`, false},
+		{"an online item two levels deep is no anchor", `{"unique_id":"homeconnect_dw_op","availability":[{"topic":"homeconnect/status/a/b/online"}]}`, false},
+		{"a feature named online is no anchor", `{"unique_id":"homeconnect_dw_op","state_topic":"homeconnect/status/HAID/BSH/online"}`, false},
 	}
 	for _, c := range cases {
 		if got := d.IsOwnConfig([]byte(c.payload)); got != c.want {

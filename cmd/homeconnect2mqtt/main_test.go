@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/SukramJ/go-hamqtt/publisher"
 
@@ -18,8 +19,8 @@ import (
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
-	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/version"
 )
 
 func TestRunVersion(t *testing.T) {
@@ -133,14 +134,16 @@ func TestMQTTSessionSubscribeBypassesBreaker(t *testing.T) {
 // testPlane is the composition root's own plane, built exactly as serve
 // builds it, so a will asserted here is the will the daemon ships.
 func testPlane(cfg *config.Config) *haplane.Plane {
-	return haplane.New(&haplane.Transport{}, haplane.Config{
-		Prefix:      cfg.HASSBaseTopic,
-		StatusTopic: layout.Bridge(cfg.MQTTTopic),
-		Layout:      hass.NewLayout(cfg.MQTTTopic),
-		QoS:         haplane.QoS(cfg.QoSLevel()),
-		Retain:      cfg.RetainEnabled(),
-		Logger:      slog.New(slog.DiscardHandler),
-	})
+	return haplane.New(&haplane.Transport{}, haPlaneConfig(cfg, testInstance(cfg), nil, slog.New(slog.DiscardHandler)))
+}
+
+// testInstance is the layout of the configured instance name.
+func testInstance(cfg *config.Config) layout.Instance {
+	inst, err := layout.New(cfg.MQTTTopic)
+	if err != nil {
+		panic(err)
+	}
+	return inst
 }
 
 func testWill(t *testing.T, cfg *config.Config) publisher.Will {
@@ -160,10 +163,9 @@ func testWill(t *testing.T, cfg *config.Config) publisher.Will {
 //
 // Until F1 the will wrote <MQTT_TOPIC>/status, which no discovery payload
 // referenced — so a killed daemon left every entity showing its last
-// retained value forever. The topic did not move (it was already in the
-// daemon's own publish root, not in Home Assistant's discovery tree,
-// which is why no retained copy needed retracting); what changed is that
-// every payload now declares it.
+// retained value forever. Since 0.15.0 it writes `0` on
+// <MQTT_TOPIC>/connected (mqtt-smarthome 2.0 §3.1), which every component
+// declares first, read as available at 2.
 func TestWillIsTheAvailabilitySourceEveryEntityReads(t *testing.T) {
 	t.Parallel()
 	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: new(1)}
@@ -171,14 +173,14 @@ func TestWillIsTheAvailabilitySourceEveryEntityReads(t *testing.T) {
 	if will == nil {
 		t.Fatal("no Last Will configured: a killed daemon would leave every entity available forever")
 	}
-	if want := layout.Bridge(cfg.MQTTTopic); will.Topic != want {
+	if want := "homeconnect/connected"; will.Topic != want {
 		t.Errorf("will topic = %q, want %q", will.Topic, want)
 	}
 	if strings.HasPrefix(will.Topic, cfg.HASSBaseTopic+"/") {
 		t.Errorf("will topic %q is inside Home Assistant's discovery tree", will.Topic)
 	}
-	if string(will.Payload) != hass.PayloadNotAvailable {
-		t.Errorf("will payload = %q, want %q", will.Payload, hass.PayloadNotAvailable)
+	if string(will.Payload) != "0" {
+		t.Errorf("will payload = %q, want 0", will.Payload)
 	}
 	if !will.Retain {
 		t.Error("will is not retained: a subscriber connecting after the death sees nothing")
@@ -269,10 +271,10 @@ func TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker(t *testing.T) {
 	// survived the whole suite. #44 caught that once as M41 and it came
 	// back one line away.
 	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: new(1)}
-	plane := haplane.New(&haplane.Transport{}, haPlaneConfig(cfg, nil, slog.New(slog.DiscardHandler)))
+	plane := haplane.New(&haplane.Transport{}, haPlaneConfig(cfg, testInstance(cfg), nil, slog.New(slog.DiscardHandler)))
 	status := plane.StatusTopic()
-	if status != layout.Bridge(cfg.MQTTTopic) {
-		t.Fatalf("the plane's status topic is %q, the layout renders %q", status, layout.Bridge(cfg.MQTTTopic))
+	if want := testInstance(cfg).Connected(); status != want {
+		t.Fatalf("the plane's status topic is %q, the layout renders %q", status, want)
 	}
 	client := &recordingClient{}
 	failing := &failingPublisher{}
@@ -288,7 +290,7 @@ func TestHATransportKeepsTheAvailabilityMarkersOffTheBreaker(t *testing.T) {
 	if err := tr.Publish(t.Context(), "homeassistant/sensor/x/y/config", []byte("{}"), 1, true); !errors.Is(err, mqtt.ErrCircuitOpen) {
 		t.Fatalf("a discovery config did not go through the breaker: %v", err)
 	}
-	if err := tr.Publish(t.Context(), status, []byte("online"), 1, true); err != nil {
+	if err := tr.Publish(t.Context(), status, []byte("1"), 1, true); err != nil {
 		t.Errorf("the birth marker was refused by the open breaker (%v) — every entity would "+
 			"sit unavailable until a recovery probe happened to succeed", err)
 	}
@@ -322,16 +324,20 @@ func TestThePlaneConfigStatesEveryFieldTheMigrationDependsOn(t *testing.T) {
 	t.Parallel()
 	cfg := &config.Config{
 		MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect",
-		HASSBaseTopic: "homeassistant", MQTTQoS: new(0), MQTTRetain: new(false),
+		HASSBaseTopic: "homeassistant", MQTTQoS: new(0),
 	}
 	var asked bool
-	got := haPlaneConfig(cfg, func() (uint32, bool) { asked = true; return 1024, true }, slog.New(slog.DiscardHandler))
+	got := haPlaneConfig(cfg, testInstance(cfg), func() (uint32, bool) { asked = true; return 1024, true }, slog.New(slog.DiscardHandler))
 
 	if got.Prefix != cfg.HASSBaseTopic {
 		t.Errorf("Prefix = %q, want %q", got.Prefix, cfg.HASSBaseTopic)
 	}
-	if want := layout.Bridge(cfg.MQTTTopic); got.StatusTopic != want {
+	if want := "homeconnect/connected"; got.StatusTopic != want {
 		t.Errorf("StatusTopic = %q, want %q", got.StatusTopic, want)
+	}
+	if want := "homeconnect/set/#"; got.SetFilter != want {
+		t.Errorf("SetFilter = %q, want %q — the state plane's guard against publishing into "+
+			"the command tree", got.SetFilter, want)
 	}
 	if got.Layout == nil {
 		t.Error("no Layout stated: publisher.New could not then check StatusTopic against anything")
@@ -340,9 +346,6 @@ func TestThePlaneConfigStatesEveryFieldTheMigrationDependsOn(t *testing.T) {
 	// sentinel, not as the zero value the library reads as "unset" (F9).
 	if got.QoS != haplane.QoS(0) || got.QoS == 0 {
 		t.Errorf("QoS = %v, want the QoS(0) sentinel", got.QoS)
-	}
-	if got.Retain != cfg.RetainEnabled() {
-		t.Errorf("Retain = %v, want %v", got.Retain, cfg.RetainEnabled())
 	}
 	if got.BrokerMaxPacketSize == nil {
 		t.Fatal("no BrokerMaxPacketSize hook: a device document would be published against a " +
@@ -433,7 +436,7 @@ func TestShutdownStopsDiscoveryBeforeTheOfflineMarker(t *testing.T) {
 	t.Parallel()
 	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: new(1)}
 	tr := &recordingTransport{}
-	plane := haplane.New(tr, haPlaneConfig(cfg, nil, slog.New(slog.DiscardHandler)))
+	plane := haplane.New(tr, haPlaneConfig(cfg, testInstance(cfg), nil, slog.New(slog.DiscardHandler)))
 	spy := &stopperSpy{tr: tr}
 
 	shutdownHAPlane(t.Context(), spy, plane, slog.New(slog.DiscardHandler))
@@ -445,8 +448,68 @@ func TestShutdownStopsDiscoveryBeforeTheOfflineMarker(t *testing.T) {
 	if spy.seenAtStop != 0 {
 		t.Errorf("%d messages had already gone out when discovery was stopped, want 0", spy.seenAtStop)
 	}
-	want := layout.Bridge(cfg.MQTTTopic)
+	want := testInstance(cfg).Connected()
 	if len(tr.topics) != 1 || tr.topics[0] != want {
 		t.Fatalf("the shutdown wrote %v, want exactly [%s]", tr.topics, want)
+	}
+}
+
+// TestInstanceConfigIsTheConventionsIntrospection pins what `<name>/info`
+// and the maintenance topics are built from: the Go project name — never
+// `homeconnect2mqtt`, which is hobbyquaker's npm package and would be
+// offered npm updates by a management tool — the build version, the
+// daemon's real slog level, its real graceful shutdown, and the two
+// operator keys.
+func TestInstanceConfigIsTheConventionsIntrospection(t *testing.T) {
+	cfg := &config.Config{
+		MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant",
+		MQTTQoS: new(1), MQTTMaintenance: new(false), MQTTStatsInterval: new(0), Language: "de",
+	}
+	var level slog.LevelVar
+	stopped := false
+	got := instanceConfig(cfg, testInstance(cfg), 2, &level, func() { stopped = true }, slog.New(slog.DiscardHandler))
+
+	if got.Name != "go-homeconnect2mqtt" {
+		t.Errorf("info.name = %q, want the Go project name", got.Name)
+	}
+	if got.Version != version.Version || got.Version == "" {
+		t.Errorf("info.version = %q, want the build version %q", got.Version, version.Version)
+	}
+	if got.Layout.Info() != "homeconnect/info" {
+		t.Errorf("info topic = %q", got.Layout.Info())
+	}
+	if !got.MaintenanceDisabled {
+		t.Error("MQTT_MAINTENANCE: false did not disable maintenance")
+	}
+	if got.StatsInterval != publisher.StatsOff {
+		t.Errorf("MQTT_STATS_INTERVAL: 0 -> %v, want StatsOff (0 is off, not the default)", got.StatsInterval)
+	}
+	if got.Extra["appliances"] != 2 {
+		t.Errorf("info extra = %v, want the appliance count", got.Extra)
+	}
+	got.SetLogLevel(slog.LevelDebug)
+	if level.Level() != slog.LevelDebug {
+		t.Error("SetLogLevel does not move the daemon's own slog level")
+	}
+	got.Shutdown()
+	if !stopped {
+		t.Error("Shutdown is not the daemon's graceful stop")
+	}
+	if got.Supervised == nil {
+		t.Fatal("no Supervised answer: a restart would always be refused")
+	}
+	t.Setenv(supervisedEnv, "0")
+	if publisher.DetectSupervised(supervisedEnv)() {
+		t.Errorf("%s=0 did not refuse the restart", supervisedEnv)
+	}
+	if supervisedEnv != "HC2M_SUPERVISED" {
+		t.Errorf("supervised variable = %q, want HC2M_SUPERVISED (the repository's env prefix)", supervisedEnv)
+	}
+
+	// The defaults: maintenance on, stats every 60 s.
+	cfg.MQTTMaintenance, cfg.MQTTStatsInterval = nil, nil
+	got = instanceConfig(cfg, testInstance(cfg), 1, &level, func() {}, slog.New(slog.DiscardHandler))
+	if got.MaintenanceDisabled || got.StatsInterval != 60*time.Second {
+		t.Errorf("defaults: maintenance disabled=%v, stats %v; want on, 60s", got.MaintenanceDisabled, got.StatsInterval)
 	}
 }
