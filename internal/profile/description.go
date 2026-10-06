@@ -75,6 +75,10 @@ type DeviceInfo struct {
 // Description is the fully parsed appliance model: device metadata plus
 // every entry, indexed by uid and by name for fast lookup.
 type Description struct {
+	// HaID is the appliance's id from the profile archive's index, recorded
+	// so a cached description carries it to the daemon. Empty in a cache an
+	// hc-util before 0.15.0 wrote.
+	HaID         string `json:"HaID,omitempty"`
 	Info         DeviceInfo
 	Entries      []*Entry
 	byUID        map[int]*Entry

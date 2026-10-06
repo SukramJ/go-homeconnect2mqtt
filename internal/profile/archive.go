@@ -233,6 +233,7 @@ func parseFileSet(files map[string][]byte, logger *slog.Logger) ([]*DeviceProfil
 		if err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrParser, err)
 		}
+		desc.HaID = pj.HaID
 		profiles = append(profiles, &DeviceProfile{
 			HaID:           pj.HaID,
 			ConnectionType: ConnectionType(strings.ToUpper(pj.ConnectionType)),

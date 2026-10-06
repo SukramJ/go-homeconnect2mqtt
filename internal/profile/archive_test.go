@@ -94,6 +94,11 @@ func TestParseArchiveBytes(t *testing.T) {
 	if _, ok := p.Description.ByName("Demo.Setting.Power"); !ok {
 		t.Error("description not parsed from archive")
 	}
+	// The cached description carries the haId to the daemon, which uses it
+	// as the device segment of every topic.
+	if p.Description.HaID != "0102030405" {
+		t.Errorf("Description.HaID = %q, want the index's haId", p.Description.HaID)
+	}
 }
 
 func TestDefaultHostTLS(t *testing.T) {
@@ -249,6 +254,7 @@ func TestLoadDevicesValidation(t *testing.T) {
 		"no psk":    "devices:\n  - name: x\n    connection_type: AES\n",
 		"aes no iv": "devices:\n  - name: x\n    connection_type: AES\n    psk64: a\n",
 		"duplicate": "devices:\n  - name: x\n    connection_type: TLS\n    psk64: a\n  - name: x\n    connection_type: TLS\n    psk64: b\n",
+		"bad haid":  "devices:\n  - name: x\n    haid: ../x\n    connection_type: TLS\n    psk64: a\n",
 		"empty":     "devices: []\n",
 	}
 	for label, content := range cases {
@@ -260,8 +266,42 @@ func TestLoadDevicesValidation(t *testing.T) {
 	}
 }
 
+// TestResolveHaID pins where the topic's device segment comes from: the
+// explicit `haid` first, then the cached description, and nothing else — a
+// device with neither is refused with what to do about it, rather than
+// published under a segment that would move again once the haId is known.
+func TestResolveHaID(t *testing.T) {
+	desc := &Description{HaID: "FROM-PROFILE"}
+	cases := []struct {
+		name string
+		dc   DeviceConfig
+		desc *Description
+		want string
+		err  error
+	}{
+		{"explicit wins", DeviceConfig{Name: "dw", HaID: "EXPLICIT"}, desc, "EXPLICIT", nil},
+		{"from the description", DeviceConfig{Name: "dw"}, desc, "FROM-PROFILE", nil},
+		{"neither", DeviceConfig{Name: "dw"}, &Description{}, "", ErrNoHaID},
+		{"no description", DeviceConfig{Name: "dw"}, nil, "", ErrNoHaID},
+	}
+	for _, c := range cases {
+		got, err := ResolveHaID(c.dc, c.desc)
+		if got != c.want || !errors.Is(err, c.err) {
+			t.Errorf("%s: ResolveHaID = (%q, %v), want (%q, %v)", c.name, got, err, c.want, c.err)
+		}
+	}
+	if _, err := ResolveHaID(DeviceConfig{Name: "dw"}, &Description{HaID: "../x"}); err == nil {
+		t.Error("an unsafe haId from the description was accepted")
+	}
+	_, err := ResolveHaID(DeviceConfig{Name: "Geschirrspüler"}, nil)
+	if err == nil || !strings.Contains(err.Error(), "Geschirrspüler") || !strings.Contains(err.Error(), "haid") {
+		t.Errorf("the refusal does not name the device and the key: %v", err)
+	}
+}
+
 func TestDescriptionJSONRoundTrip(t *testing.T) {
 	d := mustParse(t)
+	d.HaID = "0102030405"
 	dir := t.TempDir()
 	path := filepath.Join(dir, "desc.json")
 	if err := SaveDescriptionJSON(path, d); err != nil {
@@ -278,6 +318,9 @@ func TestDescriptionJSONRoundTrip(t *testing.T) {
 	}
 	if len(loaded.Entries) != len(d.Entries) {
 		t.Errorf("entry count changed: %d -> %d", len(d.Entries), len(loaded.Entries))
+	}
+	if loaded.HaID != d.HaID {
+		t.Errorf("round-trip lost the haId: %q -> %q", d.HaID, loaded.HaID)
 	}
 }
 
