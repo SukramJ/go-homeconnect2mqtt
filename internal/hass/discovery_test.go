@@ -222,7 +222,9 @@ func (fakeEnricher) DeviceClass(feature string) (string, bool) {
 
 func (fakeEnricher) Unit(feature string) (string, bool) {
 	if feature == "BSH.Common.Status.Temp" {
-		return "K", true
+		// A unit humidity admits: an override pair Home Assistant would
+		// refuse is reconciled away (see TestSensorClassesAreReconciled).
+		return "%", true
 	}
 	return "", false
 }
@@ -245,7 +247,7 @@ func TestEnrichmentOverride(t *testing.T) {
 	}
 	var p map[string]any
 	_ = json.Unmarshal([]byte(raw), &p)
-	if p["device_class"] != "humidity" || p["unit_of_measurement"] != "K" {
+	if p["device_class"] != "humidity" || p["unit_of_measurement"] != "%" {
 		t.Errorf("enrichment override not applied: class=%v unit=%v", p["device_class"], p["unit_of_measurement"])
 	}
 }

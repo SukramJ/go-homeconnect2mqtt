@@ -634,14 +634,19 @@ func mustJSON(t *testing.T, v any) []byte {
 // hand-maintained sets for binary_sensor, switch and button were EXACTLY Home
 // Assistant's, so replacing them with go-ha-catalog's tables moves nothing
 // there. The two that moved are sensor (`return true`, i.e. 13 refusals
-// waiting) and number (`dc != "enum"`, i.e. 18).
+// waiting) and number (`dc != "enum"`, i.e. 18 at the time).
+//
+// 0.15.1 took `timestamp` off BSH.Common.Option.RemainingProgramTime (the
+// appliance reports remaining seconds, not a point in time), which is the one
+// number row the sensor row did not share and one row of every other
+// platform: 35 catalogued classes became 34.
 var catalogueClassesInvalidPerPlatform = map[string]int{
 	platformSensor:       13,
-	platformNumber:       18,
-	platformBinarySensor: 21,
-	platformSelect:       35,
-	platformSwitch:       35,
-	platformButton:       35,
+	platformNumber:       17,
+	platformBinarySensor: 20,
+	platformSelect:       34,
+	platformSwitch:       34,
+	platformButton:       34,
 }
 
 // f13CatalogueRows is the sensor row of the table above, by feature name.
@@ -687,8 +692,8 @@ func TestCatalogueDeviceClassesAgainstEveryPlatform(t *testing.T) {
 			catalogued[e.Name] = dc
 		}
 	}
-	if len(catalogued) != 35 {
-		t.Errorf("mapping.yaml carries %d device_class entries reachable from the pin, want 35", len(catalogued))
+	if len(catalogued) != 34 {
+		t.Errorf("mapping.yaml carries %d device_class entries reachable from the pin, want 34", len(catalogued))
 	}
 
 	// The two F13 literals must agree with the catalogue and with each other.

@@ -198,9 +198,14 @@ features:
     name_de: Programm-Fortschritt
     enabled_by_default: true
   BSH.Common.Option.RemainingProgramTime:
-    name: Program finish time
-    name_de: Programm-Endzeit
-    device_class: timestamp
+    # The appliance reports the REMAINING SECONDS and this bridge publishes
+    # them as they are, so the entity is a duration (derived from the
+    # timeSpan content type), not a timestamp: a timestamp sensor needs a
+    # datetime as its state, admits no unit and no state class, and the
+    # `timestamp` this entry carried until 0.15.1 made Home Assistant refuse
+    # the whole device document.
+    name: Remaining program time
+    name_de: Restprogrammzeit
     enabled_by_default: true
   BSH.Common.Option.RemainingProgramTime.AutoCounting:
     name: Auto Counting

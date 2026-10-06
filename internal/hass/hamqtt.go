@@ -409,6 +409,8 @@ func sanitizeDescriptionForPlatform(desc *model.Description, platform string) {
 		return
 	}
 	desc.Options = nil
+	dc, unit, sc := reconcileSensorClasses(string(desc.DeviceClass), string(desc.Unit), string(desc.StateClass))
+	desc.DeviceClass, desc.Unit, desc.StateClass = model.DeviceClass(dc), model.Unit(unit), hacatalog.StateClass(sc)
 }
 
 // hamqttModel builds the device and the entity set PublishDevice would

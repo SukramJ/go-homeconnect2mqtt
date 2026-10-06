@@ -67,9 +67,21 @@ var goldenDigests = map[string]string{
 	// unenriched control, which never carried a catalogue class at all.
 	// internal/bridge/testdata/topics.json is likewise untouched: F13 lives
 	// entirely inside a discovery payload.
-	"discovery_full_en.json":    "248d2d26994693d8c8489bb70e8f693713188056607c3722a9fb4d3fb7a27dc2",
-	"discovery_full_de.json":    "ad39e602a9df3e9451131699aff882ca041c083627b176709f620e305b570785",
-	"discovery_curated_de.json": "f1bcd7c4e4b3f29bf4e43905f6244de7adcf67e8c75696da8956b803c9056fc3",
+	//
+	// Moved a fifth time by the 0.15.1 hotfix, in the three ENRICHED files
+	// only, on exactly ONE row each:
+	// bsh_common_option_remainingprogramtime loses "device_class":
+	// "timestamp" and is renamed "Program finish time" -> "Remaining program
+	// time" ("Programm-Endzeit" -> "Restprogrammzeit"), because mapping.yaml
+	// no longer calls remaining SECONDS a timestamp. On a real appliance
+	// (read-only Integer, timeSpan) that timestamp met the heuristic's unit
+	// "s" and state_class "measurement", and discovery.Validate refused the
+	// whole device document. No topic, unique_id, default_entity_id or
+	// platform moves: identity_en.json and discovery_plain_en.json are
+	// UNCHANGED.
+	"discovery_full_en.json":    "138e9b92012c355b00df3d357c1976a3d4eeab0b23611a586cf7a006ff9b4e18",
+	"discovery_full_de.json":    "51e77f10c51d8b8bf8a68b5564c3b2e89eb516a780b93611d993e98447650d56",
+	"discovery_curated_de.json": "7c6a30e7a82b82bd9e58a6e362aaed78b665f656e5db0e69f30e316fac087ac3",
 	// UNCHANGED by F13 — the unenriched control.
 	"discovery_plain_en.json": "9120a86322c7b308df91ef82fd4b96ee6e6f99f3d5add77eb431de074f963c78",
 	// UNCHANGED by F13 — no identity string moves.

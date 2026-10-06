@@ -235,7 +235,7 @@ func TestTheSweepNeverOffersTheDocumentItJustPublished(t *testing.T) {
 	// asynchronous, and two windows over one stub is a test racing itself
 	// rather than a property.
 	seedRetained(rec, map[string]string{doc: `{"device":{"identifiers":["homeconnect_geschirrspuler"]},"components":{}}`})
-	if _, _, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, dev.haID, dev.app.Info(), dev.app.Entities(), nil); err != nil {
+	if _, _, _, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, dev.haID, dev.app.Info(), dev.app.Entities(), nil); err != nil {
 		t.Fatalf("PublishDeviceBundle: %v", err)
 	}
 
@@ -367,7 +367,7 @@ func TestBothSweepGuardsMustFailTogether(t *testing.T) {
 	doc := bundleTopicFor(b, dev.name)
 	rec.setFail(doc)
 
-	topic, _, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, dev.haID, d0(dev), dev.app.Entities(), nil)
+	topic, _, _, err := b.hass.PublishDeviceBundle(t.Context(), dev.name, dev.haID, d0(dev), dev.app.Entities(), nil)
 	if err == nil {
 		t.Fatal("the stub accepted a document it was told to refuse")
 	}
