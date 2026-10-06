@@ -221,7 +221,11 @@ func (d *Discovery) applyEnrichment(e *homeconnect.Entity, payload map[string]an
 		payload["state_class"] = sc
 	}
 	if ec, ok := d.enrich.EntityCategory(f); ok {
-		payload["entity_category"] = ec
+		if entityCategoryAllowed(platform, ec) {
+			payload["entity_category"] = ec
+		} else {
+			d.logRefusedEntityCategory(f, platform, ec)
+		}
 	}
 	if val, ok := d.enrich.EnabledByDefault(f); ok {
 		if val {
@@ -242,6 +246,19 @@ func (d *Discovery) logRefusedDeviceClass(feature, platform, dc string) {
 		slog.String("platform", platform),
 		slog.String("device_class", dc),
 		slog.String("action", "override dropped, heuristic class kept"))
+}
+
+// logRefusedEntityCategory names an operator entity_category the target
+// platform cannot carry — `config` on a sensor or binary_sensor, or a value
+// that is not a category at all. Home Assistant refuses the entity with one
+// line in its own log naming an entity id the user has never seen; this is
+// the place that knows which catalogue line caused it.
+func (d *Discovery) logRefusedEntityCategory(feature, platform, ec string) {
+	d.logger.Warn("hass.entity_category_refused",
+		slog.String("feature", feature),
+		slog.String("platform", platform),
+		slog.String("entity_category", ec),
+		slog.String("action", "override dropped, heuristic category kept"))
 }
 
 // localizeOptions translates a select's enum options to the configured display

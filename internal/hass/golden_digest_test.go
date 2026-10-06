@@ -79,12 +79,25 @@ var goldenDigests = map[string]string{
 	// whole device document. No topic, unique_id, default_entity_id or
 	// platform moves: identity_en.json and discovery_plain_en.json are
 	// UNCHANGED.
-	"discovery_full_en.json":    "138e9b92012c355b00df3d357c1976a3d4eeab0b23611a586cf7a006ff9b4e18",
-	"discovery_full_de.json":    "51e77f10c51d8b8bf8a68b5564c3b2e89eb516a780b93611d993e98447650d56",
-	"discovery_curated_de.json": "7c6a30e7a82b82bd9e58a6e362aaed78b665f656e5db0e69f30e316fac087ac3",
-	// UNCHANGED by F13 — the unenriched control.
-	"discovery_plain_en.json": "9120a86322c7b308df91ef82fd4b96ee6e6f99f3d5add77eb431de074f963c78",
-	// UNCHANGED by F13 — no identity string moves.
+	//
+	// Moved a sixth time by 0.15.2, in all four PAYLOAD files, and in one
+	// key only: "entity_category" goes from "config" to "diagnostic" on
+	// every `sensor` row that carried "config" — 187 rows in each full file
+	// (enriched and plain alike, because the heuristic produced most of
+	// them) and 59 in the curated one. Home Assistant refuses `config` on a
+	// sensor and a binary_sensor and never creates the entity
+	// (sensor/__init__.py:309-313, binary_sensor/__init__.py:79-83), so
+	// every one of these rows described an entity that did not exist.
+	// mapping.yaml lost its eight `entity_category: config` lines in the
+	// same change; they moved no further byte, because the heuristic
+	// already says `config` for a writable setting. No topic, unique_id,
+	// default_entity_id or platform moves: identity_en.json is UNCHANGED.
+	"discovery_full_en.json":    "89f1e968ec3b3392dd9cb0dc06cca678136c6168c87475b74d6ed82ae7561a34",
+	"discovery_full_de.json":    "5810f7192f6decf0ba85f9273161d6a4a2bf552f2daa80604c5e0e720e3f7dd4",
+	"discovery_curated_de.json": "3e0d81ab1f7ac98f7135eb35a57983c0f1aba0b3cf168dd1c907518759ad897c",
+	// UNCHANGED by F13 — the unenriched control. Moved by 0.15.2 (above).
+	"discovery_plain_en.json": "16b35f729b6a9034f0581128fb05872fc949462bd7a1854f473dbdf9612d749a",
+	// UNCHANGED by F13 and by 0.15.2 — no identity string moves.
 	"identity_en.json": "a725b3b2f3072047d8f2f95bdc7b078ae0f34aadb3b3e74c6cf46d72a9e7eb93",
 }
 

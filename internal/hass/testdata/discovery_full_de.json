@@ -6342,7 +6342,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Basisprogramm",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/BaseProgram/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_option_baseprogram"
@@ -6376,7 +6376,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Bluetooth-Anwesenheitstoken",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/BluetoothPresenceToken/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_option_bluetoothpresencetoken"
@@ -6410,7 +6410,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Restzeit aktueller Schritt",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/CurrentStepRemainingTime/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_option_currentstepremainingtime"
@@ -6443,7 +6443,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Dauer",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/Duration/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_option_duration"
@@ -6477,7 +6477,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Vergangene Programmzeit",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/ElapsedProgramTime/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_option_elapsedprogramtime"
@@ -6511,7 +6511,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Energieprognose",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/EnergyForecast/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_option_energyforecast"
@@ -6545,7 +6545,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Geschätzte Gesamtprogrammzeit",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/EstimatedTotalProgramTime/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_option_estimatedtotalprogramtime"
@@ -6578,7 +6578,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Beenden in relativ",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/FinishInRelative/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_option_finishinrelative"
@@ -6612,7 +6612,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Programmname",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/ProgramName/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_option_programname"
@@ -6710,7 +6710,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Restprogrammzeit ist geschätzt",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/RemainingProgramTimeIsEstimated/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_option_remainingprogramtimeisestimated"
@@ -6776,7 +6776,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Wasserprognose",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/WaterForecast/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_option_waterforecast"
@@ -6952,7 +6952,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Cloud-Verbindung erlauben",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/AllowBackendConnection/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_allowbackendconnection"
@@ -6986,7 +6986,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Umgebungslicht-Helligkeit",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/AmbientLightBrightness/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_ambientlightbrightness"
@@ -7019,7 +7019,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Umgebungslichtfarbe",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/AmbientLightColor/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_ambientlightcolor"
@@ -7053,7 +7053,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Benutzerdefinierte Umgebungslichtfarbe",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/AmbientLightCustomColor/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_ambientlightcustomcolor"
@@ -7087,7 +7087,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Gerätedatum und -uhrzeit",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/ApplianceDateTime/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_appliancedatetime"
@@ -7121,7 +7121,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Gerätezeit",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/ApplianceTime/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_appliancetime"
@@ -7155,7 +7155,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Funktion",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/Favorite/001/Functionality/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_favorite_001_functionality"
@@ -7189,7 +7189,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/Favorite/001/Name/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_favorite_001_name"
@@ -7223,7 +7223,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Programm",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/Favorite/001/Program/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_favorite_001_program"
@@ -7257,7 +7257,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Funktion",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/Favorite/002/Functionality/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_favorite_002_functionality"
@@ -7291,7 +7291,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/Favorite/002/Name/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_favorite_002_name"
@@ -7325,7 +7325,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Programm",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/Favorite/002/Program/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_favorite_002_program"
@@ -7359,7 +7359,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Sprache",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/Language/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_language"
@@ -7393,7 +7393,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Flüssigkeitsvolumen-Einheit",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/LiquidVolumeUnit/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_liquidvolumeunit"
@@ -7427,7 +7427,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Mit Zeitserver synchronisieren",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/SynchronizeWithTimeServer/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_synchronizewithtimeserver"
@@ -7461,7 +7461,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Temperatureinheit",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/TemperatureUnit/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_temperatureunit"
@@ -7495,7 +7495,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Zeitformat",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/TimeFormat/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_timeformat"
@@ -7529,7 +7529,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Zeitzone",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Setting/Timezone/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_setting_timezone"
@@ -8159,7 +8159,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Prozessphase",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Option/ProcessPhase/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_option_processphase"
@@ -8192,7 +8192,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Referenzkarten-ID",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Option/ReferenceMapId/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_option_referencemapid"
@@ -8225,7 +8225,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Saugkraft",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Option/SuctionPower/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_option_suctionpower"
@@ -8258,7 +8258,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Aktuelle Karte",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Setting/CurrentMap/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_setting_currentmap"
@@ -8292,7 +8292,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name Karte 1",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Setting/NameOfMap1/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_setting_nameofmap1"
@@ -8326,7 +8326,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name Karte 2",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Setting/NameOfMap2/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_setting_nameofmap2"
@@ -8360,7 +8360,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name Karte 3",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Setting/NameOfMap3/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_setting_nameofmap3"
@@ -8394,7 +8394,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name Karte 4",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Setting/NameOfMap4/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_setting_nameofmap4"
@@ -8428,7 +8428,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Name Karte 5",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CleaningRobot/Setting/NameOfMap5/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_cleaningrobot_setting_nameofmap5"
@@ -8594,7 +8594,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Aromaauswahl",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/AromaSelect/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_aromaselect"
@@ -8627,7 +8627,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Kaffeestärke",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/BeanAmount/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_beanamount"
@@ -8660,7 +8660,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Bohnenbehälter",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/BeanContainerSelection/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_beancontainerselection"
@@ -8694,7 +8694,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Getränkegröße",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/BeverageSize/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_beveragesize"
@@ -8728,7 +8728,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Verbleibende Getränke",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/BeveragesRemaining/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_beveragesremaining"
@@ -8762,7 +8762,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Mahlgrad",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/Coarsness/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_coarsness"
@@ -8796,7 +8796,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Empfehlung",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/Coarsness/Recommendation/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_coarsness_recommendation"
@@ -8829,7 +8829,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Kaffee-Milch-Verhältnis",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/CoffeeMilkRatio/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_coffeemilkratio"
@@ -8863,7 +8863,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Kaffeestärke",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/CoffeeStrength/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_coffeestrength"
@@ -8897,7 +8897,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Empfehlung",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/CoffeeStrength/Recommendation/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_coffeestrength_recommendation"
@@ -8930,7 +8930,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Kaffeetemperatur",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/CoffeeTemperature/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_coffeetemperature"
@@ -8964,7 +8964,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Empfehlung",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/CoffeeTemperature/Recommendation/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_coffeetemperature_recommendation"
@@ -8998,7 +8998,7 @@
         "name": "Geschirrspüler"
       },
       "device_class": "volume",
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Füllmenge",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/FillQuantity/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_fillquantity"
@@ -9032,7 +9032,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Empfehlung",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/FillQuantity/Recommendation/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_fillquantity_recommendation"
@@ -9065,7 +9065,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Durchflussmenge",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/FlowRate/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_flowrate"
@@ -9099,7 +9099,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Empfehlung",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/FlowRate/Recommendation/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_flowrate_recommendation"
@@ -9132,7 +9132,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Warmwassertemperatur",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/HotWaterTemperature/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_hotwatertemperature"
@@ -9165,7 +9165,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Mehrere Getränke",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Option/MultipleBeverages/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_option_multiplebeverages"
@@ -9198,7 +9198,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Tassenwärmer",
       "state_topic": "homeconnect/Geschirrspüler/ConsumerProducts/CoffeeMaker/Setting/CupWarmer/state",
       "unique_id": "homeconnect_geschirrspuler_consumerproducts_coffeemaker_setting_cupwarmer"
@@ -9539,7 +9539,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Boost",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Option/Hood/Boost/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_common_option_hood_boost"
@@ -9572,7 +9572,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Funktionslicht",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Setting/Lighting/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_common_setting_lighting"
@@ -9606,7 +9606,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Beleuchtungshelligkeit",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Setting/LightingBrightness/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_common_setting_lightingbrightness"
@@ -9639,7 +9639,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Signallautstärke",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Common/Setting/SignalVolume/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_common_setting_signalvolume"
@@ -9672,7 +9672,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Zonen verbinden",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/JoinZone/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hob_option_joinzone"
@@ -9705,7 +9705,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Zonenauswahl",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Option/ZoneSelector/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hob_option_zoneselector"
@@ -9738,7 +9738,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Automatischer Timer",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/AutomaticTimer/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_automatictimer"
@@ -9771,7 +9771,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Automatische Zonenauswahl",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/AutomaticZoneSelection/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_automaticzoneselection"
@@ -9804,7 +9804,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Energieverbrauchsanzeige",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/EnergyConsumptionIndication/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_energyconsumptionindication"
@@ -9837,7 +9837,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Dunstabzug-Nachlauf",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/HoodAfterRun/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_hoodafterrun"
@@ -9870,7 +9870,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Dunstabzug automatisches Licht aus",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/HoodAutomaticLightOff/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_hoodautomaticlightoff"
@@ -9903,7 +9903,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Dunstabzug automatisches Licht ein",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/HoodAutomaticLightOn/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_hoodautomaticlighton"
@@ -9936,7 +9936,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Dunstabzug Automatikstart",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/HoodAutomaticStart/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_hoodautomaticstart"
@@ -9969,7 +9969,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Leistungsmanagement",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/PowerManagement/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_powermanagement"
@@ -10002,7 +10002,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Timerauswahl",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/TimerSelection/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_timerselection"
@@ -10036,7 +10036,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "UPDTest Position",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hob/Setting/UPDTestPosition/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hob_setting_updtestposition"
@@ -18307,7 +18307,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Funktionslicht-Farbtemperatur",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hood/Setting/ColorTemperature/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hood_setting_colortemperature"
@@ -18340,7 +18340,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Funktionslicht-Farbtemperatur in Prozent",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Hood/Setting/ColorTemperaturePercent/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_hood_setting_colortemperaturepercent"
@@ -18374,7 +18374,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Luftaustausch",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/AirExchange/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_oven_option_airexchange"
@@ -18408,7 +18408,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Garraumauswahl",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/CavitySelector/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_oven_option_cavityselector"
@@ -18441,7 +18441,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Schnelles Vorheizen",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/FastPreHeat/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_oven_option_fastpreheat"
@@ -18475,7 +18475,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Aufheizfortschritt",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/HeatupProgress/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_oven_option_heatupprogress"
@@ -18509,7 +18509,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Bratenthermometer-Temperatur V2",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/MeatProbeTemperatureV2/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_oven_option_meatprobetemperaturev2"
@@ -18543,7 +18543,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Mikrowellenleistung",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/MicrowavePower/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_oven_option_microwavepower"
@@ -18577,7 +18577,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Dampfstoß",
       "state_topic": "homeconnect/Geschirrspüler/Cooking/Oven/Option/SteamBoost/state",
       "unique_id": "homeconnect_geschirrspuler_cooking_oven_option_steamboost"
@@ -18646,7 +18646,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Brillanz-Trocknung",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/BrillianceDry/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_brilliancedry"
@@ -18680,7 +18680,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Schonkorb",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/DelicateBasket/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_delicatebasket"
@@ -18713,7 +18713,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Eco-Trocknung",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/EcoDry/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_ecodry"
@@ -18747,7 +18747,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Energiesparen",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/EnergySafe/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_energysafe"
@@ -18780,7 +18780,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Extra-Trocknung",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/ExtraDry/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_extradry"
@@ -18814,7 +18814,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Extra-Spülen",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/ExtraRinse/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_extrarinse"
@@ -18848,7 +18848,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hinten links",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/FlexSpray/BackLeft/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_flexspray_backleft"
@@ -18882,7 +18882,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hinten rechts",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/FlexSpray/BackRight/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_flexspray_backright"
@@ -18916,7 +18916,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Vorne links",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/FlexSpray/FrontLeft/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_flexspray_frontleft"
@@ -18950,7 +18950,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Vorne rechts",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/FlexSpray/FrontRight/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_flexspray_frontright"
@@ -18983,7 +18983,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Halbe Beladung",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/HalfLoad/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_halfload"
@@ -19016,7 +19016,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hygiene +",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/HygienePlus/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_hygieneplus"
@@ -19049,7 +19049,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Intensivzone",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/IntensivZone/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_intensivzone"
@@ -19083,7 +19083,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Vorbehandlung",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/Pretreatment/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_pretreatment"
@@ -19117,7 +19117,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hygiene UC",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/SanitationUC/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_sanitationuc"
@@ -19150,7 +19150,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Stille auf Abruf",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/SilenceOnDemand/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_silenceondemand"
@@ -19184,7 +19184,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Speicherfunktion",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/StorageFunction/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_storagefunction"
@@ -19218,7 +19218,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Turbo",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/Turbo/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_turbo"
@@ -19252,7 +19252,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Vario Speed",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/VarioSpeed/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_variospeed"
@@ -19285,7 +19285,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Vario-Speed +",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/VarioSpeedPlus/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_variospeedplus"
@@ -19318,7 +19318,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Zeolith-Trocknung",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Option/ZeoliteDry/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_option_zeolitedry"
@@ -19352,7 +19352,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Trocknungsassistent",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Setting/DryingAssistantAllPrograms/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_setting_dryingassistantallprograms"
@@ -19386,7 +19386,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Eco als Standard",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Setting/EcoAsDefault/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_setting_ecoasdefault"
@@ -19420,7 +19420,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Extra-Trocknung",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Setting/ExtraDry/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_setting_extradry"
@@ -19454,7 +19454,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Warmwasseranschluss",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Setting/HotWater/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_setting_hotwater"
@@ -19488,7 +19488,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Infolicht",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Setting/InfoLight/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_setting_infolight"
@@ -19522,7 +19522,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Klarspüler",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Setting/RinseAid/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_setting_rinseaid"
@@ -19556,7 +19556,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Trübungssensor-Empfindlichkeit",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Setting/SensitivityTurbidity/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_setting_sensitivityturbidity"
@@ -19590,7 +19590,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Standardzeit Leise nach Wunsch",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Setting/SilenceOnDemandDefaultTime/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_setting_silenceondemanddefaulttime"
@@ -19624,7 +19624,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Signaltonlautstärke",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Setting/SoundLevelSignal/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_setting_soundlevelsignal"
@@ -19658,7 +19658,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Beschleunigung nach Wunsch",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Setting/SpeedOnDemand/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_setting_speedondemand"
@@ -19692,7 +19692,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Wasserhärte",
       "state_topic": "homeconnect/Geschirrspüler/Dishcare/Dishwasher/Setting/WaterHardness/state",
       "unique_id": "homeconnect_geschirrspuler_dishcare_dishwasher_setting_waterhardness"
@@ -19828,7 +19828,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Lüftergeschwindigkeit in Prozent",
       "state_topic": "homeconnect/Geschirrspüler/HeatingVentilationAirConditioning/AirConditioner/Option/FanSpeedPercentage/state",
       "unique_id": "homeconnect_geschirrspuler_heatingventilationairconditioning_airconditioner_option_fanspeedpercentage"
@@ -19862,7 +19862,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Solltemperatur",
       "state_topic": "homeconnect/Geschirrspüler/HeatingVentilationAirConditioning/AirConditioner/Option/SetpointTemperature/state",
       "unique_id": "homeconnect_geschirrspuler_heatingventilationairconditioning_airconditioner_option_setpointtemperature"
@@ -19896,7 +19896,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Beladungsempfehlung",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/LoadRecommendation/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_option_loadrecommendation"
@@ -19930,7 +19930,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Niedrigtemperatur-Hygiene",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/LowTemperatureHygiene/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_option_lowtemperaturehygiene"
@@ -19964,7 +19964,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Prozessphase",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/ProcessPhase/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_option_processphase"
@@ -19998,7 +19998,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Programmreferenz",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/ReferToProgram/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_option_refertoprogram"
@@ -20032,7 +20032,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "SpeedPerfect",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/SpeedPerfect/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_option_speedperfect"
@@ -20065,7 +20065,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "VarioPerfect",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Option/VarioPerfect/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_option_varioperfect"
@@ -20099,7 +20099,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Automatische Abschaltung",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/AutoPowerOff/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_setting_autopoweroff"
@@ -20133,7 +20133,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Helligkeit",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/Brightness/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_setting_brightness"
@@ -20167,7 +20167,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Helligkeit",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/DoorLightRing/Brightness/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_setting_doorlightring_brightness"
@@ -20201,7 +20201,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Endsignal",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/EndSignal/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_setting_endsignal"
@@ -20235,7 +20235,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Endsignal-Lautstärke",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/EndSignalVolume/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_setting_endsignalvolume"
@@ -20269,7 +20269,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Tastensignal-Lautstärke",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/KeySignalVolume/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_setting_keysignalvolume"
@@ -20303,7 +20303,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Stumm",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/Sound/Mute/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_setting_sound_mute"
@@ -20337,7 +20337,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Lautstärke",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/Sound/Volume/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_setting_sound_volume"
@@ -20371,7 +20371,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Nennleistung",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/SupplyPower/PowerRating/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_setting_supplypower_powerrating"
@@ -20405,7 +20405,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Knitterschutz",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Common/Setting/WrinkleGuard/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_common_setting_wrinkleguard"
@@ -20915,7 +20915,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Ursprüngliche Programmdauer",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Dryer/Option/ConnectedDry/OriginalProgramTime/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_dryer_option_connecteddry_originalprogramtime"
@@ -20948,7 +20948,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Trockenziel",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Dryer/Option/DryingTarget/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_dryer_option_dryingtarget"
@@ -20982,7 +20982,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Trockenziel-Anpassung",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Dryer/Option/DryingTargetAdjustment/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_dryer_option_dryingtargetadjustment"
@@ -21016,7 +21016,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Schonend",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Dryer/Option/Gentle/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_dryer_option_gentle"
@@ -21050,7 +21050,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Halbe Beladung",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Dryer/Option/HalfLoad/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_dryer_option_halfload"
@@ -21084,7 +21084,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Prozessphase",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Dryer/Option/ProcessPhase/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_dryer_option_processphase"
@@ -21118,7 +21118,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Auffrischen",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Dryer/Option/Refresher/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_dryer_option_refresher"
@@ -21152,7 +21152,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Knitterschutz",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Dryer/Option/WrinkleGuard/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_dryer_option_wrinkleguard"
@@ -21186,7 +21186,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Desinfektionsmittel",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/Disinfectant/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_disinfectant"
@@ -21220,7 +21220,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "EISA",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/EISA/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_eisa"
@@ -21254,7 +21254,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hand-Einweichen",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/HandSoak/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_handsoak"
@@ -21288,7 +21288,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hygienedampf",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/HygienicSteam/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_hygienicsteam"
@@ -21322,7 +21322,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Hygienedampf-Intensität",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/HygienicSteamIntensity/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_hygienicsteamintensity"
@@ -21355,7 +21355,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Intensiv +",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/IntensivePlus/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_intensiveplus"
@@ -21388,7 +21388,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Weniger Bügeln",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/LessIroning/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_lessironing"
@@ -21421,7 +21421,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Mini-Beladung",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/MiniLoad/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_miniload"
@@ -21455,7 +21455,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Mehrfaches Einweichen",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/MultipleSoak/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_multiplesoak"
@@ -21489,7 +21489,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Vorbehandlung",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/PreTreatment/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_pretreatment"
@@ -21522,7 +21522,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Vorwäsche",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/Prewash/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_prewash"
@@ -21556,7 +21556,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Prozessphase",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/ProcessPhase/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_processphase"
@@ -21589,7 +21589,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Spülstopp",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/RinseHold/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_rinsehold"
@@ -21622,7 +21622,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Extra-Spülen",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/RinsePlus/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_rinseplus"
@@ -21656,7 +21656,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Spülen Plus 1",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/RinsePlus1/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_rinseplus1"
@@ -21690,7 +21690,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Spülen Plus 3",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/RinsePlus3/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_rinseplus3"
@@ -21724,7 +21724,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Leises Waschen",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/SilentWash/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_silentwash"
@@ -21758,7 +21758,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Smart-Einweichen",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/SmartSoak/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_smartsoak"
@@ -21791,7 +21791,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Einweichen",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/Soak/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_soak"
@@ -21825,7 +21825,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Einweichdauer",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/SoakDuration/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_soakduration"
@@ -21859,7 +21859,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Einweichpause",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/SoakPause/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_soakpause"
@@ -21893,7 +21893,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Einweichtemperatur",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/SoakTemperature/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_soaktemperature"
@@ -21927,7 +21927,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Speed Perfect",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/SpeedPerfect/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_speedperfect"
@@ -21960,7 +21960,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Schleuderdrehzahl",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/SpinSpeed/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_spinspeed"
@@ -21993,7 +21993,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Fleckenautomatik",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/Stains/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_stains"
@@ -22026,7 +22026,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Temperatur",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/Temperature/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_temperature"
@@ -22060,7 +22060,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Wasser und Spülen Plus",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/WaterAndRinsePlus/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_waterandrinseplus"
@@ -22094,7 +22094,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Wasser und Spülen Plus 1",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/WaterAndRinsePlus1/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_waterandrinseplus1"
@@ -22127,7 +22127,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Wasser +",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Option/WaterPlus/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_option_waterplus"
@@ -22161,7 +22161,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Trommelreinigungserinnerung aktivieren",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/Washer/Setting/EnableDrumCleanReminder/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washer_setting_enabledrumcleanreminder"
@@ -22575,7 +22575,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Trockenziel",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/WasherDryer/Option/DryingTarget/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washerdryer_option_dryingtarget"
@@ -22609,7 +22609,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Niedrigtemperatur-Hygiene",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/WasherDryer/Option/LowTemperatureHygiene/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washerdryer_option_lowtemperaturehygiene"
@@ -22643,7 +22643,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Knitterschutz-Boost",
       "state_topic": "homeconnect/Geschirrspüler/LaundryCare/WasherDryer/Option/WrinkleGuardBoost/state",
       "unique_id": "homeconnect_geschirrspuler_laundrycare_washerdryer_option_wrinkleguardboost"
@@ -22677,7 +22677,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistent Kraft Gefrierschrank",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Door/AssistantForceFreezer/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_door_assistantforcefreezer"
@@ -22711,7 +22711,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistent Kraft Kühlschrank",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Door/AssistantForceFridge/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_door_assistantforcefridge"
@@ -22744,7 +22744,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Türassistent Gefrierschrank",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Door/AssistantFreezer/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_door_assistantfreezer"
@@ -22777,7 +22777,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Türassistent Kühlschrank",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Door/AssistantFridge/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_door_assistantfridge"
@@ -22811,7 +22811,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistent Zeitüberschreitung Gefrierschrank",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Door/AssistantTimeoutFreezer/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_door_assistanttimeoutfreezer"
@@ -22845,7 +22845,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistent Zeitüberschreitung Kühlschrank",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Door/AssistantTimeoutFridge/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_door_assistanttimeoutfridge"
@@ -22879,7 +22879,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistent Auslöser Gefrierschrank",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Door/AssistantTriggerFreezer/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_door_assistanttriggerfreezer"
@@ -22913,7 +22913,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Assistent Auslöser Kühlschrank",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Door/AssistantTriggerFridge/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_door_assistanttriggerfridge"
@@ -22947,7 +22947,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Helligkeit",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Light/External/Brightness/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_light_external_brightness"
@@ -22980,7 +22980,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Außenbeleuchtung",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Light/External/Power/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_light_external_power"
@@ -23014,7 +23014,7 @@
         "name": "Geschirrspüler"
       },
       "enabled_by_default": false,
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Helligkeit",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Light/Internal/Brightness/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_light_internal_brightness"
@@ -23047,7 +23047,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Innenbeleuchtung",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/Common/Setting/Light/Internal/Power/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_common_setting_light_internal_power"
@@ -23445,7 +23445,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Super-Modus Gefrierschrank",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Setting/SuperModeFreezer/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_fridgefreezer_setting_supermodefreezer"
@@ -23478,7 +23478,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "entity_category": "config",
+      "entity_category": "diagnostic",
       "name": "Super-Modus Kühlschrank",
       "state_topic": "homeconnect/Geschirrspüler/Refrigeration/FridgeFreezer/Setting/SuperModeRefrigerator/state",
       "unique_id": "homeconnect_geschirrspuler_refrigeration_fridgefreezer_setting_supermoderefrigerator"

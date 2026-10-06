@@ -4,16 +4,20 @@
 package hass
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	hacatalog "github.com/SukramJ/go-ha-catalog"
 	"github.com/SukramJ/go-hamqtt/discovery"
+	"github.com/SukramJ/go-hamqtt/model"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/pincatalog"
@@ -37,10 +41,18 @@ import (
 // (see sweepFeatures for which) it tries every shape (read-only and writable, x boolean, string,
 // enumeration, and a number under every content type the classifier derives
 // a class or a unit from, plus none), and requires every
-// resulting document to pass discovery.Validate AND the two rules Home
+// resulting document to pass discovery.Validate AND the rules Home
 // Assistant applies that the validator does not (see haRefuses). One bad
-// mapping line can no longer silence a whole appliance without failing
-// here first.
+// mapping line can no longer cost an entity — or, through this daemon's own
+// validation gate, an appliance — without failing here first.
+//
+// 0.15.2 added the entity_category rule. 187 of the pin's 687 components
+// were sensors filed under `config`, which Home Assistant refuses on a
+// sensor and a binary_sensor: the entity is never created. The renderer now
+// maps such a category to `diagnostic`, so the RENDERED document cannot
+// carry it whatever mapping.yaml says — which is why the sweep also fails on
+// the refusal itself: a mapping line asking for a category one of the shapes
+// cannot carry is a line that does not mean what it says.
 
 // sweepContentTypes is every content type deviceClassAndUnit maps, plus
 // none, which stands for every content type it does not map.
@@ -85,9 +97,9 @@ func sweepShapes() []sweepShape {
 // dotted feature mapping.yaml names, with the kind its name implies — whose
 // rendering can differ from feature to feature within one shape:
 //
-//   - every feature the catalogue gives a device_class, unit or state_class,
-//     which is where an override can contradict the heuristic, and is the
-//     only way the 0.15.0 regression could arise;
+//   - every feature the catalogue gives a device_class, unit, state_class or
+//     entity_category, which is where an override can contradict the
+//     heuristic, and is the only way the 0.15.0 regression could arise;
 //   - for every other feature, one representative per (kind, "Count" in the
 //     name, primary leaf) combination, because the heuristic reads the name
 //     through those two tests only (stateClassFor, isPrimary). The rest of
@@ -111,7 +123,8 @@ func sweepFeatures(t *testing.T) []*profile.Entry {
 		_, dc := cat.DeviceClass(e.Name)
 		_, unit := cat.Unit(e.Name)
 		_, sc := cat.StateClass(e.Name)
-		if e.Name != "" && (dc || unit || sc) {
+		_, ec := cat.EntityCategory(e.Name)
+		if e.Name != "" && (dc || unit || sc || ec) {
 			out = append(out, e)
 			continue
 		}
@@ -154,12 +167,19 @@ func sweepEntities(features []*profile.Entry, s sweepShape) []*homeconnect.Entit
 }
 
 // haRefuses is what Home Assistant refuses about a component that
-// discovery.Validate (go-hamqtt v0.36.0) does not check:
+// discovery.Validate (go-hamqtt v0.36.0) does not check. Each costs that ONE
+// entity: Home Assistant validates a device document as a whole only for its
+// device, origin, availability and each component's platform and unique_id
+// (components/mqtt/schemas.py:199-227, discovery.py:304-313); everything
+// else is validated per component (mqtt/entity.py:324-347).
 //
+//   - an entity_category outside {config, diagnostic}
+//     (helpers/entity.py:212), or `config` on a sensor or binary_sensor,
+//     which both refuse to be added (sensor/__init__.py:309-313,
+//     binary_sensor/__init__.py:79-83);
 //   - a sensor unit its device class does not declare — the MQTT sensor
 //     schema raises "The unit of measurement ... is not valid together with
-//     device class ...", which drops the entity and, in a document, the
-//     document;
+//     device class ...", which drops the entity;
 //   - a unit or a state class on a non-numeric device class (timestamp,
 //     date): the entity is created, and raises on its first state.
 func haRefuses(t *testing.T, body map[string]any) string {
@@ -169,6 +189,14 @@ func haRefuses(t *testing.T, body map[string]any) string {
 		t.Fatalf("LoadSensor: %v", err)
 	}
 	platform, _ := body["platform"].(string)
+	if cat, ok := body["entity_category"].(string); ok {
+		switch {
+		case cat != categoryConfig && cat != categoryDiagnostic:
+			return fmt.Sprintf("entity_category %q is not one of Home Assistant's", cat)
+		case cat == categoryConfig && (platform == platformSensor || platform == platformBinarySensor):
+			return fmt.Sprintf("entity_category %q on a %s, which Home Assistant refuses to add", cat, platform)
+		}
+	}
 	dc, _ := body["device_class"].(string)
 	unit, _ := body["unit_of_measurement"].(string)
 	sc, _ := body["state_class"].(string)
@@ -190,7 +218,8 @@ func TestEveryMappedFeatureInEveryShapeRendersAValidDocument(t *testing.T) {
 	components := 0
 	for _, s := range shapes {
 		for _, lang := range []string{"de"} {
-			d := New(nil, goldenPrefix, goldenRoot, lang, false, slog.New(slog.DiscardHandler))
+			refusals := &refusalLog{}
+			d := New(nil, goldenPrefix, goldenRoot, lang, false, slog.New(refusals))
 			d.SetEnricher(pinEnricher(t))
 			b, err := d.BundleFor(goldenDeviceDE, goldenHaID, pincatalog.Info, sweepEntities(features, s))
 			if err != nil {
@@ -201,6 +230,9 @@ func TestEveryMappedFeatureInEveryShapeRendersAValidDocument(t *testing.T) {
 				if !errors.As(err, &ve) || ve.Blocking() {
 					t.Errorf("%s/%s: the document is refused: %v", s.name, lang, err)
 				}
+			}
+			for _, r := range refusals.categories() {
+				t.Errorf("%s/%s: mapping.yaml asks for a category this shape's platform refuses: %s", s.name, lang, r)
 			}
 			for _, key := range b.Keys() {
 				raw, err := json.Marshal(b.Components[key])
@@ -285,5 +317,158 @@ func TestSensorClassesAreReconciled(t *testing.T) {
 	}
 	if dc, u, sc := reconcileSensorClassesIn(nil, "duration", "s", "measurement"); dc != "" || u != "s" || sc != "measurement" {
 		t.Errorf("without the tables: (%q,%q,%q), want the device class dropped and nothing else", dc, u, sc)
+	}
+}
+
+// refusalLog is a slog.Handler that keeps every hass.entity_category_refused
+// record, so the sweep can fail on the catalogue line rather than only on
+// the rendered document the sanitizer has already repaired.
+type refusalLog struct {
+	mu   sync.Mutex
+	seen []string
+}
+
+func (l *refusalLog) Enabled(context.Context, slog.Level) bool { return true }
+
+func (l *refusalLog) Handle(_ context.Context, r slog.Record) error {
+	if r.Message != "hass.entity_category_refused" {
+		return nil
+	}
+	var b strings.Builder
+	r.Attrs(func(a slog.Attr) bool {
+		fmt.Fprintf(&b, "%s=%s ", a.Key, a.Value)
+		return true
+	})
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.seen = append(l.seen, strings.TrimSpace(b.String()))
+	return nil
+}
+
+func (l *refusalLog) WithAttrs([]slog.Attr) slog.Handler { return l }
+func (l *refusalLog) WithGroup(string) slog.Handler      { return l }
+
+func (l *refusalLog) categories() []string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return slices.Clone(l.seen)
+}
+
+// TestTheSweepCatchesAConfigCategoryOnAReadOnlyPlatform proves the sweep's
+// category rule can fail: the line 0.15.1 shipped eight times —
+// `entity_category: config` on a setting — on a setting the appliance
+// describes read-only, which lands on a binary_sensor.
+func TestTheSweepCatchesAConfigCategoryOnAReadOnlyPlatform(t *testing.T) {
+	entries := []*profile.Entry{{
+		UID: 9001, Name: "Dishcare.Dishwasher.Setting.ExtraDry", Kind: profile.KindSetting,
+		Access: "read", Available: true, ProtocolType: profile.ProtocolBoolean,
+	}}
+	app := homeconnect.NewAppliance(nil, &profile.Description{Info: pincatalog.Info, Entries: entries}, nil)
+	refusals := &refusalLog{}
+	d := New(nil, goldenPrefix, goldenRoot, "en", false, slog.New(refusals))
+	d.SetEnricher(categoryEnricher{categoryConfig})
+	b, err := d.BundleFor(goldenDeviceDE, goldenHaID, pincatalog.Info, app.Entities())
+	if err != nil {
+		t.Fatalf("BundleFor: %v", err)
+	}
+	if got := refusals.categories(); len(got) != 1 {
+		t.Fatalf("refusals = %v, want exactly one", got)
+	}
+	body := decodeComponent(t, b.Components["dishcare_dishwasher_setting_extradry"])
+	if body["platform"] != platformBinarySensor || body["entity_category"] != categoryDiagnostic {
+		t.Errorf("rendered %v, want a diagnostic binary_sensor", body)
+	}
+	if why := haRefuses(t, map[string]any{"platform": platformBinarySensor, "entity_category": categoryConfig}); why == "" {
+		t.Error("haRefuses accepts config on a binary_sensor")
+	}
+	if why := haRefuses(t, map[string]any{"platform": platformSwitch, "entity_category": "configuration"}); why == "" {
+		t.Error("haRefuses accepts a category Home Assistant does not define")
+	}
+}
+
+// categoryEnricher configures one entity_category for every feature, and
+// nothing else.
+type categoryEnricher struct{ cat string }
+
+func (categoryEnricher) LocalizedName(string, string) (string, bool) { return "", false }
+func (categoryEnricher) DeviceClass(string) (string, bool)           { return "", false }
+func (categoryEnricher) Unit(string) (string, bool)                  { return "", false }
+func (categoryEnricher) StateClass(string) (string, bool)            { return "", false }
+func (c categoryEnricher) EntityCategory(string) (string, bool)      { return c.cat, true }
+func (categoryEnricher) EnabledByDefault(string) (val, ok bool)      { return false, false }
+func (categoryEnricher) Excluded(string) bool                        { return false }
+
+// TestEntityCategoryIsRenderedOnlyWhereThePlatformAcceptsIt pins the rule
+// for every platform this daemon emits, in both render paths.
+func TestEntityCategoryIsRenderedOnlyWhereThePlatformAcceptsIt(t *testing.T) {
+	platforms := []string{platformSensor, platformBinarySensor, platformSwitch, platformSelect, platformNumber, platformButton}
+	for _, platform := range platforms {
+		configBecomes := categoryConfig
+		if platform == platformSensor || platform == platformBinarySensor {
+			configBecomes = categoryDiagnostic
+		}
+		for _, tc := range []struct{ in, want string }{
+			{"", ""},
+			{categoryDiagnostic, categoryDiagnostic},
+			{categoryConfig, configBecomes},
+			{"Config", ""},
+			{"configuration", ""},
+		} {
+			if got := renderableCategory(platform, tc.in); got != tc.want {
+				t.Errorf("%s: renderableCategory(%q) = %q, want %q", platform, tc.in, got, tc.want)
+			}
+			p := map[string]any{"entity_category": tc.in}
+			sanitizeForPlatform(p, platform)
+			if got, _ := p["entity_category"].(string); got != tc.want {
+				t.Errorf("%s: sanitizeForPlatform(%q) = %q, want %q", platform, tc.in, got, tc.want)
+			}
+			desc := &model.Description{Category: hacatalog.EntityCategory(tc.in)}
+			sanitizeDescriptionForPlatform(desc, platform)
+			if got := string(desc.Category); got != tc.want {
+				t.Errorf("%s: sanitizeDescriptionForPlatform(%q) = %q, want %q", platform, tc.in, got, tc.want)
+			}
+		}
+	}
+}
+
+// TestNumberBoundsAreOnlyThoseHomeAssistantAccepts pins numberBounds against
+// the MQTT number schema: step >= 1e-3 (mqtt/number.py:98-100), min <= max
+// after the 0/100 defaults (mqtt/number.py:79-80, number/const.py:93-94),
+// and nothing JSON cannot carry.
+func TestNumberBoundsAreOnlyThoseHomeAssistantAccepts(t *testing.T) {
+	type want struct {
+		minV, maxV, step string // "-" = absent
+	}
+	show := func(p *float64) string {
+		if p == nil {
+			return "-"
+		}
+		return fmt.Sprint(*p)
+	}
+	inf, nan := math.Inf(1), math.NaN()
+	cases := []struct {
+		name string
+		b    homeconnect.Bounds
+		want want
+	}{
+		{"ordinary", homeconnect.Bounds{Min: 0, HasMin: true, Max: 10, HasMax: true, Step: 0.5, HasStep: true}, want{"0", "10", "0.5"}},
+		{"zero step", homeconnect.Bounds{Min: 0, HasMin: true, Max: 10, HasMax: true, Step: 0, HasStep: true}, want{"0", "10", "-"}},
+		{"negative step", homeconnect.Bounds{Step: -1, HasStep: true}, want{"-", "-", "-"}},
+		{"step below the floor", homeconnect.Bounds{Step: 0.0005, HasStep: true}, want{"-", "-", "-"}},
+		{"step at the floor", homeconnect.Bounds{Step: 0.001, HasStep: true}, want{"-", "-", "0.001"}},
+		{"min above max", homeconnect.Bounds{Min: 10, HasMin: true, Max: 1, HasMax: true}, want{"-", "-", "-"}},
+		{"min equals max", homeconnect.Bounds{Min: 5, HasMin: true, Max: 5, HasMax: true}, want{"5", "5", "-"}},
+		{"lone min above the default max", homeconnect.Bounds{Min: 200, HasMin: true}, want{"-", "-", "-"}},
+		{"lone max below the default min", homeconnect.Bounds{Max: -5, HasMax: true}, want{"-", "-", "-"}},
+		{"lone min inside the default range", homeconnect.Bounds{Min: 30, HasMin: true}, want{"30", "-", "-"}},
+		{"infinite max", homeconnect.Bounds{Min: 0, HasMin: true, Max: inf, HasMax: true}, want{"0", "-", "-"}},
+		{"NaN step", homeconnect.Bounds{Step: nan, HasStep: true}, want{"-", "-", "-"}},
+	}
+	for _, c := range cases {
+		minV, maxV, step := numberBounds(c.b)
+		got := want{show(minV), show(maxV), show(step)}
+		if got != c.want {
+			t.Errorf("%s: numberBounds = %+v, want %+v", c.name, got, c.want)
+		}
 	}
 }

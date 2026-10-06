@@ -284,16 +284,7 @@ func (d *Discovery) describe(e *homeconnect.Entity, platform string) *model.Desc
 			desc.Options = &model.Enum{Codes: enumOptions(e)}
 		}
 	case platformNumber:
-		b := e.Bounds()
-		if b.HasMin {
-			desc.Min = new(b.Min)
-		}
-		if b.HasMax {
-			desc.Max = new(b.Max)
-		}
-		if b.HasStep {
-			desc.Step = new(b.Step)
-		}
+		desc.Min, desc.Max, desc.Step = numberBounds(e.Bounds())
 	}
 	// Home Assistant defaults to enabled; only the long tail says otherwise.
 	if !enabledByDefault(e) {
@@ -303,7 +294,8 @@ func (d *Discovery) describe(e *homeconnect.Entity, platform string) *model.Desc
 }
 
 // enrichDescription is applyEnrichment against a Description instead of a map,
-// including its refusal of a device_class the platform does not declare (F13).
+// including its refusal of a device_class the platform does not declare (F13)
+// and of an entity_category the platform does not accept.
 func (d *Discovery) enrichDescription(e *homeconnect.Entity, desc *model.Description, platform string) {
 	if d.enrich == nil || e.Name() == "" {
 		return
@@ -326,7 +318,11 @@ func (d *Discovery) enrichDescription(e *homeconnect.Entity, desc *model.Descrip
 		desc.StateClass = hacatalog.StateClass(sc)
 	}
 	if ec, ok := d.enrich.EntityCategory(f); ok {
-		desc.Category = hacatalog.EntityCategory(ec)
+		if entityCategoryAllowed(platform, ec) {
+			desc.Category = hacatalog.EntityCategory(ec)
+		} else {
+			d.logRefusedEntityCategory(f, platform, ec)
+		}
 	}
 	if val, ok := d.enrich.EnabledByDefault(f); ok {
 		if val {
@@ -392,6 +388,7 @@ func sanitizeDescriptionForPlatform(desc *model.Description, platform string) {
 	if dc := string(desc.DeviceClass); dc != "" && !deviceClassAllowed(platform, dc) {
 		desc.DeviceClass = ""
 	}
+	desc.Category = hacatalog.EntityCategory(renderableCategory(platform, string(desc.Category)))
 	if platform != platformSensor && platform != platformNumber {
 		desc.Unit = ""
 	}

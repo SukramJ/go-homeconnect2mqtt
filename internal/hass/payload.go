@@ -18,6 +18,7 @@
 package hass
 
 import (
+	"math"
 	"slices"
 	"sort"
 	"strconv"
@@ -295,6 +296,11 @@ func enabledByDefault(e *homeconnect.Entity) bool { return isPrimary(e) }
 // entityCategoryFor classifies non-primary entities into HA's device-page
 // sections: writable settings -> config, read-only status/option/event ->
 // diagnostic. Primary entities stay uncategorized (prominent).
+//
+// This is the INTENT, judged on the feature; whether the platform the entity
+// lands on can carry it is a second question, answered by
+// entityCategoryAllowed after enrichment. A writable string setting is a
+// `sensor` (classify has no text platform), and a sensor refuses `config`.
 func entityCategoryFor(e *homeconnect.Entity) string {
 	if isPrimary(e) {
 		return ""
@@ -314,6 +320,112 @@ func entityCategoryFor(e *homeconnect.Entity) string {
 	default:
 		return ""
 	}
+}
+
+// entityCategoryAllowed reports whether Home Assistant will add an entity of
+// platform with entity_category cat. The rule is the base components', read
+// from home-assistant/core 2026.10:
+//
+//   - The value must be one of EntityCategory's two members:
+//     ENTITY_CATEGORIES_SCHEMA is `Coerce(EntityCategory)`
+//     (helpers/entity.py:212), and the MQTT schema applies it to every
+//     platform (components/mqtt/schemas.py:183), so anything else costs the
+//     component.
+//   - `sensor` and `binary_sensor` refuse `config`: both raise
+//     "cannot be added as the entity category is set to config" from
+//     async_internal_added_to_hass (sensor/__init__.py:309-313,
+//     binary_sensor/__init__.py:79-83). The entity never exists, and nothing
+//     on the wire or in a validator says so — discovery.Validate (go-hamqtt
+//     v0.36.0) does not check it.
+//   - `switch`, `select`, `number` and `button` accept both; their base
+//     components carry no such check.
+//
+// An empty category is always allowed: it is the absence of the key.
+func entityCategoryAllowed(platform, cat string) bool {
+	switch cat {
+	case "":
+		return true
+	case categoryDiagnostic:
+		return true
+	case categoryConfig:
+		return platform != platformSensor && platform != platformBinarySensor
+	default:
+		return false
+	}
+}
+
+// renderableCategory is the entity_category an entity of platform is
+// published with, given the category it was derived or configured with.
+//
+// A `config` entity on a read-only platform becomes `diagnostic`, rather
+// than losing its category. Home Assistant defines diagnostic as "an entity
+// exposing some configuration parameter, or diagnostics of a device"
+// (const.py:1037-1039) — which is exactly a setting the appliance reports
+// but this platform cannot write — and groups it with the diagnostic
+// entities on the device page, below the controls and out of the default
+// dashboards, where a `config` entity would have been had it existed.
+// Dropping the category instead would promote a long-tail setting to a
+// primary, uncategorized entity. A value Home Assistant does not know is
+// dropped: there is nothing it could be mapped to.
+func renderableCategory(platform, cat string) string {
+	if entityCategoryAllowed(platform, cat) {
+		return cat
+	}
+	if cat == categoryConfig {
+		return categoryDiagnostic
+	}
+	return ""
+}
+
+// numberMinStep is the smallest step Home Assistant's MQTT number schema
+// accepts: `Range(min=1e-3)` (components/mqtt/number.py:98-100).
+const numberMinStep = 1e-3
+
+// numberDefaultMin and numberDefaultMax are what Home Assistant assumes for
+// an absent min or max (components/number/const.py:93-94). They matter to
+// the min <= max check, which it applies to the values after defaulting
+// (components/mqtt/number.py:79-80).
+const (
+	numberDefaultMin = 0.0
+	numberDefaultMax = 100.0
+)
+
+// numberBounds is the min, max and step a number entity may be published
+// with, from the bounds the appliance described. A nil return is a key that
+// is not written, which leaves Home Assistant's default in place.
+//
+// Each guard is a refusal by Home Assistant's MQTT number schema, which
+// costs the entity:
+//
+//   - a step below 1e-3 — zero or negative from a description that says
+//     stepSize="0" — fails `Range(min=1e-3)`; the command path already
+//     ignores such a step (internal/bridge's writeValue uses only a Step > 0);
+//   - min > max, after HA's own 0/100 defaults fill the absent one, fails
+//     validate_config. Both bounds are then left out: there is no way to
+//     tell which of the two is wrong, and HA's defaults are a valid pair;
+//   - a non-finite bound cannot be encoded in JSON at all.
+func numberBounds(b homeconnect.Bounds) (minV, maxV, step *float64) {
+	finite := func(f float64) bool { return !math.IsNaN(f) && !math.IsInf(f, 0) }
+	if b.HasMin && finite(b.Min) {
+		minV = new(b.Min)
+	}
+	if b.HasMax && finite(b.Max) {
+		maxV = new(b.Max)
+	}
+	effMin, effMax := numberDefaultMin, numberDefaultMax
+	if minV != nil {
+		effMin = *minV
+	}
+	if maxV != nil {
+		effMax = *maxV
+	}
+	if effMin > effMax {
+		minV, maxV = nil, nil
+	}
+	if b.HasStep && finite(b.Step) && b.Step >= numberMinStep {
+		step = new(b.Step)
+	}
+	return minV, maxV, step
 }
 
 // stateClassFor derives a sensor state_class for numeric read-only sensors so
@@ -399,15 +511,15 @@ func payloadFor(e *homeconnect.Entity, platform, device string, t entityTopics, 
 			p["options"] = enumOptions(e) // device_class=enum sensors need options
 		}
 	case platformNumber:
-		b := e.Bounds()
-		if b.HasMin {
-			p["min"] = b.Min
+		minV, maxV, step := numberBounds(e.Bounds())
+		if minV != nil {
+			p["min"] = *minV
 		}
-		if b.HasMax {
-			p["max"] = b.Max
+		if maxV != nil {
+			p["max"] = *maxV
 		}
-		if b.HasStep {
-			p["step"] = b.Step
+		if step != nil {
+			p["step"] = *step
 		}
 	}
 	if deviceClass != "" {
@@ -521,6 +633,13 @@ func deviceClassAllowedIn(t map[string]map[string]bool, platform, dc string) boo
 func sanitizeForPlatform(p map[string]any, platform string) {
 	if dc, ok := p["device_class"].(string); ok && !deviceClassAllowed(platform, dc) {
 		delete(p, "device_class")
+	}
+	if cat, ok := p["entity_category"].(string); ok {
+		if cat = renderableCategory(platform, cat); cat == "" {
+			delete(p, "entity_category")
+		} else {
+			p["entity_category"] = cat
+		}
 	}
 	// unit_of_measurement is sensor/number only, state_class sensor only.
 	if platform != platformSensor && platform != platformNumber {

@@ -7,6 +7,14 @@
 #
 # Per feature (all optional): name / name_de / device_class / unit / state_class /
 #   entity_category (diagnostic|config) / enabled_by_default / exclude.
+#
+# entity_category: leave it out for a setting or option. The bridge already
+# files a writable one under `config` and a read-only one under `diagnostic`,
+# and only the bridge knows which platform the appliance's description puts
+# it on. Home Assistant refuses `config` on a sensor or binary_sensor (the
+# entity is never created), so an override of `config` is honoured only where
+# the feature lands on a control (switch/select/number/button) and is
+# otherwise dropped with a `hass.entity_category_refused` warning.
 
 features:
   # ---- BSH.Common ----
@@ -251,7 +259,6 @@ features:
   BSH.Common.Setting.AllowBackendConnection:
     name: Allow cloud connection
     name_de: Cloud-Verbindung erlauben
-    entity_category: config
     enabled_by_default: false
   BSH.Common.Setting.AmbientLightBrightness:
     name: Ambient Light Brightness
@@ -320,7 +327,6 @@ features:
   BSH.Common.Setting.RemoteControlLevel:
     name: Remote control level
     name_de: Fernsteuerungsstufe
-    entity_category: config
     enabled_by_default: false
   BSH.Common.Setting.SmartEnergyService.AutoSmartStartEnabled:
     name: Auto Smart Start Enabled
@@ -2038,22 +2044,18 @@ features:
   Dishcare.Dishwasher.Setting.DryingAssistantAllPrograms:
     name: Drying assistant
     name_de: Trocknungsassistent
-    entity_category: config
     enabled_by_default: false
   Dishcare.Dishwasher.Setting.EcoAsDefault:
     name: Eco as default
     name_de: Eco als Standard
-    entity_category: config
     enabled_by_default: false
   Dishcare.Dishwasher.Setting.ExtraDry:
     name: Extra dry
     name_de: Extra-Trocknung
-    entity_category: config
     enabled_by_default: false
   Dishcare.Dishwasher.Setting.HotWater:
     name: Hot water connection
     name_de: Warmwasseranschluss
-    entity_category: config
     enabled_by_default: false
   Dishcare.Dishwasher.Setting.InfoLight:
     name: Info Light
@@ -2062,12 +2064,10 @@ features:
   Dishcare.Dishwasher.Setting.RinseAid:
     name: Rinse aid
     name_de: Klarspüler
-    entity_category: config
     enabled_by_default: false
   Dishcare.Dishwasher.Setting.SensitivityTurbidity:
     name: Turbidity sensitivity
     name_de: Trübungssensor-Empfindlichkeit
-    entity_category: config
     enabled_by_default: false
   Dishcare.Dishwasher.Setting.SilenceOnDemandDefaultTime:
     name: Silence On Demand Default Time
