@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"sync"
 
@@ -473,10 +474,13 @@ func (d *Discovery) BundleNodeIDOf(topic string) (string, bool) {
 //     the moment the sweep runs.
 //   - A BLOCKING discovery.Validate. Home Assistant validates a document as
 //     one unit and drops the whole thing, so a single refused component
-//     costs the appliance all of its entities — which is exactly why F13
-//     had to be fixed before this step (#43). An advisory ValidationError
-//     is logged and published, because advisory means Home Assistant
-//     accepts it.
+//     would cost the appliance all of its entities — which is exactly why F13
+//     had to be fixed before this step (#43). Since 0.15.1 a finding that
+//     names a component withholds THAT component (omitted, never
+//     tombstoned) and publishes the rest; only a finding about the document
+//     itself withholds the document. See [Discovery.validateBundle]. An
+//     advisory ValidationError is logged and published, because advisory
+//     means Home Assistant accepts it.
 //   - A packet the broker will not take. That refusal lives in
 //     haplane.Plane.PublishBundle, before the retraction, and is reported
 //     here as haplane.ErrDocumentTooLarge.
@@ -499,17 +503,22 @@ func (d *Discovery) BundleNodeIDOf(topic string) (string, bool) {
 // caller remembers as the previous state of the document it just wrote. It
 // is nil on every refusal, because a document that was not written did not
 // become anybody's previous document.
+//
+// The third is the per-entity config topics of every component that was
+// WITHHELD from the published document (see [Discovery.publishBundle]): the
+// caller's orphan sweep must leave them alone, because clearing a retained
+// per-entity config deletes its entity exactly as a tombstone would.
 func (d *Discovery) PublishDeviceBundle(
 	ctx context.Context,
 	device, haID string,
 	info profile.DeviceInfo,
 	entities []*homeconnect.Entity,
 	prior map[string]discovery.Component,
-) (topic string, live map[string]discovery.Component, err error) {
+) (topic string, live map[string]discovery.Component, withheld []string, err error) {
 	b, err := d.BundleFor(device, haID, info, entities)
 	if err != nil {
 		d.logger.Error("hass.bundle_render", slog.String("device", device), slog.String("err", err.Error()))
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	if gone := ApplyTombstones(b, prior); len(gone) > 0 {
 		d.logger.Info("hass.components_removed",
@@ -518,11 +527,11 @@ func (d *Discovery) PublishDeviceBundle(
 				"no longer published; the document carries a platform-only entry for each, "+
 					"which is how Home Assistant is told to delete the entity"))
 	}
-	topic, err = d.publishBundle(ctx, device, b)
+	topic, withheld, err = d.publishBundle(ctx, device, b)
 	if err != nil {
-		return topic, nil, err
+		return topic, nil, nil, err
 	}
-	return topic, LiveComponents(b), nil
+	return topic, LiveComponents(b), withheld, nil
 }
 
 // publishBundle is PublishDeviceBundle's gates and its write, separated
@@ -540,33 +549,38 @@ func (d *Discovery) PublishDeviceBundle(
 // — which walked straight past a `len(b.Components) == 0` test and
 // published a fleet-wide deletion as if it were a migration.
 // TestADocumentOfNothingButTombstonesIsWithheld is the pin.
-func (d *Discovery) publishBundle(ctx context.Context, device string, b *discovery.Bundle) (string, error) {
-	topic := publisher.BundleConfigTopic(d.baseTopic, b.NodeID)
-	live := len(LiveComponents(b))
-	if live == 0 {
+//
+// The second return is the per-entity config topics of the components
+// validateBundle withheld, for the caller's orphan sweep to leave alone.
+func (d *Discovery) publishBundle(ctx context.Context, device string, b *discovery.Bundle) (topic string, withheld []string, err error) {
+	topic = publisher.BundleConfigTopic(d.baseTopic, b.NodeID)
+	if len(LiveComponents(b)) == 0 {
 		err := fmt.Errorf("hass: device document for %q has no components", device)
 		d.logger.Error("hass.bundle_empty",
 			slog.String("device", device), slog.String("topic", topic),
 			slog.Int("entries", len(b.Components)),
 			slog.String("consequence", "withheld; the per-entity configs are left in place"))
-		return topic, err
+		return topic, nil, err
 	}
-	if err := d.validateBundle(device, topic, b); err != nil {
-		return topic, err
+	withheld, err = d.validateBundle(device, topic, b)
+	if err != nil {
+		return topic, nil, err
 	}
+	live := len(LiveComponents(b))
 	sent, err := d.mqtt.PublishBundle(ctx, b)
 	if err != nil {
 		d.logger.Error("hass.bundle_publish",
 			slog.String("device", device), slog.String("topic", topic),
 			slog.Int("components", live), slog.Int("tombstones", len(b.Components)-live),
 			slog.String("err", err.Error()))
-		return topic, err
+		return topic, nil, err
 	}
 	d.logger.Info("hass.bundle_published",
 		slog.String("device", device), slog.String("topic", topic),
 		slog.Int("components", live), slog.Int("tombstones", len(b.Components)-live),
+		slog.Int("withheld", len(withheld)),
 		slog.Bool("written", sent))
-	return topic, nil
+	return topic, withheld, nil
 }
 
 // validateBundle runs discovery.Validate and decides what a finding costs.
@@ -576,29 +590,117 @@ func (d *Discovery) publishBundle(ctx context.Context, device string, b *discove
 // drops a document it cannot validate in its entirety, so "blocking" means
 // zero entities for the appliance, while "advisory" means Home Assistant
 // accepts the document as it is.
-func (d *Discovery) validateBundle(device, topic string, b *discovery.Bundle) error {
+//
+// # Containment
+//
+// Until 0.15.1 one refused component withheld the whole document, which on
+// 0.15.0 cost three real appliances every entity they had over a single
+// catalogue line. A blocking finding that names a LIVE component is now
+// contained instead: that component is taken out of the document, an ERROR
+// names it with its findings, and the rest is validated again and
+// published. Only a finding that names no component — the node id, the
+// origin, the device block — or a document that is still refused after the
+// removal withholds the whole document, as before.
+//
+// The removed component is OMITTED, never tombstoned, and that is the whole
+// safety argument. Home Assistant reads a platform-only entry as "delete
+// this entity, with its history"; it reads an absent key as nothing at all
+// (TestOmittingAComponentDoesNotRemoveIt), so the entity it already has
+// stays, stale, until a release renders it validly again. The tombstones
+// of this document were applied before this runs, against the component
+// set that still held the key, so none was written for it; the live set
+// the caller records as the next prior state does not hold it, so the next
+// document tombstones nothing for it either. Its per-entity config topic is
+// returned, so the orphan sweep — which would delete the entity just as a
+// tombstone does — leaves a retained per-entity config for it in place.
+func (d *Discovery) validateBundle(device, topic string, b *discovery.Bundle) ([]string, error) {
 	err := discovery.Validate(b)
 	if err == nil {
-		return nil
+		return nil, nil
 	}
 	var ve *discovery.ValidationError
 	if !errors.As(err, &ve) {
 		d.logger.Error("hass.bundle_invalid",
 			slog.String("device", device), slog.String("topic", topic), slog.String("err", err.Error()))
-		return err
+		return nil, err
 	}
+	var withheld []string
 	if ve.Blocking() {
+		bad, ok := invalidComponents(b, ve)
+		if ok {
+			withheld = d.withholdComponents(device, topic, b, bad)
+			err = discovery.Validate(b)
+			ve = nil
+			if err != nil && !errors.As(err, &ve) {
+				d.logger.Error("hass.bundle_invalid",
+					slog.String("device", device), slog.String("topic", topic), slog.String("err", err.Error()))
+				return nil, err
+			}
+			if len(LiveComponents(b)) == 0 {
+				err = fmt.Errorf("hass: every component of the device document for %q was refused", device)
+				ve = &discovery.ValidationError{NodeID: b.NodeID, Issues: []string{err.Error()}}
+			}
+		}
+	}
+	if ve != nil && ve.Blocking() {
 		d.logger.Error("hass.bundle_invalid",
 			slog.String("device", device), slog.String("topic", topic),
 			slog.Int("components", len(b.Components)),
 			slog.String("err", err.Error()),
 			slog.String("consequence",
 				"withheld; Home Assistant drops a device document whole, so publishing it would cost the appliance every entity"))
-		return err
+		return nil, err
 	}
-	d.logger.Warn("hass.bundle_advisory",
-		slog.String("device", device), slog.String("topic", topic), slog.String("err", err.Error()))
-	return nil
+	if ve != nil {
+		d.logger.Warn("hass.bundle_advisory",
+			slog.String("device", device), slog.String("topic", topic), slog.String("err", err.Error()))
+	}
+	return withheld, nil
+}
+
+// invalidComponents attributes every blocking finding to the live component
+// it names. discovery.Validate prefixes a component's findings with the
+// component's key; a finding about the document itself carries no such
+// prefix. ok is false when any finding names no live component, because
+// then removing components cannot make the document valid, and when there
+// is nothing to remove.
+func invalidComponents(b *discovery.Bundle, ve *discovery.ValidationError) (map[string][]string, bool) {
+	out := map[string][]string{}
+	for _, issue := range ve.Issues {
+		key, _, found := strings.Cut(issue, ": ")
+		comp, exists := b.Components[key]
+		if !found || !exists || comp.Platform == "" || comp.UniqueID == "" {
+			return nil, false
+		}
+		out[key] = append(out[key], issue)
+	}
+	return out, len(out) > 0
+}
+
+// withholdComponents takes the given components out of b — omitted, never
+// tombstoned; see [Discovery.validateBundle] — and returns their per-entity
+// config topics, sorted.
+func (d *Discovery) withholdComponents(device, topic string, b *discovery.Bundle, bad map[string][]string) []string {
+	keys := make([]string, 0, len(bad))
+	for key := range bad {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	out := make([]string, 0, len(keys))
+	for _, key := range keys {
+		comp := b.Components[key]
+		d.logger.Error("hass.component_withheld",
+			slog.String("device", device), slog.String("topic", topic),
+			slog.String("component", key), slog.String("platform", string(comp.Platform)),
+			slog.String("err", strings.Join(bad[key], "; ")),
+			slog.String("consequence",
+				"left out of the device document so the appliance's other entities are published; "+
+					"not removed: Home Assistant keeps the entity it already has, unchanged and no longer updated, "+
+					"until a release renders it validly"))
+		out = append(out, publisher.EntityConfigTopic(d.baseTopic, string(comp.Platform), b.NodeID, key))
+		delete(b.Components, key)
+	}
+	return out
 }
 
 // publishedPlatforms is the set of Home Assistant platforms this daemon

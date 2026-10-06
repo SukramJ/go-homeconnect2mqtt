@@ -6677,8 +6677,7 @@
         "model": "SMV6ZCX49E",
         "name": "Geschirrspüler"
       },
-      "device_class": "timestamp",
-      "name": "Programm-Endzeit",
+      "name": "Restprogrammzeit",
       "state_topic": "homeconnect/Geschirrspüler/BSH/Common/Option/RemainingProgramTime/state",
       "unique_id": "homeconnect_geschirrspuler_bsh_common_option_remainingprogramtime"
     }

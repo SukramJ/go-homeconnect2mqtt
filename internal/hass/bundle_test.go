@@ -374,7 +374,7 @@ func TestTheDocumentedDowngradeTopicMatchesTheCode(t *testing.T) {
 func TestAnEmptyDocumentIsWithheld(t *testing.T) {
 	rec := &bundleRecorder{}
 	d := New(rec, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
-	topic, _, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, goldenHaID, pincatalog.Info, nil, nil)
+	topic, _, _, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, goldenHaID, pincatalog.Info, nil, nil)
 	if err == nil {
 		t.Fatal("an empty document was published")
 	}
@@ -401,14 +401,14 @@ func TestAnEmptyDocumentIsWithheld(t *testing.T) {
 }
 
 // TestABlockingDocumentIsWithheld. Home Assistant validates a device
-// document as one unit and drops the whole thing, so a single refused
-// component costs the appliance every entity it has. That is what made F13
-// a blocker for this step (#43): eleven silently-refused rows would have
-// become 687 lost ones.
+// document as one unit and drops the whole thing, so a document refused for
+// a reason no single component carries — here the origin block a device
+// document requires — is not published at all.
 //
-// The document is made blocking by a deliberately invalid component rather
+// The document is made blocking by a deliberately invalid document rather
 // than by a mocked validator, so the test breaks if discovery.Validate's
-// idea of "blocking" changes under it.
+// idea of "blocking" changes under it. A refusal that DOES name components
+// is contained instead: TestAnInvalidComponentIsWithheldAndTheRestPublished.
 func TestABlockingDocumentIsWithheld(t *testing.T) {
 	rec := &bundleRecorder{}
 	d := New(rec, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
@@ -416,22 +416,12 @@ func TestABlockingDocumentIsWithheld(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BundleFor: %v", err)
 	}
-	// Two components on the same platform sharing a unique_id: a real
-	// registry collision, which Render passes through and Validate refuses.
-	keys := b.Keys()
-	first := b.Components[keys[0]]
-	for _, k := range keys[1:] {
-		if c := b.Components[k]; c.Platform == first.Platform {
-			c.UniqueID = first.UniqueID
-			b.Components[k] = c
-			break
-		}
-	}
+	b.Origin.Name = ""
 	var ve *discovery.ValidationError
 	if !errors.As(discovery.Validate(b), &ve) || !ve.Blocking() {
 		t.Fatal("the fixture is not blocking, so this test proves nothing")
 	}
-	topic, err := d.publishBundle(t.Context(), goldenDeviceEN, b)
+	topic, withheld, err := d.publishBundle(t.Context(), goldenDeviceEN, b)
 	if err == nil {
 		t.Fatal("a blocking document was published — Home Assistant drops such a document " +
 			"whole, so that costs the appliance every entity it has")
@@ -439,8 +429,98 @@ func TestABlockingDocumentIsWithheld(t *testing.T) {
 	if want := d.BundleTopic(goldenDeviceEN); topic != want {
 		t.Errorf("topic = %q, want %q", topic, want)
 	}
+	if withheld != nil {
+		t.Errorf("a withheld document reported withheld components %v", withheld)
+	}
 	if rec.written() != 0 {
 		t.Errorf("a blocking document wrote %d messages", rec.written())
+	}
+}
+
+// TestAnInvalidComponentIsWithheldAndTheRestPublished is the 0.15.1
+// containment. One refused component used to withhold the whole document —
+// on 0.15.0 that was one catalogue line costing three appliances every
+// entity. Now the component is left out, the rest is published, and the
+// component is NOT tombstoned even though the previous document declared it:
+// a tombstone tells Home Assistant to delete the entity and its history,
+// an omission tells it nothing.
+func TestAnInvalidComponentIsWithheldAndTheRestPublished(t *testing.T) {
+	entities := pinEntities(t)
+	rec := &bundleRecorder{}
+	var logs bytes.Buffer
+	d := New(rec, goldenPrefix, goldenRoot, "en", false, slog.New(slog.NewTextHandler(&logs, nil)))
+	b, err := d.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, entities)
+	if err != nil {
+		t.Fatalf("BundleFor: %v", err)
+	}
+	prior := LiveComponents(b)
+	total := len(prior)
+
+	// Two invalid components, the way 0.15.0 rendered RemainingProgramTime:
+	// a timestamp carrying a state class.
+	var bad []string
+	for _, key := range b.Keys() {
+		if c := b.Components[key]; c.Platform == hacatalog.PlatformSensor && len(bad) < 2 {
+			c.DeviceClass = "timestamp"
+			c.StateClass = "measurement"
+			b.Components[key] = c
+			bad = append(bad, key)
+		}
+	}
+	var ve *discovery.ValidationError
+	if !errors.As(discovery.Validate(b), &ve) || !ve.Blocking() {
+		t.Fatal("the fixture is not blocking, so this test proves nothing")
+	}
+	// The tombstones run before the gate, as in PublishDeviceBundle, against
+	// a prior that declared both components.
+	if gone := ApplyTombstones(b, prior); len(gone) != 0 {
+		t.Fatalf("the fixture tombstoned %v", gone)
+	}
+	topic, withheld, err := d.publishBundle(t.Context(), goldenDeviceEN, b)
+	if err != nil {
+		t.Fatalf("a document with two invalid components was withheld whole: %v", err)
+	}
+	if want := d.BundleTopic(goldenDeviceEN); topic != want {
+		t.Errorf("topic = %q, want %q", topic, want)
+	}
+	if len(rec.bundles) != 1 {
+		t.Fatalf("published %d documents, want 1", len(rec.bundles))
+	}
+	sent := rec.bundles[0]
+	if got := len(LiveComponents(sent)); got != total-2 {
+		t.Errorf("published %d live components, want %d", got, total-2)
+	}
+	wantTopics := make([]string, 0, len(bad))
+	for _, key := range bad {
+		if _, present := sent.Components[key]; present {
+			t.Errorf("%s: still in the document (a tombstone or the invalid component)", key)
+		}
+		if _, marked := sent.Tombstones[key]; marked {
+			t.Errorf("%s: tombstoned — Home Assistant would DELETE the entity", key)
+		}
+		wantTopics = append(wantTopics, "homeassistant/sensor/dishwasher/"+key+"/config")
+		if !strings.Contains(logs.String(), "component="+key) {
+			t.Errorf("%s: no ERROR names the withheld component", key)
+		}
+	}
+	sort.Strings(wantTopics)
+	if !slices.Equal(withheld, wantTopics) {
+		t.Errorf("withheld = %v, want %v", withheld, wantTopics)
+	}
+	if err := discovery.Validate(sent); err != nil {
+		t.Errorf("the published document does not validate: %v", err)
+	}
+	// What the caller remembers as the next prior state no longer holds
+	// them, so the next document cannot tombstone them either.
+	next, err := d.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, entities)
+	if err != nil {
+		t.Fatalf("BundleFor: %v", err)
+	}
+	for _, key := range bad {
+		delete(next.Components, key)
+	}
+	if gone := ApplyTombstones(next, LiveComponents(sent)); len(gone) != 0 {
+		t.Errorf("the next document tombstones %v", gone)
 	}
 }
 

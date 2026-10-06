@@ -409,7 +409,7 @@ func (b *Bridge) publishDiscovery(parent context.Context, d *Device) {
 	// this asks about. Every failure direction of the read produces fewer
 	// tombstones and never different ones — see internal/hass/tombstone.go.
 	prior := b.prior.forConnection(ctx, rt, node, b.readPriorDocuments)
-	topic, live, err := b.hass.PublishDeviceBundle(ctx, d.name, d.haID, d.app.Info(), d.app.Entities(), prior)
+	topic, live, withheld, err := b.hass.PublishDeviceBundle(ctx, d.name, d.haID, d.app.Info(), d.app.Entities(), prior)
 	cancel()
 	if err != nil {
 		// Every failure path in PublishDeviceBundle has already logged what
@@ -431,7 +431,15 @@ func (b *Bridge) publishDiscovery(parent context.Context, d *Device) {
 	// after both gates, for the same reason they exist: a document that was
 	// not published did not become anybody's previous document.
 	b.prior.record(rt, node, live)
-	b.reconcileOrphans(parent, d.name, map[string]bool{topic: true})
+	// A component the document had to withhold is not an orphan: its
+	// retained per-entity config, if an older release left one, is the
+	// entity Home Assistant still has, and clearing it would delete that
+	// entity with its history. See hass.Discovery.validateBundle.
+	keep := map[string]bool{topic: true}
+	for _, t := range withheld {
+		keep[t] = true
+	}
+	b.reconcileOrphans(parent, d.name, keep)
 }
 
 // documentIsDeclared reports whether the publish plane claims topic — i.e.

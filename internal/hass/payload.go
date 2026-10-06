@@ -18,6 +18,7 @@
 package hass
 
 import (
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -116,6 +117,89 @@ var deviceClasses = sync.OnceValue(func() map[string]map[string]bool {
 	}
 	return out
 })
+
+// sensorRelationTables is what Home Assistant says a sensor's device_class,
+// unit_of_measurement and state_class may be COMBINED as, decoded once from
+// go-ha-catalog: the state classes each device class admits (the table
+// go-hamqtt's discovery.Validate checks a document against), the units each
+// device class admits, and which device classes are numeric at all.
+type sensorRelationTables struct {
+	stateClasses map[string][]string
+	units        map[string][]string
+	numeric      map[string]bool
+}
+
+var sensorRelations = sync.OnceValue(func() *sensorRelationTables {
+	rel, err := hacatalog.LoadRelations()
+	if err != nil {
+		return nil
+	}
+	sensor, err := hacatalog.LoadSensor()
+	if err != nil {
+		return nil
+	}
+	numeric := make(map[string]bool, len(sensor.NumericDeviceClasses))
+	for _, c := range sensor.NumericDeviceClasses {
+		numeric[c] = true
+	}
+	return &sensorRelationTables{
+		stateClasses: rel.SensorDeviceClassStateClasses,
+		units:        sensor.DeviceClassUnits,
+		numeric:      numeric,
+	}
+})
+
+// reconcileSensorClasses returns the device_class, unit and state_class a
+// non-enum sensor may carry TOGETHER, given the three it was derived with.
+//
+// It exists because the three come from different places — the heuristic
+// derives a unit and a state class from the wire type, the catalogue
+// overlays a device class afterwards — and nothing checked the result as a
+// combination. 0.13.0 to 0.15.0 rendered `BSH.Common.Option.RemainingProgramTime`
+// as device_class `timestamp` (from mapping.yaml) with unit `s` and state_class
+// `measurement` (from its integer wire type). Home Assistant admits no state
+// class and no unit on a timestamp, discovery.Validate refused the device
+// document, and because Home Assistant drops a document whole, every
+// appliance exposing that one option published no document at all.
+//
+// The rules, each one Home Assistant's own:
+//
+//   - A non-numeric device class (timestamp, date, uptime) carries neither a
+//     unit nor a state class: the sensor's state is not a number.
+//   - A unit the device class does not declare is refused by Home
+//     Assistant's MQTT sensor schema, which drops the entity — and in a
+//     device document, the document. The DEVICE CLASS is what goes: the unit
+//     describes what the appliance actually reports, the class is an overlay.
+//   - A state class the device class does not admit is dropped; the entity
+//     loses long-term statistics, not its existence.
+//
+// A table that fails to load fails CLOSED, like deviceClassAllowed: the
+// device class is dropped, which is always a combination Home Assistant
+// accepts.
+func reconcileSensorClasses(dc, unit, sc string) (outDC, outUnit, outSC string) {
+	return reconcileSensorClassesIn(sensorRelations(), dc, unit, sc)
+}
+
+// reconcileSensorClassesIn is reconcileSensorClasses against given tables,
+// so the fail-closed branch is reachable from a test.
+func reconcileSensorClassesIn(t *sensorRelationTables, dc, unit, sc string) (outDC, outUnit, outSC string) {
+	if dc == "" {
+		return dc, unit, sc
+	}
+	if t == nil {
+		return "", unit, sc
+	}
+	if !t.numeric[dc] {
+		return dc, "", ""
+	}
+	if units, known := t.units[dc]; known && unit != "" && !slices.Contains(units, unit) {
+		return "", unit, sc
+	}
+	if allowed, known := t.stateClasses[dc]; known && sc != "" && !slices.Contains(allowed, sc) {
+		sc = ""
+	}
+	return dc, unit, sc
+}
 
 // classify maps an entity to a Home Assistant platform. ok is false when
 // the entity should not be exposed via discovery (e.g. a raw program node).
@@ -458,6 +542,16 @@ func sanitizeForPlatform(p map[string]any, platform string) {
 		return
 	}
 	delete(p, "options")
+	// The three classes as a combination. See reconcileSensorClasses.
+	dc, _ := p["device_class"].(string)
+	unit, _ := p["unit_of_measurement"].(string)
+	sc, _ := p["state_class"].(string)
+	dc, unit, sc = reconcileSensorClasses(dc, unit, sc)
+	for key, val := range map[string]string{"device_class": dc, "unit_of_measurement": unit, "state_class": sc} {
+		if val == "" {
+			delete(p, key)
+		}
+	}
 }
 
 // enumOptions returns the sorted enum value names for a select.
