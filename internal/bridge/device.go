@@ -60,6 +60,22 @@ type Device struct {
 
 	// Injectable for deterministic tests; defaults to manager.Run.
 	runFn func(ctx context.Context) error
+
+	// link is the appliance's link state as this daemon last declared it on
+	// its `connection_state` and `online` items. See [Bridge.reassertLink].
+	linkMu sync.Mutex
+	link   deviceLink
+}
+
+// deviceLink is what the two link items should say right now. Each half is
+// recorded at the moment onState publishes it, so a broker reconnect in the
+// middle of an onState pass re-asserts exactly what that pass has declared
+// so far — in particular not `online` true before the appliance's device
+// document has gone out.
+type deviceLink struct {
+	state       homeconnect.ConnectionState // "" until the first onState
+	online      bool
+	onlineKnown bool
 }
 
 // Name returns the logical device name.
@@ -327,14 +343,64 @@ func (b *Bridge) featureView(d *Device, e *homeconnect.Entity) state.Feature {
 // `<name>/connected` with the fleet.
 func (b *Bridge) onState(d *Device, s homeconnect.ConnectionState) {
 	connected := s == homeconnect.StateConnected
+	d.linkMu.Lock()
+	d.link.state = s
 	b.publish(d.topics.ConnectionState(), string(s))
+	d.linkMu.Unlock()
 	if connected {
 		b.publishDiscovery(context.Background(), d)
 	}
+	d.linkMu.Lock()
+	d.link.online, d.link.onlineKnown = connected, true
 	b.publish(d.topics.Online(), connected)
+	d.linkMu.Unlock()
 	b.setDeviceConnected(d, connected)
 	if b.state != nil {
 		b.state.SetConnectionState(d.name, string(s), connected)
+	}
+}
+
+// reassertLink publishes the appliance's `connection_state` and `online`
+// items as they are NOW, on a fresh broker connection.
+//
+// The status replay alone cannot do it. It re-sends what the state plane
+// last had ACCEPTED by a broker (publisher.StatePublisher records a write
+// only once it succeeded), and onState writes these two items only when the
+// link changes. So an appliance that dropped or came back while the broker
+// was away had that publish fail, and the replay restored the value from
+// before the outage: its entities stayed available (or unavailable) wrongly
+// until the appliance's next link change, which can be days.
+// `<name>/connected` never had this problem — haplane.Plane.AnnounceOnline
+// publishes the level the daemon last ASKED for, not the last one written.
+//
+// It runs after the replay and takes the device's link lock, so it is
+// ordered against onState; an unchanged value is a no-op at the state
+// plane's dedup gate. Before the first onState there is nothing to assert.
+func (b *Bridge) reassertLink(d *Device) {
+	d.linkMu.Lock()
+	defer d.linkMu.Unlock()
+	if d.link.state != "" {
+		b.publish(d.topics.ConnectionState(), string(d.link.state))
+	}
+	if d.link.onlineKnown {
+		b.publish(d.topics.Online(), d.link.online)
+	}
+}
+
+// requeueValues hands every feature value the appliance model currently
+// holds back to the device's publish queue, on a fresh broker connection.
+//
+// It is reassertLink's counterpart for the features, and closes the same
+// gap: a value that changed while the broker was away failed to publish,
+// was dropped with a warning, and the replay restored the one before it.
+// Going through the queue keeps the drain goroutine the only writer of a
+// feature topic, which publisher.StatePublisher requires; a value the
+// broker already holds is a no-op at the dedup gate.
+func (b *Bridge) requeueValues(d *Device) {
+	for _, e := range d.app.Entities() {
+		if e.HasValue() {
+			d.pub.enqueue(d.topics.state(e), statusValue(e))
+		}
 	}
 }
 

@@ -241,8 +241,9 @@ func (b *Bridge) Run(ctx context.Context) error {
 
 // PublishOnline is the (re)connect hook: it rebuilds the Home Assistant
 // plane for the new broker connection, announces `<name>/connected` at the
-// level the appliances warrant and `<name>/info`, and replays the status
-// items.
+// level the appliances warrant and `<name>/info`, replays the status items
+// and then re-asserts what changed while the broker was away — each
+// appliance's link items and its current feature values.
 //
 // All of it belongs to the connection rather than to the process. The
 // discovery runtime's superseded/declared/announced maps and the state
@@ -265,6 +266,13 @@ func (b *Bridge) PublishOnline(ctx context.Context) {
 	// document per appliance.
 	go func() {
 		b.republishStatus(ctx)
+		// After the replay, never before it: the replay re-sends what the
+		// broker last accepted, which for a value that changed during the
+		// outage is the value before it. See [Bridge.reassertLink].
+		for _, d := range b.devices {
+			b.reassertLink(d)
+			b.requeueValues(d)
+		}
 		b.republishDiscovery(ctx)
 	}()
 }
