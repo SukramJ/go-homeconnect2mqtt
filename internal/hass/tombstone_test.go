@@ -321,9 +321,10 @@ func TestATombstoneIsNotCarriedForwardAsPriorState(t *testing.T) {
 // check, because tombstones change the bytes Home Assistant reads and the
 // packet the preflight measures.
 //
-// discovery.Validate must be CLEAN rather than merely non-blocking: Home
-// Assistant drops a document it cannot validate in its entirety, so a
-// finding here costs the appliance every entity it has.
+// discovery.Validate must be CLEAN rather than merely non-blocking: a
+// blocking finding here would cost entities — the component it names, and
+// for a removal entry on a platform Home Assistant does not support, the
+// whole document in Home Assistant's eyes.
 func TestTheTombstonedDocumentStillValidatesAndIsMeasured(t *testing.T) {
 	full, curated := bundlePair(t)
 	plain, err := json.Marshal(curated)
@@ -528,10 +529,17 @@ func TestTheCuratedWarningDescribesTheBehaviourThisReleaseHas(t *testing.T) {
 // was not: TestTheTombstonedDocumentStillValidatesAndIsMeasured asserts
 // that OUR tombstoned document validates, which stays true if
 // discovery.Validate is handed a tombstone-free copy — the mutation that
-// matters survived the whole suite. What it costs is the thing the gate
-// exists for: a document whose REMOVAL entries make it blocking is
-// published anyway, and Home Assistant drops the document entire, so the
-// appliance loses all 687 entities rather than the one bad removal.
+// matters survived the whole suite. What it costs is real here: a removal
+// entry whose platform is not one Home Assistant supports over MQTT is one
+// of the few findings Home Assistant refuses a WHOLE document for
+// (components/mqtt/schemas.py:207-211), so publishing it would cost the
+// appliance every entity.
+//
+// Since 0.15.2 such an entry is contained like any other attributable
+// finding: it is left out, and the rest is published. So the assertion is
+// that the published document does not carry it — which a validator
+// handed a tombstone-free copy cannot achieve, because it finds nothing to
+// withhold.
 //
 // The removal is where a bad platform can come from, and it is not
 // hypothetical: the tombstone's platform is the PRIOR document's, read
@@ -539,45 +547,55 @@ func TestTheCuratedWarningDescribesTheBehaviourThisReleaseHas(t *testing.T) {
 // daemon (or by nothing at all) and no render of this one vouches for it.
 //
 // The control comes first. The identical publish with no prior state must
-// succeed, so the refusal below can only be the tombstone — a test whose
-// failure could come from the rendered components would prove nothing
-// about which document the validator saw.
+// succeed and withhold nothing, so the withholding below can only be the
+// tombstone's.
 func TestTheValidatorIsShownTheDocumentTheRemovalsProduced(t *testing.T) {
 	entities := pinEntities(t)
 	control := &bundleRecorder{}
 	d := New(control, goldenPrefix, goldenRoot, "en", true, slog.New(slog.DiscardHandler))
 	d.SetEnricher(pinEnricher(t))
-	if _, _, _, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, goldenHaID, pincatalog.Info, entities, nil); err != nil {
+	_, controlLive, controlWithheld, err := d.PublishDeviceBundle(t.Context(), goldenDeviceEN, goldenHaID, pincatalog.Info, entities, nil)
+	if err != nil {
 		t.Fatalf("the control publish was refused, so nothing below is attributable: %v", err)
 	}
-	if control.written() == 0 {
-		t.Fatal("the control publish wrote nothing")
+	if control.written() == 0 || len(controlWithheld) != 0 {
+		t.Fatalf("the control publish wrote %d messages and withheld %v", control.written(), controlWithheld)
 	}
 
 	// A key no render of this daemon produces, so it becomes a tombstone,
 	// carrying a platform Home Assistant has no MQTT support for.
+	const bad = "a_component_no_render_of_ours_declares"
 	prior := map[string]discovery.Component{
-		"a_component_no_render_of_ours_declares": {
+		bad: {
 			Platform: hacatalog.Platform("toaster"),
 			UniqueID: "homeconnect_dishwasher_gone",
 		},
 	}
 	rec := &bundleRecorder{}
-	d2 := New(rec, goldenPrefix, goldenRoot, "en", true, slog.New(slog.DiscardHandler))
+	var logs bytes.Buffer
+	d2 := New(rec, goldenPrefix, goldenRoot, "en", true, slog.New(slog.NewTextHandler(&logs, nil)))
 	d2.SetEnricher(pinEnricher(t))
-	_, live, _, err := d2.PublishDeviceBundle(t.Context(), goldenDeviceEN, goldenHaID, pincatalog.Info, entities, prior)
-	if err == nil {
-		t.Fatal("a document whose REMOVAL entry is blocking was published: Home Assistant drops " +
-			"the whole document, so the appliance loses every entity it has")
+	_, live, withheld, err := d2.PublishDeviceBundle(t.Context(), goldenDeviceEN, goldenHaID, pincatalog.Info, entities, prior)
+	if err != nil {
+		t.Fatalf("a document with one bad removal entry was withheld whole: %v", err)
 	}
-	var ve *discovery.ValidationError
-	if !errors.As(err, &ve) || !ve.Blocking() {
-		t.Fatalf("err = %v, want a blocking discovery.ValidationError", err)
+	if len(rec.bundles) != 1 {
+		t.Fatalf("published %d documents, want 1", len(rec.bundles))
 	}
-	if live != nil {
-		t.Errorf("a refused document reported %d live components as the next prior state", len(live))
+	if _, present := rec.bundles[0].Components[bad]; present {
+		t.Fatal("the removal entry on an unsupported platform was published: Home Assistant refuses " +
+			"the whole document for it, so the appliance would lose every entity it has")
 	}
-	if rec.written() != 0 {
-		t.Errorf("a refused document still wrote %d messages", rec.written())
+	if !strings.Contains(logs.String(), "component="+bad) {
+		t.Error("no ERROR names the withheld removal entry")
+	}
+	if len(withheld) != 0 {
+		t.Errorf("withheld per-entity topics %v for a removal entry, which has no entity to keep", withheld)
+	}
+	if len(live) != len(controlLive) {
+		t.Errorf("live components = %d, want the control's %d", len(live), len(controlLive))
+	}
+	if err := discovery.Validate(rec.bundles[0]); err != nil {
+		t.Errorf("the published document does not validate: %v", err)
 	}
 }

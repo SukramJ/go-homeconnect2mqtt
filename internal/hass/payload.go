@@ -101,8 +101,7 @@ const controlPressPayload = "PRESS"
 // TestDeviceClassTableLoads asserts it. When it does fail, deviceClassAllowed
 // fails CLOSED — no entity carries a device_class at all. That costs every
 // entity an icon and its class semantics; the open failure costs the whole
-// entity, and at ADR 0070 step 6, where a device bundle is validated as one
-// document, it costs every entity on the device.
+// entity.
 var deviceClasses = sync.OnceValue(func() map[string]map[string]bool {
 	raw, err := hacatalog.LoadDeviceClasses()
 	if err != nil {
@@ -159,18 +158,20 @@ var sensorRelations = sync.OnceValue(func() *sensorRelationTables {
 // combination. 0.13.0 to 0.15.0 rendered `BSH.Common.Option.RemainingProgramTime`
 // as device_class `timestamp` (from mapping.yaml) with unit `s` and state_class
 // `measurement` (from its integer wire type). Home Assistant admits no state
-// class and no unit on a timestamp, discovery.Validate refused the device
-// document, and because Home Assistant drops a document whole, every
-// appliance exposing that one option published no document at all.
+// class and no unit on a timestamp, which costs that one entity; but
+// discovery.Validate refused it, and this daemon's own gate then withheld the
+// whole device document, so every appliance exposing that one option
+// published no document at all. (0.15.1 contains such a finding to the
+// component; see Discovery.validateBundle.)
 //
 // The rules, each one Home Assistant's own:
 //
 //   - A non-numeric device class (timestamp, date, uptime) carries neither a
 //     unit nor a state class: the sensor's state is not a number.
 //   - A unit the device class does not declare is refused by Home
-//     Assistant's MQTT sensor schema, which drops the entity — and in a
-//     device document, the document. The DEVICE CLASS is what goes: the unit
-//     describes what the appliance actually reports, the class is an overlay.
+//     Assistant's MQTT sensor schema, which drops the entity. The DEVICE
+//     CLASS is what goes: the unit describes what the appliance actually
+//     reports, the class is an overlay.
 //   - A state class the device class does not admit is dropped; the entity
 //     loses long-term statistics, not its existence.
 //

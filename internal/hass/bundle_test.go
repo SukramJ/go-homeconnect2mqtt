@@ -400,10 +400,11 @@ func TestAnEmptyDocumentIsWithheld(t *testing.T) {
 	}
 }
 
-// TestABlockingDocumentIsWithheld. Home Assistant validates a device
-// document as one unit and drops the whole thing, so a document refused for
-// a reason no single component carries — here the origin block a device
-// document requires — is not published at all.
+// TestABlockingDocumentIsWithheld. A document refused for a reason no
+// single component carries — here the origin block a device document
+// requires, which Home Assistant's DEVICE_DISCOVERY_SCHEMA refuses the whole
+// document for (components/mqtt/schemas.py:214-227) — is not published at
+// all.
 //
 // The document is made blocking by a deliberately invalid document rather
 // than by a mocked validator, so the test breaks if discovery.Validate's
@@ -423,8 +424,8 @@ func TestABlockingDocumentIsWithheld(t *testing.T) {
 	}
 	topic, withheld, err := d.publishBundle(t.Context(), goldenDeviceEN, b)
 	if err == nil {
-		t.Fatal("a blocking document was published — Home Assistant drops such a document " +
-			"whole, so that costs the appliance every entity it has")
+		t.Fatal("a document without an origin was published — Home Assistant refuses such a " +
+			"document whole, so that costs the appliance every entity it has")
 	}
 	if want := d.BundleTopic(goldenDeviceEN); topic != want {
 		t.Errorf("topic = %q, want %q", topic, want)
@@ -694,5 +695,79 @@ func TestCuratedOmissionsAreCountedAndSaidOutLoud(t *testing.T) {
 	}
 	if strings.Contains(quiet.String(), "hass.curated_components_omitted") {
 		t.Errorf("HASS_DISCOVERY: full warned about omissions it did not make: %q", quiet.String())
+	}
+}
+
+// TestEveryComponentFindingIsContained drives each kind of finding
+// discovery.Validate (go-hamqtt v0.36.0) attributes to a component, one at a
+// time, and requires each to cost that component only.
+//
+// Most of them cost one entity in Home Assistant as well — the platform
+// schema refuses the component when it is set up. Two are findings Home
+// Assistant refuses the WHOLE document for: a platform outside
+// SUPPORTED_COMPONENTS and a missing unique_id
+// (components/mqtt/schemas.py:199-211). Containing those is what keeps the
+// rest of the appliance: the omission cures the document.
+func TestEveryComponentFindingIsContained(t *testing.T) {
+	cases := []struct {
+		name    string
+		finding string
+		mutate  func(c *discovery.Component)
+	}{
+		{"no platform", "platform is required", func(c *discovery.Component) { c.Platform = "" }},
+		{"platform without MQTT support", "is not an MQTT-capable platform", func(c *discovery.Component) { c.Platform = "toaster" }},
+		{"no unique_id", "unique_id is required", func(c *discovery.Component) { c.UniqueID = "" }},
+		{"unknown key", "is not a valid key for platform", func(c *discovery.Component) {
+			c.Extra = map[string]any{"no_such_key": true}
+		}},
+		{"device class the platform does not declare", "is not valid for platform", func(c *discovery.Component) {
+			c.DeviceClass = "door"
+		}},
+		{"options on a non-enum sensor", "options require device_class", func(c *discovery.Component) {
+			c.Options = []string{"a", "b"}
+		}},
+		{"availability without a topic", "has no topic", func(c *discovery.Component) {
+			c.Availability = []discovery.AvailabilityEntry{{}}
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := &bundleRecorder{}
+			d := New(rec, goldenPrefix, goldenRoot, "en", false, slog.New(slog.DiscardHandler))
+			b, err := d.BundleFor(goldenDeviceEN, goldenHaID, pincatalog.Info, pinEntities(t))
+			if err != nil {
+				t.Fatalf("BundleFor: %v", err)
+			}
+			total := len(LiveComponents(b))
+			var key string
+			for _, k := range b.Keys() {
+				if b.Components[k].Platform == hacatalog.PlatformSensor && b.Components[k].DeviceClass == "" {
+					key = k
+					break
+				}
+			}
+			c := b.Components[key]
+			tc.mutate(&c)
+			b.Components[key] = c
+			err = discovery.Validate(b)
+			var ve *discovery.ValidationError
+			if !errors.As(err, &ve) || !ve.Blocking() || !strings.Contains(err.Error(), key+": ") ||
+				!strings.Contains(err.Error(), tc.finding) {
+				t.Fatalf("the fixture does not produce the finding %q on %s: %v", tc.finding, key, err)
+			}
+			if _, _, err := d.publishBundle(t.Context(), goldenDeviceEN, b); err != nil {
+				t.Fatalf("withheld whole: %v", err)
+			}
+			if len(rec.bundles) != 1 {
+				t.Fatalf("published %d documents, want 1", len(rec.bundles))
+			}
+			sent := rec.bundles[0]
+			if _, present := sent.Components[key]; present {
+				t.Errorf("%s is still in the published document", key)
+			}
+			if got := len(LiveComponents(sent)); got < total-1 {
+				t.Errorf("published %d live components of %d; containment cost more than one", got, total)
+			}
+		})
 	}
 }
