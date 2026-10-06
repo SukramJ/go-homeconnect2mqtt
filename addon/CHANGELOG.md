@@ -5,6 +5,43 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-10-06
+
+**Fixes 0.15.0 leaving appliances without any working entity in Home
+Assistant.** Update and restart; nothing else to do.
+
+### Fixed
+- **No discovery document was published for an appliance that reports
+  `BSH.Common.Option.RemainingProgramTime`** (dishwashers, washers, hobs, …).
+  The log said `hass.bundle_invalid … state_class "measurement" is not allowed
+  for device_class "timestamp"` on every publish. `mapping.yaml` called this
+  value a `timestamp`, but the appliance reports the remaining *seconds*, so
+  the entity also got the unit `s` and the state class `measurement` — a
+  combination Home Assistant refuses, and it refuses a device document as a
+  whole. This was already the case since 0.13.0, the first release with
+  device documents: those appliances kept running on the per-entity
+  discovery configs of 0.12, which pointed at the old topics (a fresh installation of 0.13.0 or later had
+  no entities for them at all). 0.15.0 moved the
+  topics and cleared the old ones, so their entities stopped updating.
+  0.15.1 publishes the document again: Home Assistant re-points the existing
+  entities (same `unique_id`, same entity ids, history kept), and the old
+  per-entity configs are retracted as 0.13.0 intended.
+- The entity is now what the appliance actually sends: **"Remaining program
+  time" / "Restprogrammzeit"**, a duration in seconds, instead of "Program
+  finish time" / "Programm-Endzeit", which never showed a value (Home
+  Assistant cannot read a number of seconds as a point in time).
+- Device class, unit and state class are now checked **as a combination**
+  against Home Assistant's own tables before anything is published: a state
+  class or unit Home Assistant does not allow for the final device class is
+  left out (for example `measurement` on a read-only energy, volume or
+  `timestamp` sensor), instead of costing the whole appliance its document.
+- **One invalid entity no longer costs an appliance every entity.** If Home
+  Assistant would still refuse a single component, that component is left out
+  of the document with a `hass.component_withheld` error naming it, and the
+  rest is published. It is not deleted: Home Assistant keeps the entity it
+  already has, and its history, until a release renders it correctly. Only a
+  problem with the document itself still withholds the whole document.
+
 ## [0.15.0] - 2026-10-06
 
 **Breaking.** The MQTT topic tree moves onto the
