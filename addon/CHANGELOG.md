@@ -5,6 +5,14 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+### Added
+- **`mqtt_ca`: verify a broker whose TLS certificate is signed by your own
+  CA.** Set `mqtt_ca` (env `HC2M_MQTT_CA`) to the path of a PEM bundle under
+  `ssl` or `share`; the bridge loads it as the trust anchor for a `tls://`,
+  `ssl://` or `mqtts://` broker. Empty keeps the system trust store. A missing
+  or certificate-less file is refused at start, with a message naming it,
+  instead of failing the TLS handshake later.
+
 ## [0.15.2] - 2026-10-06
 
 **Entities that Home Assistant silently refused now appear, and appliance

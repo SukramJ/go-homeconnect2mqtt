@@ -38,9 +38,11 @@ services:
 
 # /share is the drop folder for the profile ZIP / pre-parsed <haId>.json files
 # (run.sh creates /share/homeconnect on start); /data is the add-on's own
-# persistent volume (parsed descriptions + generated devices.yaml land there).
+# persistent volume (parsed descriptions + generated devices.yaml land there);
+# /ssl read-only so mqtt_ca can point at the standard /ssl location.
 map:
   - share:rw
+  - ssl:ro
 
 options:
   profile_zip: ""
@@ -49,6 +51,7 @@ options:
   mqtt_port: 1883
   mqtt_login: ""
   mqtt_password: ""
+  mqtt_ca: ""
   mqtt_topic: homeconnect
   maintenance: true
   stats_interval: 60
@@ -73,6 +76,7 @@ schema:
   mqtt_port: port
   mqtt_login: "str?"
   mqtt_password: "password?"
+  mqtt_ca: "str?"
   mqtt_topic: str
   maintenance: bool
   stats_interval: "int(0,86400)"
