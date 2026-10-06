@@ -5,6 +5,74 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-10-06
+
+**Entities that Home Assistant silently refused now appear, and appliance
+availability is correct again after a broker outage.** Update and restart;
+nothing else to do — but read the first point if you run
+`HASS_DISCOVERY: full`.
+
+### Fixed
+- **Some settings and options never appeared in Home Assistant.** A setting
+  or option that this bridge shows as a read-only sensor or binary sensor —
+  typically a writable text setting such as a time zone, a favourite's name
+  or the remote control level, or a setting the appliance reports read-only
+  — was filed under the *Configuration* category. Home Assistant refuses to
+  create a sensor or binary sensor in that category, so the entity never
+  existed (nothing was logged by this bridge). These entities are now filed
+  under *Diagnostic*, and appear. This had been the case since at least
+  0.14.0.
+
+  **What you will see after the update:** new entities on the device page,
+  under *Diagnostic*. On the three appliances we test with that is 2 on a
+  dishwasher, 9 on a hob and none on a washer, all of them **disabled by
+  default**, so nothing new shows up on a dashboard until you enable it.
+  With `HASS_DISCOVERY: curated` nothing changes on those appliances. An
+  appliance that models more of its settings as text can gain more.
+- **An appliance could be shown available (or unavailable) wrongly after the
+  MQTT broker was away.** If an appliance dropped off or came back while the
+  broker was unreachable, the bridge could not publish that, and on
+  reconnect it restored the state from before the outage — until the
+  appliance next changed its connection. On every broker reconnect the bridge
+  now publishes each appliance's current `online` and `connection_state`,
+  and every feature value it currently knows, so a value that changed during
+  the outage is not left at the old one either.
+- **A sensor whose value is text but whose catalogue entry describes a
+  number showed no value.** If an appliance reports a feature as text or as
+  a list of choices while `mapping.yaml` gives it a unit, a state class or a
+  numeric device class (for example a battery level reported as an
+  enumeration), Home Assistant expects a number and rejects every value.
+  Such a sensor now keeps only what fits a text value; a list of choices
+  gets its choices back.
+- **A number with an invalid range or step in the appliance's description is
+  no longer refused by Home Assistant**: a step of 0 (or below Home
+  Assistant's minimum of 0.001) is left out, as is a minimum above the
+  maximum, so Home Assistant uses its defaults instead of dropping the
+  entity.
+
+### Changed
+- `mapping.yaml` no longer sets `entity_category: config` on eight dishwasher
+  and common settings; the bridge already files a writable setting under
+  *Configuration* and a read-only one under *Diagnostic*. If your own
+  `mapping.yaml` asks for `config` on a feature that ends up as a sensor or
+  binary sensor, the request is now ignored with a
+  `hass.entity_category_refused` warning instead of costing the entity.
+- If a single entity of an appliance is still invalid, it is now left out of
+  the device document in **every** case the check can name an entity for —
+  including a missing or unknown platform and a missing `unique_id` — and the
+  rest is published. Only a problem with the device document itself (its
+  device or origin block) still holds the whole document back.
+
+### Correction to 0.15.1
+- The 0.15.1 notes said Home Assistant "refuses a device document as a
+  whole" when one entity is invalid. That is not so: Home Assistant checks a
+  device document as a whole only for its device, origin and availability
+  and for each entity's platform and `unique_id`; anything else costs only
+  that one entity. The appliances that lost every entity in 0.15.0 lost them
+  because **this bridge** held the whole document back. 0.15.1 already
+  stopped doing that; the log message `hass.bundle_invalid` and the code
+  comments now say it correctly.
+
 ## [0.15.1] - 2026-10-06
 
 **Fixes 0.15.0 leaving appliances without any working entity in Home
