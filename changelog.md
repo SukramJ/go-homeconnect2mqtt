@@ -5,6 +5,12 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+### Security
+
+- Built with Go 1.27.2, which fixes Go standard-library vulnerabilities
+  (net/http and HTTP/2, crypto/tls, net/textproto, html/template).
+  golangci-lint v2.14.0 (reads Go 1.27.2's export data).
+
 ## [0.15.2] - 2026-10-06
 
 **Entities that Home Assistant silently refused now appear, and appliance
