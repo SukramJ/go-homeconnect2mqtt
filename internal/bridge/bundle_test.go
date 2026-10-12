@@ -97,6 +97,13 @@ func TestTheMigrationRetractsEveryPerEntityConfigBeforeTheDocument(t *testing.T)
 		t.Fatalf("BundleFor: %v", err)
 	}
 	superseded := publisher.SupersededTopics(pinPrefix, bundle)
+	// The previous build's configs, retained: the runtime retracts a
+	// superseded topic only where the broker still holds one.
+	held := map[string]string{}
+	for _, topic := range superseded {
+		held[topic] = `{"previous":"build"}`
+	}
+	seedRetained(rec, held)
 
 	b.publishDiscovery(t.Context(), dev)
 
@@ -177,7 +184,10 @@ func TestTheSweepIsSkippedWhenTheDocumentWasNotPublished(t *testing.T) {
 	// BOTH guards at once was not caught until this line moved.
 	drainReconciles(t, b)
 
-	if windows := rec.discoveryWindows(pinPrefix); len(windows) != 0 {
+	// One window is expected: the supersede step's snapshot, which looks
+	// for retained per-entity configs before the document is attempted. A
+	// second would be the sweep.
+	if windows := rec.discoveryWindows(pinPrefix); len(windows) > 1 {
 		t.Errorf("the sweep opened %v although the document was not published", windows)
 	}
 	if got := retractedTopics(rec); slices.Contains(got, "homeassistant/sensor/geschirrspuler/retired_feature/config") {

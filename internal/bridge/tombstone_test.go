@@ -118,6 +118,11 @@ func TestTheReadBackRunsBeforeTheMigrationAndRemovesWhatIsGone(t *testing.T) {
 		windowFirst = len(rec.bundleWindows(pinPrefix)) > 0
 	}
 
+	// The stale per-entity config is still retained — that is what makes it
+	// a hazard — and the runtime retracts only what the broker holds.
+	legacy := publisher.EntityConfigTopic(pinPrefix, "sensor", b.hass.BundleNodeID(dev.name), retired)
+	seedRetained(rec, map[string]string{legacy: ourConfig(retired)})
+
 	b.publishDiscovery(t.Context(), dev)
 	drainReconciles(t, b)
 
@@ -148,7 +153,6 @@ func TestTheReadBackRunsBeforeTheMigrationAndRemovesWhatIsGone(t *testing.T) {
 	// And the other half of a removal: the stale per-entity config is
 	// retracted, or it re-creates the entity on the next MQTT-integration
 	// restart.
-	legacy := publisher.EntityConfigTopic(pinPrefix, "sensor", b.hass.BundleNodeID(dev.name), retired)
 	if !slices.Contains(retractedTopics(rec), legacy) {
 		t.Errorf("%s was not retracted", legacy)
 	}
