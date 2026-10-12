@@ -6,6 +6,10 @@
 MQTT_SERVER: "tcp://localhost:1883"
 MQTT_LOGIN: ""
 MQTT_PASSWORD: ""
+# MQTT_CA is the path to a PEM file with the CA certificate(s) that signed
+# the broker's TLS certificate. Empty uses the system trust store. Only used
+# with a tls://, ssl:// or mqtts:// MQTT_SERVER.
+MQTT_CA: ""
 # MQTT_TOPIC is the instance name: every topic is <MQTT_TOPIC>/<function>/...
 # (mqtt-smarthome 2.0). It is the ONLY thing that keeps two instances on one
 # broker apart — give each its own. The default "homeconnect" is also the

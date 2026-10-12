@@ -8,6 +8,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"flag"
 	"fmt"
@@ -147,7 +149,11 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 		return fmt.Errorf("mqtt: last will: %w", err)
 	}
 
-	client := mqtt.NewTCPClient(mqttClientConfig(cfg, will, logger))
+	tcpCfg, err := mqttClientConfig(cfg, will, logger)
+	if err != nil {
+		return err
+	}
+	client := mqtt.NewTCPClient(tcpCfg)
 	clientRef.Store(client)
 	lc := mqtt.NewLifecycle(mqtt.LifecycleConfig{
 		InitialBackoff: cfg.ReconnectInitialDuration(),
@@ -422,6 +428,23 @@ func brokerMaxPacketSize(client *mqtt.TCPClient) (uint32, bool) {
 	return res.MaximumPacketSize, true
 }
 
+// loadCAPool reads a PEM bundle and returns a pool holding every
+// certificate it contains. A missing or unreadable file, or a bundle with
+// no certificate in it, is an error: MQTT_CA is an explicit operator
+// choice, so a silently ignored one would surface later as an unexplained
+// TLS handshake failure instead of a message naming the file.
+func loadCAPool(path string) (*x509.CertPool, error) {
+	pemBytes, err := os.ReadFile(path) //nolint:gosec // operator-supplied path
+	if err != nil {
+		return nil, fmt.Errorf("mqtt: read MQTT_CA %q: %w", path, err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(pemBytes) {
+		return nil, fmt.Errorf("mqtt: MQTT_CA %q contains no certificates", path)
+	}
+	return pool, nil
+}
+
 // mqttClientConfig builds the broker client configuration, including the
 // Last Will. It is a function rather than a literal inside run() so the
 // will — the one publish this daemon never makes itself — can be asserted
@@ -437,8 +460,8 @@ func brokerMaxPacketSize(client *mqtt.TCPClient) (uint32, bool) {
 // exactly how a will nobody reads gets configured — which is the defect
 // go-hamqtt's publisher package exists to stop reproducing, and which
 // this daemon had until F1.
-func mqttClientConfig(cfg *config.Config, will publisher.Will, logger *slog.Logger) mqtt.TCPConfig {
-	return mqtt.TCPConfig{
+func mqttClientConfig(cfg *config.Config, will publisher.Will, logger *slog.Logger) (mqtt.TCPConfig, error) {
+	tcpCfg := mqtt.TCPConfig{
 		BrokerURL:  cfg.MQTTServer,
 		ClientID:   config.ClientID,
 		Username:   cfg.MQTTLogin,
@@ -452,6 +475,18 @@ func mqttClientConfig(cfg *config.Config, will publisher.Will, logger *slog.Logg
 		},
 		Logger: logger,
 	}
+	// MQTT_CA: trust the operator's own CA for a tls://, ssl:// or mqtts://
+	// broker. The transport honours TLSConfig only for those schemes and
+	// warns itself when it is set on a plaintext one, so it is set here
+	// whenever the option is present.
+	if cfg.MQTTCA != "" {
+		pool, err := loadCAPool(cfg.MQTTCA)
+		if err != nil {
+			return mqtt.TCPConfig{}, err
+		}
+		tcpCfg.TLSConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
+	}
+	return tcpCfg, nil
 }
 
 func loadConfig(configPath string) (*config.Config, error) {
