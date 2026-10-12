@@ -5,6 +5,17 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-12
+
+### Changed
+
+- go-hamqtt 0.36.0 -> 0.37.0. The release adds scoped validation findings
+  (`discovery.Inspect`), component containment (`discovery.Contain`,
+  `publisher.Config.Contain`) and `InstanceConfig.ExtraFunc`. This bridge
+  already withholds only the failing components of a device document
+  (omitted, never tombstoned) with its own gate, so no behaviour changes and
+  no re-publish is expected.
+
 ### Security
 
 - Built with Go 1.27.2, which fixes Go standard-library vulnerabilities
