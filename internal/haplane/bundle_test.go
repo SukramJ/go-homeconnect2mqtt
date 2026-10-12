@@ -43,10 +43,15 @@ var errBrokerRefused = errors.New("broker refused the packet")
 // in nothing else: both are retained, both go to the discovery prefix, and
 // a recorder that kept only topics could not tell "retracted" from
 // "written".
+//
+// It also retains, as a broker does, and replays what it holds to a new
+// subscription: the runtime retracts a superseded config only where its
+// snapshot saw one (publisher.Config.SupersedeObserved).
 type broker struct {
-	mu     sync.Mutex
-	calls  []call
-	refuse string
+	mu       sync.Mutex
+	calls    []call
+	refuse   string
+	retained map[string][]byte
 }
 
 type call struct {
@@ -55,18 +60,55 @@ type call struct {
 	payload []byte
 }
 
-func (b *broker) Publish(_ context.Context, topic string, payload []byte, _ byte, _ bool) error {
+func (b *broker) Publish(_ context.Context, topic string, payload []byte, _ byte, retain bool) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.refuse != "" && topic == b.refuse {
 		return errBrokerRefused
 	}
 	b.calls = append(b.calls, call{topic: topic, empty: len(payload) == 0, payload: append([]byte(nil), payload...)})
+	if retain {
+		if len(payload) == 0 {
+			delete(b.retained, topic)
+		} else {
+			b.seedLocked(topic, payload)
+		}
+	}
 	return nil
 }
 
-func (b *broker) Subscribe(context.Context, string, byte, publisher.Handler) error { return nil }
-func (b *broker) Unsubscribe(context.Context, string) error                        { return nil }
+func (b *broker) Subscribe(_ context.Context, filter string, _ byte, h publisher.Handler) error {
+	b.mu.Lock()
+	replay := map[string][]byte{}
+	for t, p := range b.retained {
+		if strings.HasPrefix(t, strings.TrimSuffix(filter, "#")) {
+			replay[t] = p
+		}
+	}
+	b.mu.Unlock()
+	for t, p := range replay {
+		h(t, p, true)
+	}
+	return nil
+}
+
+// seed puts retained configs on the broker: the previous build's per-entity
+// configs, or the ones a dying socket never cleared.
+func (b *broker) seed(topics ...string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for _, t := range topics {
+		b.seedLocked(t, []byte(`{"previous":"build"}`))
+	}
+}
+
+func (b *broker) seedLocked(topic string, payload []byte) {
+	if b.retained == nil {
+		b.retained = map[string][]byte{}
+	}
+	b.retained[topic] = append([]byte(nil), payload...)
+}
+func (b *broker) Unsubscribe(context.Context, string) error { return nil }
 
 // take returns everything recorded since the last take and clears the log,
 // which is how one connection's traffic is separated from the next one's.
@@ -184,6 +226,7 @@ func TestTheRetractionsAreReSentAfterAReconnect(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			tr := &broker{}
+			tr.seed(want...)
 			p := bundlePlane(t, tr, nil)
 
 			// Connection 1. The retractions go out and the document does
@@ -202,7 +245,9 @@ func TestTheRetractionsAreReSentAfterAReconnect(t *testing.T) {
 				t.Fatal("connection 1 published the document although the broker refused it")
 			}
 
-			// The link comes back.
+			// The link comes back, and the broker never applied what was
+			// written to the dead one: the per-entity configs are still there.
+			tr.seed(want...)
 			tr.setRefuse("")
 			if tc.reconnect {
 				p.Reconnect()
@@ -258,6 +303,7 @@ func TestTheCrashWindowHealsOnTheNextBoot(t *testing.T) {
 	b := testBundle()
 	want := publisher.SupersededTopics(testPrefix, b)
 	tr := &broker{}
+	tr.seed(want...)
 
 	// The process that dies.
 	crashed := bundlePlane(t, tr, nil)
@@ -269,7 +315,9 @@ func TestTheCrashWindowHealsOnTheNextBoot(t *testing.T) {
 		t.Fatalf("the crashing process retracted %d topics, want %d", len(got), len(want))
 	}
 
-	// The next boot: a new process over the same broker.
+	// The next boot: a new process over the same broker, which still holds
+	// the per-entity configs the dying socket never cleared.
+	tr.seed(want...)
 	tr.setRefuse("")
 	fresh := bundlePlane(t, tr, nil)
 	if _, err := fresh.PublishBundle(t.Context(), b); err != nil {
@@ -287,6 +335,29 @@ func TestTheCrashWindowHealsOnTheNextBoot(t *testing.T) {
 	}
 	if at := documentAt(calls, docTopic()); at != len(reSent) {
 		t.Errorf("the document is at index %d of %d — every retraction must precede it", at, len(calls))
+	}
+}
+
+// TestAMigratedTreeIsNotRetractedAgain is the noise this plane stopped
+// making. Once the migration is done the broker holds no per-entity config,
+// and the blind round still sent one empty message per entity on every
+// connection — each logged by Home Assistant as a conflicting discovery
+// message, because it checks the topic before the payload (79 lines per
+// restart, measured 2026-10-12). The runtime now looks first.
+func TestAMigratedTreeIsNotRetractedAgain(t *testing.T) {
+	t.Parallel()
+	tr := &broker{}
+	p := bundlePlane(t, tr, nil)
+
+	if _, err := p.PublishBundle(t.Context(), testBundle()); err != nil {
+		t.Fatal(err)
+	}
+	calls := tr.take()
+	if got := retractions(calls); len(got) != 0 {
+		t.Errorf("retracted %v on a tree that holds no per-entity config", got)
+	}
+	if documentAt(calls, docTopic()) < 0 {
+		t.Fatal("the document was not published")
 	}
 }
 

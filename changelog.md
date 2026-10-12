@@ -5,6 +5,22 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-12
+
+### Changed
+
+- go-hamqtt 0.37.0 -> 0.38.0, with `publisher.Config.SupersedeObserved` on.
+  A per-entity discovery config that the device document replaced is now
+  retracted only where the broker still retains one: the first document on
+  each connection takes one short snapshot of the discovery prefix (about
+  two seconds) and clears what it finds. Before, every connection sent one
+  empty retained message per entity whether or not anything was there, and
+  Home Assistant logged each as `Received a conflicting MQTT discovery
+  message` — 79 WARNING lines per restart for three appliances, measured
+  2026-10-12, long after the migration had finished. No entity, name or
+  history changes; an installation still holding per-entity configs is
+  migrated exactly as before.
+
 ## [0.16.0] - 2026-10-12
 
 ### Changed

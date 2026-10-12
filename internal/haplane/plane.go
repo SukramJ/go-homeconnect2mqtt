@@ -197,6 +197,12 @@ func New(tr publisher.Transport, cfg Config) *Plane {
 				Layout:      cfg.Layout,
 				QoS:         cfg.QoS,
 				Logger:      logger,
+				// Retract a superseded per-entity config only where the
+				// broker still retains one. Blind, every connection sent one
+				// empty message per entity, and Home Assistant logged each
+				// as a conflicting discovery message (79 per restart,
+				// measured 2026-10-12).
+				SupersedeObserved: true,
 			})
 		},
 		logger:      logger,
