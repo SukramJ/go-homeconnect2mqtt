@@ -3,10 +3,10 @@ module github.com/SukramJ/go-homeconnect2mqtt
 go 1.27.2
 
 require (
-	github.com/SukramJ/go-ha-catalog v0.3.0
+	github.com/SukramJ/go-ha-catalog v0.3.1
 	github.com/SukramJ/go-hamqtt v0.38.0
 	github.com/SukramJ/go-mqtt v1.6.0
 	github.com/coder/websocket v1.8.15
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.24.0
 	gopkg.in/yaml.v3 v3.0.1
 )
