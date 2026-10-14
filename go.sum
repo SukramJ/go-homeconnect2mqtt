@@ -1,13 +1,13 @@
-github.com/SukramJ/go-ha-catalog v0.3.0 h1:yyb0JmvWN9TsNT6Ev9KACCV+KFK5a/va/Dhg50igUrA=
-github.com/SukramJ/go-ha-catalog v0.3.0/go.mod h1:z+G41LzF/Aj6xeoT0CqXylm7TxFhScqt118+h1vPwA8=
+github.com/SukramJ/go-ha-catalog v0.3.1 h1:wo8CN+r4QHFCIBftSJMCHzYzmnkbs2FjEbnfjjQRT0c=
+github.com/SukramJ/go-ha-catalog v0.3.1/go.mod h1:GWdkU683HaEB23e2RWabRZinYPIbWq6wyRQ+iBbMP5s=
 github.com/SukramJ/go-hamqtt v0.38.0 h1:iWP2ncZVCVxQN07aUKV3tQh4H3SGd4dZiyFHVBUjrFE=
 github.com/SukramJ/go-hamqtt v0.38.0/go.mod h1:Uo3do9IfzH/lJnUovxLN0kTbLr1ky9gRyEmNu3/KW00=
 github.com/SukramJ/go-mqtt v1.6.0 h1:8qGuMm4BFM5xB0Lb8+GeHkTceiYDQ1YWqsmdXkQ6nKo=
 github.com/SukramJ/go-mqtt v1.6.0/go.mod h1:5d2rA0gppys68MuhP8RoCtb/yorzYwVFP3Myb1HhsaA=
 github.com/coder/websocket v1.8.15 h1:6B2JPeOGlpff2Uz6vOEH1Vzpi0iUz20A+lPVhPHtNUA=
 github.com/coder/websocket v1.8.15/go.mod h1:NX3SzP+inril6yawo5CQXx8+fk145lPDC6pumgx0mVg=
-golang.org/x/sync v0.23.0 h1:KameEIfc1IkluZyXWLn39Wd4tURc6GbCiISGiZm2bQk=
-golang.org/x/sync v0.23.0/go.mod h1:sUUOizhqBxiL6pEWpqNLUiaJn1ShEbZ6BBqskPbjZm0=
+golang.org/x/sync v0.24.0 h1:iqiDrGoDgyuvAKrhLQthUEzU/R378N78gXbBjxed7oA=
+golang.org/x/sync v0.24.0/go.mod h1:sUUOizhqBxiL6pEWpqNLUiaJn1ShEbZ6BBqskPbjZm0=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
