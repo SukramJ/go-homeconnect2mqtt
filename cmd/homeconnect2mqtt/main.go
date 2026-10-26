@@ -8,11 +8,13 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log/slog"
+	"net/url"
 	"os"
 	"os/signal"
 	"sync/atomic"
@@ -147,7 +149,11 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 		return fmt.Errorf("mqtt: last will: %w", err)
 	}
 
-	client := mqtt.NewTCPClient(mqttClientConfig(cfg, will, logger))
+	clientCfg, err := mqttClientConfig(cfg, will, logger)
+	if err != nil {
+		return err
+	}
+	client := mqtt.NewTCPClient(clientCfg)
 	clientRef.Store(client)
 	lc := mqtt.NewLifecycle(mqtt.LifecycleConfig{
 		InitialBackoff: cfg.ReconnectInitialDuration(),
@@ -437,9 +443,18 @@ func brokerMaxPacketSize(client *mqtt.TCPClient) (uint32, bool) {
 // exactly how a will nobody reads gets configured — which is the defect
 // go-hamqtt's publisher package exists to stop reproducing, and which
 // this daemon had until F1.
-func mqttClientConfig(cfg *config.Config, will publisher.Will, logger *slog.Logger) mqtt.TCPConfig {
+//
+// It also builds the TLS configuration, at start rather than at the first
+// dial, so an unreadable or unusable MQTT_TLS_CA stops the daemon with an
+// error naming the file instead of surfacing as a reconnect loop.
+func mqttClientConfig(cfg *config.Config, will publisher.Will, logger *slog.Logger) (mqtt.TCPConfig, error) {
+	tlsCfg, err := mqttTLSConfig(cfg, logger)
+	if err != nil {
+		return mqtt.TCPConfig{}, err
+	}
 	return mqtt.TCPConfig{
 		BrokerURL:  cfg.MQTTServer,
+		TLSConfig:  tlsCfg,
 		ClientID:   config.ClientID,
 		Username:   cfg.MQTTLogin,
 		Password:   cfg.MQTTPassword,
@@ -451,7 +466,38 @@ func mqttClientConfig(cfg *config.Config, will publisher.Will, logger *slog.Logg
 			Retain:  will.Retain,
 		},
 		Logger: logger,
+	}, nil
+}
+
+// mqttTLSConfig is the broker TLS configuration, or nil on a plaintext
+// MQTT_SERVER. The scheme of MQTT_SERVER is what selects TLS; MQTT_TLS_CA
+// and MQTT_TLS_INSECURE only refine it, so on a tcp:// server they have no
+// effect. That is logged rather than refused: the connection is no less
+// secure than the operator's URL asked for, and an add-on user switching
+// between the Home Assistant MQTT service (whose ssl flag picks the scheme)
+// and a plaintext broker should not have to clear the CA option first. The
+// broker's hostname is the name the certificate is verified for.
+func mqttTLSConfig(cfg *config.Config, logger *slog.Logger) (*tls.Config, error) {
+	if !cfg.MQTTUsesTLS() {
+		if cfg.MQTTTLSCA != "" || cfg.MQTTTLSInsecure {
+			logger.Warn("config.mqtt_tls_ignored",
+				slog.String("note", "MQTT_TLS_CA / MQTT_TLS_INSECURE have no effect while MQTT_SERVER is not ssl://, tls:// or mqtts://"))
+		}
+		return nil, nil
 	}
+	u, err := url.Parse(cfg.MQTTServer)
+	if err != nil {
+		return nil, fmt.Errorf("config: MQTT_SERVER: %w", err)
+	}
+	tlsCfg, err := mqtt.NewClientTLSConfigWithCA(u.Hostname(), cfg.MQTTTLSCA, cfg.MQTTTLSInsecure)
+	if err != nil {
+		return nil, fmt.Errorf("config: MQTT_TLS_CA: %w", err)
+	}
+	if cfg.MQTTTLSInsecure {
+		logger.Warn("config.mqtt_tls_insecure",
+			slog.String("note", "MQTT_TLS_INSECURE is on: the broker certificate is NOT verified, anyone on the path can impersonate the broker"))
+	}
+	return tlsCfg, nil
 }
 
 func loadConfig(configPath string) (*config.Config, error) {

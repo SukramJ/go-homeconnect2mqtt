@@ -6,6 +6,16 @@
 MQTT_SERVER: "tcp://localhost:1883"
 MQTT_LOGIN: ""
 MQTT_PASSWORD: ""
+# TLS is selected by the scheme of MQTT_SERVER: ssl://, tls:// or mqtts://
+# (e.g. "ssl://broker.lan:8883"); tcp:// / mqtt:// are plaintext. The broker
+# certificate is verified against the system roots, for the host of
+# MQTT_SERVER. The two keys below only apply over TLS.
+# MQTT_TLS_CA: PEM CA bundle for a broker certificate a private CA issued
+# (replaces the system roots); an unusable file stops the daemon at start.
+MQTT_TLS_CA: ""
+# MQTT_TLS_INSECURE: DANGEROUS — skip certificate verification entirely.
+# Never combine with MQTT_TLS_CA.
+MQTT_TLS_INSECURE: false
 # MQTT_TOPIC is the instance name: every topic is <MQTT_TOPIC>/<function>/...
 # (mqtt-smarthome 2.0). It is the ONLY thing that keeps two instances on one
 # broker apart — give each its own. The default "homeconnect" is also the

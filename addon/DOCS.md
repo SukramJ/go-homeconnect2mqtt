@@ -33,6 +33,8 @@ For a standard Home Assistant install with the Mosquitto broker:
 | `mqtt_port` | int | `1883` | MQTT broker port (only used when `mqtt_server` is a bare host). |
 | `mqtt_login` | str | `""` | MQTT username (only when `mqtt_server` is set). |
 | `mqtt_password` | password | `""` | MQTT password (only when `mqtt_server` is set). |
+| `mqtt_tls_ca` | str? | `""` | Path of a PEM CA bundle the broker certificate is verified against, for a broker whose certificate a private CA issued (replaces the system roots). `/ssl` (read-only) and `/share` are mapped, so e.g. `/ssl/ca.crt` or `/share/homeconnect/ca.pem`. Only used over TLS — see *MQTT over TLS* below. An unreadable or unusable file stops the add-on with an error naming it. |
+| `mqtt_tls_insecure` | bool | `false` | **Dangerous.** Skip the verification of the broker certificate — anyone on the network path can then impersonate the broker and read the MQTT credentials. Logged as a warning on every start. Cannot be combined with `mqtt_tls_ca`. |
 | `mqtt_topic` | str | `homeconnect` | The instance name: every topic is `<mqtt_topic>/<function>/…` (mqtt-smarthome 2.0). It is the **only** thing that keeps two instances on one broker apart — give each its own. The default `homeconnect` is also the default instance name of hobbyquaker's Node.js adapter `homeconnect2mqtt`; running both on one broker needs one of them renamed. One topic level: no `/`, `+` or `#`. |
 | `maintenance` | bool | `true` | The maintenance topics `<mqtt_topic>/maintenance/…` (runtime log level, process stats). See *Maintenance* below — and its security note. |
 | `stats_interval` | int | `60` | Seconds between `<mqtt_topic>/maintenance/stats`; `0` switches them off. |
@@ -42,6 +44,22 @@ For a standard Home Assistant install with the Mosquitto broker:
 | `language` | list(en\|de) | `en` | Friendly-name language. Entity **names** are localized; entity **ids** stay English and language-independent. |
 | `web_enable` | bool | `true` | Enable the web UI (served via Ingress): live state and the appliance controls. |
 | `debug` | bool | `false` | Verbose logging. |
+
+### MQTT over TLS
+
+TLS is chosen by the broker URL, not by an option of its own:
+
+- **Your own broker:** set `mqtt_server` to a full URL with the `ssl://` scheme
+  (`tls://` and `mqtts://` work too), e.g. `ssl://broker.lan:8883`. A bare host
+  always connects in plaintext on `mqtt_port`.
+- **Home Assistant MQTT service** (`mqtt_server` empty): the add-on uses `ssl://`
+  by itself when the service reports TLS.
+
+The broker certificate is verified against the system roots and for the
+broker's host name. For a certificate from a private CA, put the CA bundle in
+`/ssl` or `/share` and name it in `mqtt_tls_ca`. `mqtt_tls_ca` and
+`mqtt_tls_insecure` apply to both sources above and have no effect on a
+plaintext connection (the add-on logs `config.mqtt_tls_ignored`).
 
 ### `devices` entry
 

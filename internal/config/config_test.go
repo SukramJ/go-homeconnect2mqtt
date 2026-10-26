@@ -278,3 +278,61 @@ func TestDurationHelpers(t *testing.T) {
 		t.Error("HeartbeatDuration")
 	}
 }
+
+// TestMQTTTLSKeysFromBothSources: MQTT_TLS_CA and MQTT_TLS_INSECURE load
+// from the file and from the HC2M_* environment (the add-on's way).
+func TestMQTTTLSKeysFromBothSources(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		yaml     string
+		env      mapEnv
+		ca       string
+		insecure bool
+	}{
+		{"defaults", "MQTT_SERVER: ssl://h:8883\n", nil, "", false},
+		{"file CA", "MQTT_SERVER: ssl://h:8883\nMQTT_TLS_CA: /ssl/ca.crt\n", nil, "/ssl/ca.crt", false},
+		{"file insecure", "MQTT_SERVER: ssl://h:8883\nMQTT_TLS_INSECURE: true\n", nil, "", true},
+		{"environment CA", "MQTT_SERVER: ssl://h:8883\n", mapEnv{EnvPrefix + "MQTT_TLS_CA": "/ssl/ca.crt", EnvPrefix + "MQTT_TLS_INSECURE": "false"}, "/ssl/ca.crt", false},
+		{"environment insecure", "MQTT_SERVER: ssl://h:8883\n", mapEnv{EnvPrefix + "MQTT_TLS_CA": "", EnvPrefix + "MQTT_TLS_INSECURE": "true"}, "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var env Env
+			if tc.env != nil {
+				env = tc.env
+			}
+			cfg, err := Load(strings.NewReader(tc.yaml), env)
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if cfg.MQTTTLSCA != tc.ca || cfg.MQTTTLSInsecure != tc.insecure {
+				t.Errorf("MQTT_TLS_CA = %q, MQTT_TLS_INSECURE = %v; want %q, %v",
+					cfg.MQTTTLSCA, cfg.MQTTTLSInsecure, tc.ca, tc.insecure)
+			}
+		})
+	}
+}
+
+// TestMQTTTLSCAAndInsecureAreRefusedTogether: a CA to verify against and no
+// verification at all contradict each other; the operator is told which
+// two keys, rather than one silently winning.
+func TestMQTTTLSCAAndInsecureAreRefusedTogether(t *testing.T) {
+	_, err := Load(strings.NewReader("MQTT_SERVER: ssl://h:8883\n"),
+		mapEnv{EnvPrefix + "MQTT_TLS_CA": "/ssl/ca.crt", EnvPrefix + "MQTT_TLS_INSECURE": "true"})
+	var ve *ValidationError
+	if !errors.As(err, &ve) || !strings.Contains(err.Error(), "MQTT_TLS_CA") || !strings.Contains(err.Error(), "MQTT_TLS_INSECURE") {
+		t.Fatalf("err = %v, want a validation error naming MQTT_TLS_CA and MQTT_TLS_INSECURE", err)
+	}
+}
+
+// TestMQTTUsesTLS: the scheme of MQTT_SERVER is the TLS switch, with the
+// spellings the go-mqtt client dials as TLS.
+func TestMQTTUsesTLS(t *testing.T) {
+	for server, want := range map[string]bool{
+		"tcp://h:1883": false, "mqtt://h": false, "h:1883": false, "": false, "://bad": false,
+		"ssl://h:8883": true, "tls://h": true, "mqtts://h:8883": true, "SSL://h:8883": true,
+	} {
+		if got := (&Config{MQTTServer: server}).MQTTUsesTLS(); got != want {
+			t.Errorf("MQTTUsesTLS(%q) = %v, want %v", server, got, want)
+		}
+	}
+}

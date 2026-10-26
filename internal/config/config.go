@@ -9,7 +9,10 @@
 // the YAML keys so operators can reason about the file without nesting.
 package config
 
-import "time"
+import (
+	"net/url"
+	"time"
+)
 
 // Daemon-wide constants consumed by the loader engine in load.go.
 const (
@@ -34,6 +37,18 @@ type Config struct {
 	MQTTLogin    string `yaml:"MQTT_LOGIN"`
 	MQTTPassword string `yaml:"MQTT_PASSWORD"`
 	MQTTTopic    string `yaml:"MQTT_TOPIC"`
+	// MQTTTLSCA is the path of a PEM CA bundle the broker certificate is
+	// verified against, replacing the system roots — for a broker whose
+	// certificate a private CA issued. TLS itself is chosen by the scheme of
+	// MQTT_SERVER (ssl://, tls:// or mqtts://), not by a key of its own, so
+	// on a tcp:// server this has no effect and the daemon says so at start.
+	MQTTTLSCA string `yaml:"MQTT_TLS_CA"`
+	// MQTTTLSInsecure skips the verification of the broker certificate.
+	// Dangerous — anyone on the path can impersonate the broker and read the
+	// credentials — so it is never a default, is logged as a warning at
+	// start, and is refused together with MQTT_TLS_CA (the two contradict
+	// each other).
+	MQTTTLSInsecure bool `yaml:"MQTT_TLS_INSECURE"`
 	// MQTTQoS is a pointer for the same reason MQTTRetain is, and the
 	// reason is not symmetry: 0 is a LEVEL an operator can ask for, and a
 	// bare int cannot tell `MQTT_QOS: 0` from "the key is absent".
@@ -161,6 +176,22 @@ func (c *Config) StatsIntervalSeconds() int {
 		return DefaultMQTTStatsInterval
 	}
 	return *c.MQTTStatsInterval
+}
+
+// MQTTUsesTLS reports whether MQTT_SERVER selects a TLS transport. The
+// scheme spellings are the ones the go-mqtt client dials as TLS; an
+// unparsable URL is reported as plaintext and left for the client to
+// refuse.
+func (c *Config) MQTTUsesTLS() bool {
+	u, err := url.Parse(c.MQTTServer)
+	if err != nil {
+		return false
+	}
+	switch u.Scheme {
+	case "ssl", "tls", "mqtts":
+		return true
+	}
+	return false
 }
 
 // RemovedKeyNote explains what replaced a key listed in [Config.Removed].

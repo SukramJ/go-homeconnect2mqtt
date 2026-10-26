@@ -5,6 +5,19 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+### Added
+
+- **MQTT over TLS with a private CA.** `MQTT_TLS_CA` (add-on: `mqtt_tls_ca`)
+  names a PEM CA bundle the broker certificate is verified against, and
+  `MQTT_TLS_INSECURE` (add-on: `mqtt_tls_insecure`) explicitly skips the
+  verification (logged as a warning at every start; refused together with
+  `MQTT_TLS_CA`). TLS itself is still selected by the `ssl://` scheme of
+  `MQTT_SERVER`; on a `tcp://` server both keys are ignored with a warning. An
+  unreadable or unusable CA file stops the daemon at start with an error
+  naming it. The add-on maps `/ssl` read-only for the CA, and both options
+  also apply to the auto-discovered Home Assistant MQTT service.
+- go-mqtt 1.7.0.
+
 ## [0.18.0] - 2026-10-26
 
 ### Changed

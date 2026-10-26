@@ -58,6 +58,10 @@ func Validate(c *Config) error {
 		add("MQTT_LOGIN and MQTT_PASSWORD must both be set or both empty")
 	}
 
+	if c.MQTTTLSCA != "" && c.MQTTTLSInsecure {
+		add("MQTT_TLS_CA and MQTT_TLS_INSECURE contradict each other: a CA to verify against and no verification at all; set only one")
+	}
+
 	if c.HASSEnable && c.HASSBaseTopic == "" {
 		add("HASS_BASE_TOPIC is required when HASS_ENABLE is true")
 	}
