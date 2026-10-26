@@ -18,6 +18,12 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
   also apply to the auto-discovered Home Assistant MQTT service.
 - go-mqtt 1.7.0.
 
+### Changed
+
+- go-bridgeui v0.3.0: the dashboard translates value names and problem
+  events through the bridge's labels, and a wide card no longer pushes the
+  page past the window.
+
 ## [0.18.0] - 2026-10-26
 
 ### Changed
