@@ -25,8 +25,10 @@ Profile Downloader* (openHAB target format); after that everything is local.
 - **Generic MQTT mapping.** Every device feature is exposed, not a curated
   allowlist; an optional `mapping.yaml` enriches features with device classes,
   units and device-specific program-start paths.
-- **Optional Home Assistant discovery** and an optional read-only status/health
-  web UI (off by default).
+- **Optional Home Assistant discovery** and an optional web UI (off by default):
+  the shared [go-bridgeui](https://github.com/SukramJ/go-bridgeui) dashboard —
+  appliance state, programs, settings, and the features Home Assistant can
+  control — plus the device API of [docs/08-web-api.md](docs/08-web-api.md).
 
 ## Quick start
 

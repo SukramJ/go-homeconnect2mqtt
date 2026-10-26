@@ -1,161 +1,120 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2026 SukramJ
 
-// Package web is the optional, opt-in diagnostics/health UI: a small HTTP
-// API + SSE stream plus an embedded SPA. It is only started when
-// WEB_ENABLE is set and never required for the core MQTT bridge
-// (docs/08-web-api.md).
+// Package web is the optional, opt-in diagnostics UI. The dashboard —
+// server, hardening, SSE stream and single-page app — is go-bridgeui, the
+// one every go-*2mqtt bridge embeds; this package presents the state store
+// and the write dispatcher as go-bridgeui's contract, names the page's
+// layout and labels, and keeps the device API of docs/08-web-api.md
+// beside it. It is only started when WEB_ENABLE is set and never required
+// for the core MQTT bridge.
 package web
 
 import (
 	"context"
-	"crypto/subtle"
 	"embed"
-	"errors"
-	"fmt"
-	"io/fs"
 	"log/slog"
-	"net"
 	"net/http"
-	"time"
 
+	"github.com/SukramJ/go-bridgeui"
+
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/state"
 )
 
-//go:embed static
-var staticFS embed.FS
+// i18nFS holds this bridge's labels — sections, groups, status and
+// configuration tiles — merged over go-bridgeui's built-in bundles.
+//
+//go:embed i18n
+var i18nFS embed.FS
 
 // Dispatcher applies a write command (implemented by *bridge.Bridge).
 type Dispatcher interface {
 	Dispatch(ctx context.Context, device, feature string, value any) error
 }
 
-// VersionInfo is the build metadata shown by the API.
+// VersionInfo is the build identity GET /api/version reports.
 type VersionInfo struct {
 	Version   string
 	Commit    string
 	BuildDate string
 }
 
-// Config configures the web server.
+// Config parameterises the web server.
 type Config struct {
-	Bind     string
+	// Bind is the listen address "host:port".
+	Bind string
+	// User / Password enable HTTP Basic auth when either is non-empty.
 	User     string
 	Password string
+	// App is the daemon's configuration, shown sanitised under System.
+	App *config.Config
 }
 
-// Server is the HTTP server for the diagnostics UI.
-type Server struct {
-	cfg      Config
-	store    *state.Store
-	dispatch Dispatcher
-	version  VersionInfo
-	logger   *slog.Logger
-	mqttUp   func() bool
-
-	handler http.Handler
-	// shutdown is closed when serve starts its graceful shutdown; the SSE
-	// handler watches it so open streams end promptly without cutting the
-	// grace window short for regular in-flight requests. Nil (never fires)
-	// when the handler is used without serve, e.g. in httptest.
-	shutdown chan struct{}
+// layout is the Home Connect page: an appliance's state, its programs and
+// options; its settings and commands under System.
+var layout = bridgeui.Layout{
+	Brand:   "homeconnect2mqtt",
+	Product: "Home Connect",
+	Icon:    "🏠",
+	Sections: []bridgeui.Section{
+		{ID: "state", Title: "section.state", Nav: "nav.state", Groups: []string{"status", "event"}},
+		{ID: "programs", Title: "section.programs", Nav: "nav.programs", Groups: []string{"program", "option"}, Optional: true},
+	},
+	SystemGroups: []string{"setting", "command", "other"},
 }
 
-// New builds the web server. mqttUp may be nil (then MQTT is reported up).
-func New(cfg Config, store *state.Store, dispatch Dispatcher, version VersionInfo, mqttUp func() bool, logger *slog.Logger) *Server {
+// New builds the dashboard with the device API beside it. It does not bind
+// a socket — call Run on the result.
+func New(cfg Config, store *state.Store, dispatch Dispatcher, version VersionInfo, mqttUp func() bool, logger *slog.Logger) *bridgeui.Server {
 	if logger == nil {
 		logger = slog.Default()
 	}
 	if mqttUp == nil {
 		mqttUp = func() bool { return true }
 	}
-	s := &Server{cfg: cfg, store: store, dispatch: dispatch, version: version, logger: logger, mqttUp: mqttUp}
-	s.handler = s.buildHandler()
-	return s
+	app := cfg.App
+	if app == nil {
+		app = &config.Config{}
+	}
+	tr, err := bridgeui.LoadTranslations(i18nFS, "i18n")
+	if err != nil {
+		// The bundles are embedded and covered by a test.
+		panic("web: " + err.Error())
+	}
+	a := &adapter{store: store, dispatch: dispatch, version: version.Version, mqttUp: mqttUp, cfg: app}
+	a.problems.OnAdd = a.notifier.Notify
+	r := &routes{store: store, dispatch: dispatch, version: version, logger: logger}
+	return bridgeui.New(bridgeui.Options{
+		Bind:         cfg.Bind,
+		User:         cfg.User,
+		Password:     cfg.Password,
+		Realm:        "homeconnect2mqtt",
+		Logger:       logger,
+		Language:     app.Language,
+		Layout:       layout,
+		Translations: tr,
+		// docs/08-web-api.md: /api/health is a readiness probe.
+		HealthProbe: true,
+		Routes:      r.register,
+	}, a)
 }
 
-// Handler exposes the configured handler (for tests via httptest).
-func (s *Server) Handler() http.Handler { return s.handler }
+// routes is the device API of docs/08-web-api.md, served beside the
+// dashboard's own.
+type routes struct {
+	store    *state.Store
+	dispatch Dispatcher
+	version  VersionInfo
+	logger   *slog.Logger
+}
 
-func (s *Server) buildHandler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/status", s.handleStatus)
-	mux.HandleFunc("GET /api/health", s.handleHealth)
+// register adds the device API to the dashboard's mux. The one mutating
+// route takes JSON from the same origin only.
+func (s *routes) register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/devices", s.handleDevices)
 	mux.HandleFunc("GET /api/devices/{device}", s.handleDevice)
 	mux.HandleFunc("GET /api/devices/{device}/features/{feature...}", s.handleFeature)
-	mux.HandleFunc("POST /api/devices/{device}/set", s.handleSet)
-	mux.HandleFunc("GET /api/events", s.handleSSE)
+	mux.Handle("POST /api/devices/{device}/set", bridgeui.SameOrigin(http.HandlerFunc(s.handleSet)))
 	mux.HandleFunc("GET /api/version", s.handleVersion)
-
-	sub, _ := fs.Sub(staticFS, "static")
-	mux.Handle("/", http.FileServer(http.FS(sub)))
-
-	return s.withBasicAuth(mux)
-}
-
-// Run serves until the context is cancelled, then shuts down gracefully.
-func (s *Server) Run(ctx context.Context) error {
-	var lc net.ListenConfig
-	ln, err := lc.Listen(ctx, "tcp", s.cfg.Bind)
-	if err != nil {
-		return fmt.Errorf("web: listen on %s: %w", s.cfg.Bind, err)
-	}
-	return s.serve(ctx, ln)
-}
-
-// serve runs the HTTP server on ln until ctx is cancelled (split from Run
-// so tests can inject an ephemeral-port listener).
-func (s *Server) serve(ctx context.Context, ln net.Listener) error {
-	srv := &http.Server{
-		Handler:           s.handler,
-		ReadHeaderTimeout: 10 * time.Second,
-		// IdleTimeout reaps idle keep-alive connections. ReadTimeout and
-		// WriteTimeout deliberately stay zero: /api/events is a long-lived
-		// SSE response (docs/08-web-api.md) and an absolute read/write
-		// deadline would kill the stream mid-flight.
-		IdleTimeout: 120 * time.Second,
-	}
-	// Deliberately no BaseContext tied to ctx: in-flight regular requests
-	// (e.g. a set dispatch) get srv.Shutdown's full grace window; only the
-	// long-lived SSE streams are told to end early, via s.shutdown.
-	s.shutdown = make(chan struct{})
-	errCh := make(chan error, 1)
-	go func() {
-		s.logger.Info("web.listening", slog.String("bind", ln.Addr().String()))
-		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errCh <- err
-		}
-	}()
-	select {
-	case <-ctx.Done():
-		close(s.shutdown)
-		shutCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer cancel()
-		if err := srv.Shutdown(shutCtx); err != nil {
-			s.logger.Warn("web.shutdown", slog.String("err", err.Error()))
-			_ = srv.Close()
-		}
-		return ctx.Err()
-	case err := <-errCh:
-		return err
-	}
-}
-
-// withBasicAuth enforces HTTP basic auth when both user and password are
-// configured; otherwise it passes through (docs/09 §1).
-func (s *Server) withBasicAuth(next http.Handler) http.Handler {
-	if s.cfg.User == "" || s.cfg.Password == "" {
-		return next
-	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user, pass, ok := r.BasicAuth()
-		if !ok || subtle.ConstantTimeCompare([]byte(user), []byte(s.cfg.User)) != 1 ||
-			subtle.ConstantTimeCompare([]byte(pass), []byte(s.cfg.Password)) != 1 {
-			w.Header().Set("WWW-Authenticate", `Basic realm="go-homeconnect2mqtt"`)
-			writeError(w, "unauthorized", http.StatusUnauthorized, "authentication required", nil)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
 }

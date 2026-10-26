@@ -11,23 +11,28 @@ import "time"
 // Feature is the canonical representation of one device feature, shared by
 // the REST API and SSE value events (docs/09 §2.1).
 type Feature struct {
-	Feature      string   `json:"feature"`
-	Topic        string   `json:"topic"`
-	UID          int      `json:"uid"`
-	Value        any      `json:"value"`
-	ValueRaw     any      `json:"value_raw"`
-	ProtocolType string   `json:"protocol_type"`
-	ContentType  string   `json:"content_type"`
-	Access       string   `json:"access"`
-	Available    bool     `json:"available"`
-	Writable     bool     `json:"writable"`
-	Unit         *string  `json:"unit"`
-	DeviceClass  *string  `json:"device_class"`
-	Options      []string `json:"options"`
-	Min          *float64 `json:"min"`
-	Max          *float64 `json:"max"`
-	Step         *float64 `json:"step"`
-	UpdatedAt    string   `json:"updated_at"`
+	Feature      string `json:"feature"`
+	Topic        string `json:"topic"`
+	UID          int    `json:"uid"`
+	Value        any    `json:"value"`
+	ValueRaw     any    `json:"value_raw"`
+	ProtocolType string `json:"protocol_type"`
+	ContentType  string `json:"content_type"`
+	Access       string `json:"access"`
+	Available    bool   `json:"available"`
+	Writable     bool   `json:"writable"`
+	// Platform is the Home Assistant platform discovery gives the feature
+	// (button, select, switch, number, sensor, …); empty when it is not
+	// exposed. Name is its display name.
+	Platform    string   `json:"platform,omitempty"`
+	Name        string   `json:"name,omitempty"`
+	Unit        *string  `json:"unit"`
+	DeviceClass *string  `json:"device_class"`
+	Options     []string `json:"options"`
+	Min         *float64 `json:"min"`
+	Max         *float64 `json:"max"`
+	Step        *float64 `json:"step"`
+	UpdatedAt   string   `json:"updated_at"`
 }
 
 // DeviceSummary is the per-device header (docs/09 §2.2).

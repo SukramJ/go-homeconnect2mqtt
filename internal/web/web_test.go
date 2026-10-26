@@ -6,14 +6,11 @@ package web
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/bridge"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
@@ -48,18 +45,26 @@ func getJSON(t *testing.T, url string) (status int, body map[string]any) {
 	return resp.StatusCode, m
 }
 
+// /api/status is go-bridgeui's: the health with this bridge's tiles, and
+// every appliance as a device with its features as entries.
 func TestStatusEndpoint(t *testing.T) {
 	ts, _ := newTestServer(t, stubDispatch{}, true)
 	code, m := getJSON(t, ts.URL+"/api/status")
 	if code != http.StatusOK {
 		t.Fatalf("status code = %d", code)
 	}
-	if m["version"] != "0.1.0" {
-		t.Errorf("version = %v", m["version"])
+	health, _ := m["health"].(map[string]any)
+	if health["version"] != "0.1.0" {
+		t.Errorf("version = %v", health["version"])
 	}
-	devs, _ := m["devices"].([]any)
+	snap, _ := m["snapshot"].(map[string]any)
+	devs, _ := snap["devices"].([]any)
 	if len(devs) != 1 {
-		t.Errorf("expected 1 device, got %v", m["devices"])
+		t.Fatalf("expected 1 device, got %v", snap["devices"])
+	}
+	dev, _ := devs[0].(map[string]any)
+	if dev["id"] != "dw" || dev["title"] != "BOSCH Dishwasher" {
+		t.Errorf("device = %v", dev)
 	}
 }
 
@@ -178,51 +183,6 @@ func TestSetBodySizeLimit(t *testing.T) {
 	}
 }
 
-// TestShutdownPromptWithSSEClient verifies that cancelling the Run context
-// terminates the server promptly (well under the 5s Shutdown budget) even
-// while an SSE client holds an open stream: BaseContext must cancel the
-// request context so handleSSE returns.
-func TestShutdownPromptWithSSEClient(t *testing.T) {
-	store := state.New()
-	logger := slog.New(slog.DiscardHandler)
-	srv := New(Config{}, store, stubDispatch{}, VersionInfo{}, nil, logger)
-
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen: %v", err)
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	done := make(chan error, 1)
-	go func() { done <- srv.serve(ctx, ln) }()
-
-	// Connect an SSE client and read the initial snapshot so the stream is
-	// definitely established before shutdown starts.
-	resp, err := http.Get("http://" + ln.Addr().String() + "/api/events") //nolint:noctx // test client
-	if err != nil {
-		t.Fatalf("SSE GET: %v", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	buf := make([]byte, 256)
-	if _, err := resp.Body.Read(buf); err != nil {
-		t.Fatalf("SSE read: %v", err)
-	}
-
-	start := time.Now()
-	cancel()
-	select {
-	case err := <-done:
-		if !errors.Is(err, context.Canceled) {
-			t.Errorf("serve returned %v, want context.Canceled", err)
-		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("serve did not return within 3s of context cancel")
-	}
-	if elapsed := time.Since(start); elapsed >= 2*time.Second {
-		t.Errorf("shutdown took %v, want well under the 5s budget", elapsed)
-	}
-}
-
 // TestRunListenError checks that Run wraps and returns a listen failure.
 func TestRunListenError(t *testing.T) {
 	store := state.New()
@@ -260,21 +220,5 @@ func TestVersionEndpoint(t *testing.T) {
 	code, m := getJSON(t, ts.URL+"/api/version")
 	if code != 200 || m["version"] != "0.1.0" {
 		t.Errorf("version = %d %v", code, m["version"])
-	}
-}
-
-func TestSSESnapshot(t *testing.T) {
-	ts, _ := newTestServer(t, stubDispatch{}, true)
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/api/events", http.NoBody) //nolint:noctx // test client
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatalf("SSE GET: %v", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	buf := make([]byte, 256)
-	n, _ := resp.Body.Read(buf)
-	got := string(buf[:n])
-	if !strings.Contains(got, "event: snapshot") {
-		t.Errorf("first SSE chunk should be snapshot, got %q", got)
 	}
 }

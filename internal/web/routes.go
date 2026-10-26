@@ -8,7 +8,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/bridge"
 )
@@ -27,38 +26,11 @@ func writeError(w http.ResponseWriter, key string, status int, msg string, devic
 	})
 }
 
-func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
-	snap := s.store.Snapshot()
-	writeJSON(w, http.StatusOK, map[string]any{
-		"version":        s.version.Version,
-		"commit":         s.version.Commit,
-		"build_date":     s.version.BuildDate,
-		"started_at":     s.store.StartedAt().UTC().Format(time.RFC3339),
-		"uptime_seconds": int64(time.Since(s.store.StartedAt()).Seconds()),
-		"mqtt":           map[string]any{"connected": s.mqttUp()},
-		"devices":        snap.Devices,
-	})
-}
-
-func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	h := s.store.Health()
-	status := http.StatusOK
-	if h.Status != "ok" || !s.mqttUp() {
-		status = http.StatusServiceUnavailable
-		h.Status = "degraded"
-	}
-	writeJSON(w, status, map[string]any{
-		"status":  h.Status,
-		"mqtt":    map[string]any{"connected": s.mqttUp()},
-		"devices": h.Devices,
-	})
-}
-
-func (s *Server) handleDevices(w http.ResponseWriter, _ *http.Request) {
+func (s *routes) handleDevices(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, s.store.Snapshot())
 }
 
-func (s *Server) handleDevice(w http.ResponseWriter, r *http.Request) {
+func (s *routes) handleDevice(w http.ResponseWriter, r *http.Request) {
 	detail, ok := s.store.Device(r.PathValue("device"))
 	if !ok {
 		writeError(w, "device_not_found", http.StatusNotFound, "unknown device", nil)
@@ -67,7 +39,7 @@ func (s *Server) handleDevice(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, detail)
 }
 
-func (s *Server) handleFeature(w http.ResponseWriter, r *http.Request) {
+func (s *routes) handleFeature(w http.ResponseWriter, r *http.Request) {
 	detail, ok := s.store.Device(r.PathValue("device"))
 	if !ok {
 		writeError(w, "device_not_found", http.StatusNotFound, "unknown device", nil)
@@ -83,7 +55,7 @@ func (s *Server) handleFeature(w http.ResponseWriter, r *http.Request) {
 	writeError(w, "feature_not_found", http.StatusNotFound, "unknown feature", nil)
 }
 
-func (s *Server) handleVersion(w http.ResponseWriter, _ *http.Request) {
+func (s *routes) handleVersion(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"version": s.version.Version, "commit": s.version.Commit, "build_date": s.version.BuildDate,
 	})
@@ -99,7 +71,7 @@ type setRequest struct {
 // an oversized body from exhausting memory.
 const maxSetBodyBytes = 1 << 20
 
-func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
+func (s *routes) handleSet(w http.ResponseWriter, r *http.Request) {
 	device := r.PathValue("device")
 	r.Body = http.MaxBytesReader(w, r.Body, maxSetBodyBytes)
 	var req setRequest
@@ -127,7 +99,7 @@ func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
 
 // mapDispatchError translates a bridge dispatch error to the HTTP taxonomy
 // (docs/09 §5).
-func (s *Server) mapDispatchError(w http.ResponseWriter, err error) {
+func (s *routes) mapDispatchError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, bridge.ErrDeviceNotFound):
 		writeError(w, "device_not_found", http.StatusNotFound, err.Error(), nil)
