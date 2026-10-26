@@ -5,6 +5,25 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-26
+
+### Changed
+
+- **The web UI is go-bridgeui.** The dashboard is now the shared
+  [go-bridgeui](https://github.com/SukramJ/go-bridgeui) module (v0.2.0), the
+  same one go-mtec2mqtt, go-keba2mqtt and go-zendure2mqtt embed: status and
+  health, every appliance with its state, programs and options, settings, a
+  list of recent failed writes, and the controls Home Assistant has (selects,
+  switches, numbers, command buttons) — written through the same path as an
+  MQTT `set`. German or English after `LANGUAGE`, light/dark theme.
+- **API.** The device API (`/api/devices…`, `POST /api/devices/{device}/set`,
+  `/api/version`) is unchanged, except that `set` now takes JSON from the same
+  origin only (403 cross-site, 415 for another content type).
+  `/api/status`, `/api/health` and `/api/events` now have go-bridgeui's shape;
+  `/api/health` still answers 503 while degraded. The typed SSE events and
+  the `?device=` filter are gone.
+- MQTT and Home Assistant are unchanged.
+
 ## [0.17.0] - 2026-10-12
 
 ### Changed

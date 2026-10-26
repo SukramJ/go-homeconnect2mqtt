@@ -227,7 +227,7 @@ func serve(configPath, devicesPath, mappingPath string, stderr io.Writer) error 
 		return br.Run(ctx)
 	}
 
-	webSrv := web.New(web.Config{Bind: cfg.WebBind, User: cfg.WebUser, Password: cfg.WebPassword},
+	webSrv := web.New(web.Config{Bind: cfg.WebBind, User: cfg.WebUser, Password: cfg.WebPassword, App: cfg},
 		store, br,
 		web.VersionInfo{Version: version.Version, Commit: version.Commit, BuildDate: version.BuildDate},
 		client.IsConnected, logger)

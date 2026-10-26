@@ -203,6 +203,19 @@ func reconcileSensorClassesIn(t *sensorRelationTables, dc, unit, sc string) (out
 	return dc, unit, sc
 }
 
+// Describe is how the web UI shows an entity: its Home Assistant platform
+// (what control it gets, if any), its display name and its unit — the
+// same answers discovery gives, so the dashboard and Home Assistant agree.
+// ok is false for an entity discovery does not expose.
+func Describe(e *homeconnect.Entity) (platform, name, unit string, ok bool) {
+	platform, ok = classify(e)
+	if !ok {
+		return "", "", "", false
+	}
+	_, unit = deviceClassAndUnit(e)
+	return platform, humanize(e), unit, true
+}
+
 // classify maps an entity to a Home Assistant platform. ok is false when
 // the entity should not be exposed via discovery (e.g. a raw program node).
 func classify(e *homeconnect.Entity) (platform string, ok bool) {

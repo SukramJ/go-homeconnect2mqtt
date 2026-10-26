@@ -20,7 +20,8 @@ For a standard Home Assistant install with the Mosquitto broker:
    Assistant MQTT broker, and `hass_enable` is on by default, so entities appear
    automatically via MQTT discovery.
 4. **Start** the add-on, then open its **Web UI** (side-panel icon) for the live
-   diagnostic snapshot.
+   dashboard: appliance state, programs and options, settings, and the
+   controls Home Assistant also has.
 
 ## Options reference
 
@@ -39,7 +40,7 @@ For a standard Home Assistant install with the Mosquitto broker:
 | `hass_discovery` | list(full\|curated) | `curated` | `curated` (default) publishes only the primary set, aligned with the entities the official Home Connect integration creates (~60 instead of ~590 across three appliances); `full` exposes every feature (the long tail disabled-by-default + categorized as diagnostic/config). **Switching `full` → `curated` on a running installation DELETES entities:** the ~510 components per appliance that `curated` drops are tombstoned in the device document, so Home Assistant removes them along with their recorder history and anything referencing them. The add-on logs `hass.curated_components_omitted` with the count on start; see *Removing an entity* below. |
 | `hass_discovery_refresh` | bool | `false` | One-shot migration. On start the add-on clears all its retained discovery configs and re-creates the entities, so Home Assistant picks up changes it caches at first registration (entity **category**, name). Set it `true`, restart, then set it back to `false`. Resets per-entity room/custom-name; entity ids and automations are preserved. |
 | `language` | list(en\|de) | `en` | Friendly-name language. Entity **names** are localized; entity **ids** stay English and language-independent. |
-| `web_enable` | bool | `true` | Enable the read-only diagnostic web UI (served via Ingress). |
+| `web_enable` | bool | `true` | Enable the web UI (served via Ingress): live state and the appliance controls. |
 | `debug` | bool | `false` | Verbose logging. |
 
 ### `devices` entry

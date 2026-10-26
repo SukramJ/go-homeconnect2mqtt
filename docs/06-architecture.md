@@ -352,11 +352,11 @@ A `state.Store`:
 - `web.go`: HTTP listener on `WEB_BIND` (default `127.0.0.1:8080` — localhost-only, never
   accidentally on the network), optional **HTTP basic auth** (`WEB_USER`/`WEB_PASSWORD`; both empty
   ⇒ no auth, e.g. behind a reverse proxy).
-- `api.go`: JSON API — `GET /api/status`, `GET /api/health`, `GET /api/devices` (current
-  values), `POST /api/devices/<device>/set` (write dispatch into the bridge).
-- `backend.go`: **SSE** (`GET /api/events`) for live push to the browser.
-- `static/`: small embedded SPA via **`go:embed`** (an exception to the "don't embed" rule —
-  UI assets are not intended to be operator-patchable) + **i18n** (de/en, per `LANGUAGE`).
+- The dashboard — SPA, `GET /api/status`, `GET /api/health`, SSE `GET /api/events`,
+  hardening — is the shared **go-bridgeui** module; `adapter.go` presents the state store
+  and the dispatcher as its contract, `i18n/` holds this bridge's labels (de/en).
+- `routes.go`: the device API — `GET /api/devices` (current values),
+  `POST /api/devices/<device>/set` (write dispatch into the bridge, JSON + same-origin).
 
 ### 10.4 Lifecycle Integration
 

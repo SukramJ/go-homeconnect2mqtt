@@ -13,6 +13,7 @@ import (
 
 	"github.com/SukramJ/go-hamqtt/discovery"
 
+	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/profile"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/state"
@@ -323,6 +324,12 @@ func (b *Bridge) featureView(d *Device, e *homeconnect.Entity) state.Feature {
 	if e.Desc.IsEnum() {
 		for _, name := range e.Desc.Enumeration {
 			f.Options = append(f.Options, name)
+		}
+	}
+	if platform, name, unit, ok := hass.Describe(e); ok {
+		f.Platform, f.Name = platform, name
+		if unit != "" {
+			f.Unit = &unit
 		}
 	}
 	bd := e.Bounds()

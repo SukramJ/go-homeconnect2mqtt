@@ -5,8 +5,16 @@
 > `WEB_ENABLE=true`. Mirrors the `api.go`/`backend.go` pattern, adapted to the
 > Home Connect data model (`02-data-model.md`, `04-device-mapping.md`).
 >
-> This contract is the implementation and test basis for `web/api.go`,
-> `web/backend.go`, and the embedded SPA.
+> This contract is the implementation and test basis for `web/routes.go`
+> (the device API) and `web/adapter.go`.
+>
+> **Since 0.18.0 the dashboard is [go-bridgeui](https://github.com/SukramJ/go-bridgeui)**,
+> the module every go-*2mqtt bridge embeds: it serves the SPA, `GET /api/status`,
+> `GET /api/health`, `GET /api/events` (SSE) and its own `/api/snapshot`, `/api/items`,
+> `/api/config`, `/api/ui`, `POST /api/write` and `/i18n/*` in go-bridgeui's shape
+> (see its README). The device API below — `/api/devices…`, `POST …/set`,
+> `/api/version` — is this bridge's own and unchanged, served by the same server
+> behind the same auth and headers.
 
 ---
 
@@ -114,35 +122,19 @@ offline` (= `01-protocol.md` §10 state machine; `offline` = device unreachable)
 ## 3. REST Endpoints
 
 ### `GET /api/status`
-Overall daemon state.
-```json
-{
-  "version": "0.1.0",
-  "commit": "abc1234",
-  "build_date": "2026-06-23T18:00:00Z",
-  "started_at": "2026-06-23T20:10:00Z",
-  "uptime_seconds": 304,
-  "mqtt": { "connected": true, "broker": "tcp://localhost:1883", "last_connected_at": "2026-06-23T20:10:01Z" },
-  "devices": [ /* DeviceSummary[] */ ]
-}
-```
+go-bridgeui's `{health, snapshot}`: the health below, and every appliance as a
+device (`id` = `name`, `title` = brand + type, `online`, `updated_at`) whose
+entries are its features (`key` = the feature name, `group` = its kind:
+`status`, `setting`, `option`, `program`, `event`, `command`).
 
 ### `GET /api/health`
-Compact, for monitoring/probes. **HTTP 200** when `status == "ok"`, otherwise **503**
-(degraded) — so the endpoint works directly as a readiness probe.
-```json
-{
-  "status": "ok",
-  "mqtt": { "connected": true },
-  "devices": [
-    { "name": "geschirrspueler", "connection_state": "connected", "age_seconds": 3, "stale": false },
-    { "name": "kochfeld",        "connection_state": "offline",   "age_seconds": 920, "stale": true }
-  ]
-}
-```
-`status` = `ok` when MQTT is connected **and** no device is `stale`; otherwise `degraded`.
-`stale` = `age_seconds > STALE_THRESHOLD` (suggestion: max(2× expected update interval, 120 s);
-devices in state `offline`/`reconnecting` count as `stale`). Detects silent desyncs (FK-2).
+go-bridgeui's health: `status`, `version`, `started_at`, `uptime_seconds`, `tiles`
+(MQTT, topic, Home Assistant, appliances, stale appliances) and `problems`
+(failed writes from the web UI). **HTTP 200** when `status == "ok"`, otherwise
+**503** (degraded) — so the endpoint works directly as a readiness probe.
+`status` = `ok` when MQTT is connected **and** no device is `stale`; otherwise
+`degraded`. `stale` = `age_seconds > STALE_THRESHOLD` (devices in state
+`offline`/`reconnecting` count as `stale`). Detects silent desyncs (FK-2).
 
 ### `GET /api/devices`
 List of all devices: `{ "devices": [ /* DeviceSummary[] */ ] }`.
@@ -166,7 +158,8 @@ A single feature (`{feature}` = full dot-notation name, URL-encoded). Response: 
 Write dispatch into the bridge (the same path as an MQTT `/set`, including normalization,
 write-window gating, and device-specific start paths — `04-device-mapping` §6.4, FK-4/FK-5/FK-6).
 
-Request:
+Request (`Content-Type: application/json`, same-origin only — a cross-site request
+is refused with 403, a different content type with 415):
 ```json
 { "feature": "BSH.Common.Setting.PowerState", "value": "On" }
 ```
@@ -188,46 +181,11 @@ Errors: see §5 (e.g. **403** `not_writable`, **409** `write_window_closed`, **4
 
 ## 4. Server-Sent Events — `GET /api/events`
 
-Live push to the browser. Query: optional `?device=<name>` (only events for this device).
-
-**Behavior:**
-- On connect, the server first sends a `snapshot` event with the current overall state
-  (so the client does not have to call `GET /api/status` separately).
-- After that, incremental events on changes.
-- **Heartbeat:** every ~20 s an SSE comment line (`:\n\n`), so proxies do not drop the
-  connection.
-- `retry: 5000` is sent once (client reconnect hint).
-- Optional monotonic `id:` per event (for `Last-Event-ID` resume; the MVP may omit this).
-
-**Event types** (`event:` field + JSON in `data:`):
-
-`snapshot` (once on connect):
-```
-event: snapshot
-data: {"devices":[ /* DeviceSummary[] */ ],"mqtt":{"connected":true}}
-```
-
-`value` (feature value changed — fed from the `bridge.publish` path, in parallel with MQTT):
-```
-event: value
-data: {"device":"geschirrspueler","feature":"BSH.Common.Option.RemainingProgramTime","value":3600,"value_raw":3600,"updated_at":"2026-06-23T20:15:07Z"}
-```
-
-`connection` (connection state of a device changed):
-```
-event: connection
-data: {"device":"kochfeld","connection_state":"reconnecting","available":false,"updated_at":"2026-06-23T20:15:09Z"}
-```
-
-`health` (periodic, e.g. every 10 s, or on a `stale` transition):
-```
-event: health
-data: {"status":"degraded","devices":[{"name":"kochfeld","connection_state":"offline","age_seconds":920,"stale":true}]}
-```
-
-> The SSE source is the `state.Store` (`06` §10.2): each subscriber gets a buffered
-> channel (capacity 1); on a full buffer the oldest value is discarded ("latest wins"),
-> so a slow browser never blocks the publish path.
+go-bridgeui's stream: an `update` event carrying `{health, snapshot}` on connect,
+on every change of the state store (feature values, connection states) and every
+5 s. The typed `snapshot`/`value`/`connection`/`health` events and the `?device=`
+filter of releases before 0.18.0 are gone; read `/api/devices/{device}` for one
+appliance's raw features.
 
 ---
 
