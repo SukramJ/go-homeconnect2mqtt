@@ -40,6 +40,20 @@ else
 fi
 export HC2M_MQTT_TOPIC="$(bashio::config 'mqtt_topic')"
 
+# --- MQTT TLS refinements. TLS itself is selected by the ssl:// (tls://,
+# mqtts://) scheme above, whether from mqtt_server or from the MQTT service's
+# ssl flag; these apply to either source and are ignored (with a warning from
+# the daemon) on a tcp:// server. bashio yields "null" for an unset optional
+# option, so the CA is exported only when it holds a value. ---
+if bashio::config.has_value 'mqtt_tls_ca'; then
+  export HC2M_MQTT_TLS_CA="$(bashio::config 'mqtt_tls_ca')"
+fi
+if bashio::config.true 'mqtt_tls_insecure'; then
+  export HC2M_MQTT_TLS_INSECURE=true
+else
+  export HC2M_MQTT_TLS_INSECURE=false
+fi
+
 # --- mqtt-smarthome maintenance topics (<mqtt_topic>/maintenance/...) ---
 export HC2M_MQTT_MAINTENANCE="$(bashio::config 'maintenance')"
 export HC2M_MQTT_STATS_INTERVAL="$(bashio::config 'stats_interval')"

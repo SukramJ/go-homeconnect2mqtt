@@ -151,6 +151,8 @@ Proposal for the most important fields:
 MQTT_SERVER: "tcp://localhost:1883"
 MQTT_LOGIN: ""
 MQTT_PASSWORD: ""
+MQTT_TLS_CA: ""                    # PEM CA bundle; TLS itself is the ssl:// scheme of MQTT_SERVER
+MQTT_TLS_INSECURE: false           # DANGEROUS: skip certificate verification
 MQTT_TOPIC: "homeconnect"          # instance name: <name>/<function>/<item…> (mqtt-smarthome 2.0)
 MQTT_QOS: 1                        # discovery, connected, Last Will; status is QoS 0, set QoS 1
 MQTT_MAINTENANCE: true             # <name>/maintenance/… (log level, restart, stats)

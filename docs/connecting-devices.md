@@ -106,7 +106,7 @@ $EDITOR config.yaml devices.yaml
 **`config.yaml`** — at minimum the MQTT broker:
 
 ```yaml
-MQTT_SERVER: "tcp://192.168.1.10:1883"
+MQTT_SERVER: "tcp://192.168.1.10:1883"   # ssl://host:8883 for TLS (+ MQTT_TLS_CA for a private CA)
 MQTT_LOGIN: ""          # set both if your broker needs auth
 MQTT_PASSWORD: ""
 MQTT_TOPIC: "homeconnect"  # instance name; give a second instance on the same broker its own

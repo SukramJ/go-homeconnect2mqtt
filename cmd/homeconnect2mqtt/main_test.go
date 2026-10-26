@@ -169,7 +169,7 @@ func testWill(t *testing.T, cfg *config.Config) publisher.Will {
 func TestWillIsTheAvailabilitySourceEveryEntityReads(t *testing.T) {
 	t.Parallel()
 	cfg := &config.Config{MQTTServer: "tcp://b:1883", MQTTTopic: "homeconnect", HASSBaseTopic: "homeassistant", MQTTQoS: new(1)}
-	will := mqttClientConfig(cfg, testWill(t, cfg), slog.New(slog.DiscardHandler)).Will
+	will := mustClientConfig(t, cfg, testWill(t, cfg)).Will
 	if will == nil {
 		t.Fatal("no Last Will configured: a killed daemon would leave every entity available forever")
 	}
@@ -210,7 +210,7 @@ func TestWillIsCopiedFromTheRuntimeNotSpelledAgain(t *testing.T) {
 		QoS:     2,
 		Retain:  false,
 	}
-	got := mqttClientConfig(cfg, perturbed, slog.New(slog.DiscardHandler)).Will
+	got := mustClientConfig(t, cfg, perturbed).Will
 	if got.Topic != perturbed.Topic || !bytes.Equal(got.Payload, perturbed.Payload) ||
 		byte(got.QoS) != perturbed.QoS || got.Retain != perturbed.Retain {
 		t.Errorf("will = %+v, want every field copied from the runtime's %+v — "+
@@ -234,7 +234,7 @@ func TestMQTTQoSZeroStaysQoSZero(t *testing.T) {
 		if got := mqtt.QoS(will.QoS); got != want {
 			t.Errorf("MQTT_QOS: %d -> runtime will qos %v, want %v", in, got, want)
 		}
-		if got := mqttClientConfig(cfg, will, slog.New(slog.DiscardHandler)).Will.QoS; got != want {
+		if got := mustClientConfig(t, cfg, will).Will.QoS; got != want {
 			t.Errorf("MQTT_QOS: %d -> client will qos %v, want %v", in, got, want)
 		}
 	}
