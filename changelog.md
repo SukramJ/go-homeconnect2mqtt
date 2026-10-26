@@ -5,6 +5,8 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-26
+
 ### Added
 
 - **MQTT over TLS with a private CA.** `MQTT_TLS_CA` (add-on: `mqtt_tls_ca`)
