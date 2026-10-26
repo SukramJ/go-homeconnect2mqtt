@@ -203,7 +203,7 @@ func statusVal(payload string) any {
 // `val` is want, or the deadline hits.
 func waitForVal(t *testing.T, stub *stubMQTT, topic string, want any) {
 	t.Helper()
-	deadline := time.After(5 * time.Second)
+	deadline := time.After(testWait)
 	for statusVal(stub.get(topic)) != want {
 		select {
 		case <-deadline:
@@ -383,7 +383,7 @@ func TestBridgeRunStopsOnCancel(t *testing.T) {
 
 	// Wait until the worker has published a connection_state (it reached at
 	// least the connecting/offline phase), then cancel.
-	deadline := time.After(5 * time.Second)
+	deadline := time.After(testWait)
 	for stub.get(testStatus+"/connection_state") == "" {
 		select {
 		case <-deadline:
@@ -394,7 +394,7 @@ func TestBridgeRunStopsOnCancel(t *testing.T) {
 	cancel()
 	select {
 	case <-done:
-	case <-time.After(5 * time.Second):
+	case <-time.After(testWait):
 		t.Fatal("Run did not stop after cancel")
 	}
 }

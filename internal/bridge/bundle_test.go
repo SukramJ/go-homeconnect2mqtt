@@ -44,9 +44,15 @@ func bundleTopicFor(b *Bridge, device string) string { return b.hass.BundleTopic
 // runs on a goroutine by design (mqtt.Lifecycle runs OnConnect callbacks
 // inline on its reconnect loop and a callback that blocks stalls every
 // later reconnect), so a pin on it has to wait rather than assume.
+// testWait bounds every wait for an asynchronous effect in this package's
+// tests. The waits poll, so a passing test pays nothing for it; it is generous
+// because a loaded machine running -race (make check, CI) can take seconds
+// where an idle one takes milliseconds.
+const testWait = 30 * time.Second
+
 func waitUntil(t *testing.T, what string, cond func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(testWait)
 	for time.Now().Before(deadline) {
 		if cond() {
 			return
@@ -808,7 +814,7 @@ func TestTheBirthReplayCannotPublishIntoTheRefreshWindow(t *testing.T) {
 	cancel()
 	select {
 	case <-done:
-	case <-time.After(5 * time.Second):
+	case <-time.After(testWait):
 		// The appliance workers dial an address nothing answers; a slow
 		// unwind is not what this test is about.
 	}

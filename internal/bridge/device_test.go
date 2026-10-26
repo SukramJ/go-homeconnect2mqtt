@@ -71,7 +71,7 @@ func (g *gatedMQTT) callCount(topic string) int {
 // needs waitFor after this, not instead of it.
 func waitForCount(t *testing.T, g *gatedMQTT, topic string, want int) {
 	t.Helper()
-	deadline := time.After(5 * time.Second)
+	deadline := time.After(testWait)
 	for {
 		if n := g.callCount(topic); n >= want {
 			if n > want {
@@ -255,7 +255,7 @@ func TestOnUpdateDoesNotBlockOnSlowPublish(t *testing.T) {
 	dev.app.ApplyValues([]map[string]any{{"uid": 0x1005, "value": true}})
 	select {
 	case <-g.entered:
-	case <-time.After(5 * time.Second):
+	case <-time.After(testWait):
 		t.Fatal("publisher never reached Publish")
 	}
 
@@ -289,7 +289,7 @@ func TestPublisherPreservesEveryUpdate(t *testing.T) {
 	dev.app.ApplyValues([]map[string]any{{"uid": 0x1005, "value": true}})
 	select {
 	case <-g.entered:
-	case <-time.After(5 * time.Second):
+	case <-time.After(testWait):
 		t.Fatal("publisher never reached Publish")
 	}
 
@@ -351,7 +351,7 @@ func TestDevicePublisherFlushesNothingAfterCancel(t *testing.T) {
 	}()
 	select {
 	case <-done:
-	case <-time.After(5 * time.Second):
+	case <-time.After(testWait):
 		t.Fatal("publisher did not exit on cancelled context")
 	}
 	if published != 0 {
