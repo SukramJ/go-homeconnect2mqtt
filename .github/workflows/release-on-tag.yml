@@ -75,6 +75,14 @@ jobs:
       - name: Build release archives
         run: make release RELEASE_VERSION="${VERSION}"
 
+      # Releases open with the one-line sponsoring note in
+      # .github/SPONSORING.md (as in homematicip_local).
+      - name: Prepend sponsoring note
+        run: |
+          set -euo pipefail
+          { cat .github/SPONSORING.md; cat release-notes.md; } > notes.tmp
+          mv notes.tmp release-notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
