@@ -5,6 +5,8 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-27
+
 ### Changed
 
 - **The web UI follows Home Assistant's look** (go-bridgeui 0.4.0). In the
