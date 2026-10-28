@@ -105,8 +105,11 @@ install: ## go install both binaries
 	$(GO) install $(GO_BUILD_FLAGS) ./cmd/hc-util
 
 .PHONY: test
+# The timeout is a hang detector, not a speed budget. internal/hass and
+# internal/bridge take 30-55 s on CI runners but up to 160 s on slower
+# desktops under -race; CI keeps its own tighter 120 s bound.
 test: ## run the full test suite with race detector
-	CGO_ENABLED=1 $(GO) test -race -count=1 -timeout=120s ./...
+	CGO_ENABLED=1 $(GO) test -race -count=1 -timeout=600s ./...
 
 .PHONY: test-cover
 test-cover: ## run tests + coverage report
