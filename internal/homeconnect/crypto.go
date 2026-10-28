@@ -183,6 +183,12 @@ func (c *AESCrypto) chainHMAC(dir byte, last, ct []byte) []byte {
 // bumped by 16 so there are always at least two pad bytes.
 // Per docs/01-protocol.md §3.2 (custom padding).
 func (c *AESCrypto) pad(clearMsg []byte) ([]byte, error) {
+	// Outbound messages get the same cap as inbound frames. Client
+	// requests are small JSON, and the bound keeps the allocation size
+	// below from overflowing.
+	if len(clearMsg) > readLimit {
+		return nil, cryptoErrf("message of %d bytes exceeds the %d-byte limit", len(clearMsg), readLimit)
+	}
 	padLen := aes.BlockSize - (len(clearMsg) % aes.BlockSize)
 	if padLen == 1 {
 		padLen += aes.BlockSize

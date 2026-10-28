@@ -184,6 +184,16 @@ func TestNewAESCryptoBadIV(t *testing.T) {
 	}
 }
 
+func TestPadRejectsOversizedMessage(t *testing.T) {
+	c := newDetCrypto(t)
+	if _, err := c.pad(make([]byte, readLimit+1)); err == nil {
+		t.Error("message above readLimit accepted")
+	}
+	if _, err := c.pad(make([]byte, readLimit)); err != nil {
+		t.Errorf("message at readLimit rejected: %v", err)
+	}
+}
+
 func TestUnpadInvalid(t *testing.T) {
 	if _, err := unpad(nil); err == nil {
 		t.Error("empty plaintext accepted")
