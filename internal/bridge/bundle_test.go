@@ -494,8 +494,16 @@ func TestTheReconnectRepublishDoesNotOverlapItself(t *testing.T) {
 
 	// And the coalescing's OTHER half: a request made while a pass is
 	// running is honoured by exactly one further pass, never by four.
-	if windows := rec.discoveryWindows(pinPrefix); len(windows) > 2 {
-		t.Errorf("four concurrent republishes opened %d snapshot windows: %v", len(windows), windows)
+	//
+	// Counted as passes, not as snapshot windows. The windows on the
+	// discovery tree have two sources besides the pass itself: the
+	// runtime's supersede check before the first document on a connection,
+	// and one orphan sweep per pass, which b.reconciling suppresses only
+	// while the previous sweep's window is still open. Two coalesced
+	// passes therefore open two OR three windows depending on timing, and
+	// a bound of two failed about one run in eight.
+	if passes := b.republishPasses.Load(); passes > 2 {
+		t.Errorf("four concurrent republishes ran %d passes, want at most 2", passes)
 	}
 }
 
