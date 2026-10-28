@@ -218,6 +218,9 @@ Example frame:
            "deviceName": "<app_name>", "deviceID": "<app_id>"}]
    ```
    (`app_name`/`app_id` freely choosable, e.g. `"go-homeconnect2mqtt"` / a random hex ID.)
+   The key order `deviceType`, `deviceName`, `deviceID` is mandatory: some
+   firmwares parse this payload positionally and then refuse `/ci/services`
+   with **403** (#64). Do not serialise it from a sorted map.
 2. **`GET /ci/services` (version 1)** → response: `[{"service":"ci","version":x}, ...]`
    → store in `service_versions`.
 3. **If `ci` version < 3:**

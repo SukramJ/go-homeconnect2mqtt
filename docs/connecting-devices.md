@@ -248,6 +248,7 @@ automatically (FK-4) and gates writes on the appliance's current write window
 | `auth` / handshake fails immediately | wrong `psk64`/`iv64`, or a TLS device on the standard build | re-check keys from `<serial>.json`; for TLS build with `make build-tlspsk` (FK-2/FK-7) |
 | TLS device logs "TLS-PSK requires the 'tlspsk' build" | standard (CGO-free) build | rebuild with `make build-tlspsk` |
 | occasional reconnects / `HMAC` log then recovery | crypto chain desync | expected self-healing — the bridge fully reconnects (FK-2) |
+| `/ci/services -> code 403 (Forbidden)` | firmware rejected the client identity in the handshake | fixed in the bridge (#64) — update; if it persists, open an issue with a capture from `homeconnect-appliance-proxy` |
 | `500` during handshake | firmware quirk on bulk fetch | tolerated automatically; values resync on the next NOTIFY (FK-2) |
 | a write is ignored / `541` in logs | feature's write window is currently closed | the bridge retries within the window; trigger writes while the appliance is ready (FK-5) |
 

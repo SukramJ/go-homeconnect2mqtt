@@ -40,6 +40,22 @@ func TestEncodeOmitsCodeAndEmptyData(t *testing.T) {
 	}
 }
 
+func TestEncodeOrderedDataVerbatim(t *testing.T) {
+	m := &Message{
+		SID: 1, MsgID: 2, Resource: "/ei/initialValues", Version: 2, Action: ActionResponse,
+		Data:        []map[string]any{{"ignored": true}},
+		orderedData: json.RawMessage(`[{"b":1,"a":2}]`),
+	}
+	b, err := m.Encode()
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	want := `{"sID":1,"msgID":2,"resource":"/ei/initialValues","version":2,"action":"RESPONSE","data":[{"b":1,"a":2}]}`
+	if string(b) != want {
+		t.Errorf("Encode = %s, want %s", b, want)
+	}
+}
+
 func TestDecodeStringNumbers(t *testing.T) {
 	// sID/msgID/version delivered as quoted strings.
 	in := `{"sID":"42","msgID":"7","resource":"/ro/values","version":"2","action":"NOTIFY","data":[{"uid":1}]}`
