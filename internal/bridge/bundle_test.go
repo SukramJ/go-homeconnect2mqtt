@@ -882,8 +882,21 @@ func TestTheBirthHandlerAndTheReconnectHookShareOnePass(t *testing.T) {
 		t.Errorf("%d of %d device-document publishes were inside the transport at once — "+
 			"the birth handler is not going through the one coalesced pass", deepest, arrivals)
 	}
-	if sweeps := len(rec.discoveryWindows(pinPrefix)); sweeps > 2 {
-		t.Errorf("three birth deliveries and a reconnect opened %d snapshot windows", sweeps)
+	// Counted as passes, not as snapshot windows, for the reason given in
+	// TestTheReconnectRepublishDoesNotOverlapItself: the supersede check
+	// and the timing-dependent sweep gate make the window count two or
+	// three for the same two passes. The birth handler starts its passes
+	// on goroutines of its own, so wait for the coalescing to go idle
+	// before reading the count.
+	waitUntil(t, "the republish passes to finish", func() bool {
+		if b.republishPending.Load() || !b.republishMu.TryLock() {
+			return false
+		}
+		b.republishMu.Unlock()
+		return true
+	})
+	if passes := b.republishPasses.Load(); passes > 2 {
+		t.Errorf("three birth deliveries and a reconnect ran %d passes, want at most 2", passes)
 	}
 }
 
