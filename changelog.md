@@ -5,6 +5,11 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`hc-util` usage line for `connection-test`** now names its real
+  argument, `<devices.yaml>`, instead of `<device.json>` (#64).
+
 ## [0.20.1] - 2026-10-28
 
 ### Fixed

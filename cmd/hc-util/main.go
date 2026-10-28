@@ -70,6 +70,6 @@ func usage(w io.Writer) {
 usage:
   hc-util parse <profile.zip> [--out <dir>]   parse a profile archive into device descriptions
   hc-util dump <device.json>                  list all features of a parsed device
-  hc-util connection-test <device.json>       connect + handshake against a device
+  hc-util connection-test <devices.yaml>      connect + handshake against every inventory device
   hc-util version                             print version`)
 }
