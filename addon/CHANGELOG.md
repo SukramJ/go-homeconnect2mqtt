@@ -5,6 +5,14 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Appliances refusing the handshake with `403` on `/ci/services`**
+  (#64). The `/ei/initialValues` response now sends its fields in the
+  order `deviceType`, `deviceName`, `deviceID`. They used to go out
+  alphabetically, and some firmwares (e.g. a Bosch WAV28G40 washer) read
+  them by position and kept the device offline.
+
 ## [0.20.0] - 2026-10-27
 
 ### Changed

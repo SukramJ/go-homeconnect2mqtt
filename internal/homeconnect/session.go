@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -326,6 +327,15 @@ func (s *Session) failPending(err error) {
 	_ = err
 }
 
+// initialValuesData is the client identity sent in the /ei/initialValues
+// RESPONSE (docs/01-protocol.md §6.2). Field order is part of the wire
+// format.
+type initialValuesData struct {
+	DeviceType any    `json:"deviceType"`
+	DeviceName string `json:"deviceName"`
+	DeviceID   string `json:"deviceID"`
+}
+
 // handshake runs the exact sequence from docs/01-protocol.md §6.
 func (s *Session) handshake(ctx context.Context, cs *connState) error {
 	// 1. Await the device-initiated /ei/initialValues.
@@ -351,17 +361,24 @@ func (s *Session) handshake(ctx context.Context, cs *connState) error {
 	if eiVersion == 1 {
 		deviceType = 2
 	}
+	// The key order deviceType, deviceName, deviceID is fixed: some
+	// firmwares parse this payload positionally and answer every later
+	// request with 403 otherwise (#64).
+	data, err := json.Marshal([]initialValuesData{{
+		DeviceType: deviceType,
+		DeviceName: s.cfg.AppName,
+		DeviceID:   s.appID(),
+	}})
+	if err != nil {
+		return fmt.Errorf("homeconnect: encode initialValues response: %w", err)
+	}
 	resp := &Message{
-		SID:      initMsg.SID,
-		MsgID:    initMsg.MsgID,
-		Resource: "/ei/initialValues",
-		Version:  eiVersion,
-		Action:   ActionResponse,
-		Data: []map[string]any{{
-			"deviceType": deviceType,
-			"deviceName": s.cfg.AppName,
-			"deviceID":   s.appID(),
-		}},
+		SID:         initMsg.SID,
+		MsgID:       initMsg.MsgID,
+		Resource:    "/ei/initialValues",
+		Version:     eiVersion,
+		Action:      ActionResponse,
+		orderedData: data,
 	}
 	if err := s.send(ctx, resp); err != nil {
 		return fmt.Errorf("homeconnect: send initialValues response: %w", err)
