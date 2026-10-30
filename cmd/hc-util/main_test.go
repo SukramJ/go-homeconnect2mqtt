@@ -27,6 +27,11 @@ func TestRunHelp(t *testing.T) {
 	if !strings.Contains(out.String(), "usage:") {
 		t.Errorf("help output = %q", out.String())
 	}
+	// connection-test takes the devices inventory, not a parsed device
+	// description (#64).
+	if !strings.Contains(out.String(), "connection-test <devices.yaml>") {
+		t.Errorf("help output does not name connection-test's argument: %q", out.String())
+	}
 }
 
 func TestRunNoArgs(t *testing.T) {
