@@ -25,6 +25,7 @@ type scriptedSocket struct {
 
 	mu     sync.Mutex
 	sent   []*Message
+	raw    []string
 	pingFn func(context.Context) error
 }
 
@@ -67,6 +68,7 @@ func (f *scriptedSocket) Send(_ context.Context, message string) error {
 	}
 	f.mu.Lock()
 	f.sent = append(f.sent, msg)
+	f.raw = append(f.raw, message)
 	responder := f.responder
 	f.mu.Unlock()
 	if responder != nil {
@@ -124,6 +126,19 @@ func (f *scriptedSocket) sentResources() []string {
 		out[i] = m.Resource
 	}
 	return out
+}
+
+// rawFrame returns the first frame sent for resource exactly as it went on
+// the wire.
+func (f *scriptedSocket) rawFrame(resource string) string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for i, m := range f.sent {
+		if m.Resource == resource {
+			return f.raw[i]
+		}
+	}
+	return ""
 }
 
 func respondOK(req *Message, data []map[string]any) *Message {
@@ -463,4 +478,43 @@ func TestReconnectAfterFailedAttempt(t *testing.T) {
 
 func contains(s []string, v string) bool {
 	return slices.Contains(s, v)
+}
+
+// The initialValues RESPONSE must carry its keys in the order deviceType,
+// deviceName, deviceID: some firmwares parse it positionally and answer
+// /ci/services with 403 otherwise (#64).
+func TestHandshakeInitialValuesWireOrder(t *testing.T) {
+	cases := []struct {
+		name      string
+		eiVersion int
+		want      string
+	}{
+		{"ei v1 integer deviceType", 1, `"data":[{"deviceType":2,"deviceName":"test-app","deviceID":"DEADBEEF"}]`},
+		{"ei v2 Application", 2, `"data":[{"deviceType":"Application","deviceName":"test-app","deviceID":"DEADBEEF"}]`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, responder := applianceScript(1, []map[string]any{{"service": "ci", "version": 3}})
+			onConnect := func() []*Message {
+				return []*Message{{
+					SID: 42, MsgID: 1000, Resource: "/ei/initialValues", Version: tc.eiVersion, Action: ActionPost,
+					Data: []map[string]any{{"edMsgID": 500}},
+				}}
+			}
+			sock := newScriptedSocket(onConnect, responder)
+			s := newTestSession(t, sock)
+			if err := s.Connect(t.Context()); err != nil {
+				t.Fatalf("Connect: %v", err)
+			}
+			defer func() { _ = s.Close() }()
+
+			frame := sock.rawFrame("/ei/initialValues")
+			if !strings.Contains(frame, tc.want) {
+				t.Errorf("initialValues frame = %s, want data %s", frame, tc.want)
+			}
+			if !strings.HasPrefix(frame, `{"sID":42,"msgID":1000,"resource":"/ei/initialValues",`) {
+				t.Errorf("initialValues envelope = %s", frame)
+			}
+		})
+	}
 }

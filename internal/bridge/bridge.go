@@ -109,6 +109,11 @@ type Bridge struct {
 	// running is always honoured by another pass.
 	republishMu      sync.Mutex
 	republishPending atomic.Bool
+	// republishPasses counts the passes that actually ran, so the
+	// coalescing can be pinned by what it does rather than by the snapshot
+	// windows it saves: those also come from the per-connection supersede
+	// check and the orphan sweep, whose gating is timing-dependent.
+	republishPasses atomic.Int64
 
 	// prior is what the retained device documents declared before this
 	// connection published anything — the memory a removal needs, and the
@@ -338,6 +343,7 @@ func (b *Bridge) republishDiscovery(ctx context.Context) {
 	if !b.republishPending.CompareAndSwap(true, false) {
 		return // a pass that started after this request was made has done the work
 	}
+	b.republishPasses.Add(1)
 	for _, d := range b.devices {
 		if ctx.Err() != nil {
 			return

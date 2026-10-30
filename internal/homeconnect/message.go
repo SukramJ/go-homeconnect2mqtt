@@ -34,6 +34,11 @@ type Message struct {
 	Action   Action           `json:"action"`
 	Data     []map[string]any `json:"data,omitempty"`
 	Code     *int             `json:"code,omitempty"`
+
+	// orderedData, when set, goes on the wire as the data payload instead
+	// of Data. A map is serialised with sorted keys, but some firmwares
+	// parse the /ei/initialValues response positionally (#64).
+	orderedData json.RawMessage
 }
 
 // rawMessage mirrors Message but keeps the numeric fields as raw JSON so
@@ -51,7 +56,18 @@ type rawMessage struct {
 
 // Encode serialises the message to compact JSON for the wire.
 func (m *Message) Encode() ([]byte, error) {
-	return json.Marshal(m)
+	if m.orderedData == nil {
+		return json.Marshal(m)
+	}
+	return json.Marshal(struct {
+		SID      int             `json:"sID"`
+		MsgID    int             `json:"msgID"`
+		Resource string          `json:"resource"`
+		Version  int             `json:"version"`
+		Action   Action          `json:"action"`
+		Data     json.RawMessage `json:"data"`
+		Code     *int            `json:"code,omitempty"`
+	}{m.SID, m.MsgID, m.Resource, m.Version, m.Action, m.orderedData, m.Code})
 }
 
 // DecodeMessage parses a wire frame defensively: numeric fields are

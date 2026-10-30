@@ -5,6 +5,24 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`hc-util` usage line for `connection-test`** now names its real
+  argument, `<devices.yaml>`, instead of `<device.json>` (#64).
+
+## [0.20.1] - 2026-10-28
+
+### Fixed
+
+- **Appliances refusing the handshake with `403` on `/ci/services`**
+  (#64). The `/ei/initialValues` response now sends its fields in the
+  order `deviceType`, `deviceName`, `deviceID`. They used to go out
+  alphabetically, and some firmwares (e.g. a Bosch WAV28G40 washer) read
+  them by position and kept the device offline.
+- **Outbound AES messages are capped at 1 MiB**, the limit inbound frames
+  already had, so the padding allocation cannot overflow (CodeQL
+  `go/allocation-size-overflow`).
+
 ## [0.20.0] - 2026-10-27
 
 ### Changed

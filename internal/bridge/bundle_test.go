@@ -494,8 +494,16 @@ func TestTheReconnectRepublishDoesNotOverlapItself(t *testing.T) {
 
 	// And the coalescing's OTHER half: a request made while a pass is
 	// running is honoured by exactly one further pass, never by four.
-	if windows := rec.discoveryWindows(pinPrefix); len(windows) > 2 {
-		t.Errorf("four concurrent republishes opened %d snapshot windows: %v", len(windows), windows)
+	//
+	// Counted as passes, not as snapshot windows. The windows on the
+	// discovery tree have two sources besides the pass itself: the
+	// runtime's supersede check before the first document on a connection,
+	// and one orphan sweep per pass, which b.reconciling suppresses only
+	// while the previous sweep's window is still open. Two coalesced
+	// passes therefore open two OR three windows depending on timing, and
+	// a bound of two failed about one run in eight.
+	if passes := b.republishPasses.Load(); passes > 2 {
+		t.Errorf("four concurrent republishes ran %d passes, want at most 2", passes)
 	}
 }
 
@@ -874,8 +882,21 @@ func TestTheBirthHandlerAndTheReconnectHookShareOnePass(t *testing.T) {
 		t.Errorf("%d of %d device-document publishes were inside the transport at once — "+
 			"the birth handler is not going through the one coalesced pass", deepest, arrivals)
 	}
-	if sweeps := len(rec.discoveryWindows(pinPrefix)); sweeps > 2 {
-		t.Errorf("three birth deliveries and a reconnect opened %d snapshot windows", sweeps)
+	// Counted as passes, not as snapshot windows, for the reason given in
+	// TestTheReconnectRepublishDoesNotOverlapItself: the supersede check
+	// and the timing-dependent sweep gate make the window count two or
+	// three for the same two passes. The birth handler starts its passes
+	// on goroutines of its own, so wait for the coalescing to go idle
+	// before reading the count.
+	waitUntil(t, "the republish passes to finish", func() bool {
+		if b.republishPending.Load() || !b.republishMu.TryLock() {
+			return false
+		}
+		b.republishMu.Unlock()
+		return true
+	})
+	if passes := b.republishPasses.Load(); passes > 2 {
+		t.Errorf("three birth deliveries and a reconnect ran %d passes, want at most 2", passes)
 	}
 }
 
