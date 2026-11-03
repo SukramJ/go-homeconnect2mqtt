@@ -97,6 +97,8 @@ jobs:
         run: make build
       - name: version banner
         run: ./bin/homeconnect2mqtt --version
+      - name: version check (internal/version, addon/config.yaml, changelog.md)
+        run: make version-check
 
   tlspsk:
     name: tlspsk (cgo build)

@@ -17,8 +17,8 @@
 #     --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest \
 #     -f addon/Dockerfile -t go-homeconnect2mqtt-addon .
 
-# Default keeps manual/standalone builds working; the Supervisor and CI always
-# override BUILD_FROM with the per-arch HA base image (see addon/build.yaml).
+# Default keeps manual/standalone builds working; CI always overrides
+# BUILD_FROM with the per-arch HA base image (see addon-image.yml).
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 
 # ---------- Stage 1: build the Go binaries ----------

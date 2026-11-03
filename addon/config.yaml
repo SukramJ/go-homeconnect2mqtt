@@ -6,8 +6,8 @@
 # .github/workflows/addon-image.yml to ghcr.io/sukramj/go-homeconnect2mqtt-addon-{arch};
 # the Supervisor substitutes {arch} and pulls the matching tag (== `version`).
 #
-# To build locally from addon/Dockerfile instead of pulling GHCR, delete the
-# `image:` key below — the Supervisor then consults addon/build.yaml.
+# The app is distributed as the pre-built image only: the Supervisor no longer
+# reads addon/build.yaml. A local build is manual, see addon/Dockerfile.
 name: go-homeconnect2mqtt
 version: "0.20.1"
 slug: go_homeconnect2mqtt

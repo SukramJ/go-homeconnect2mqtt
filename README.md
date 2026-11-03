@@ -56,7 +56,8 @@ verification and troubleshooting) see the onboarding guide:
 ## Home Assistant add-on
 
 This repository is also a Home Assistant add-on repository. In Home Assistant go
-to **Settings → Add-ons → Add-on Store → ⋮ → Repositories** and add
+to **Settings → Apps → Install app → ⋮ → Repositories** (formerly
+*Settings → Add-ons → Add-on Store*) and add
 `https://github.com/SukramJ/go-homeconnect2mqtt`, then install the
 **go-homeconnect2mqtt** add-on. It auto-connects to the Home Assistant MQTT
 broker, publishes discovery, and surfaces the diagnostic web UI via Ingress.
