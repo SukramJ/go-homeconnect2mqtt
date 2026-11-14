@@ -5,6 +5,13 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ## [Unreleased]
 
+### Changed
+
+- go-ha-catalog 0.3.0 -> 0.3.1 (Home Assistant 2026.10.0), go-hamqtt
+  0.38.0 -> 0.39.0, golang.org/x/sync 0.23.0 -> 0.25.0 (#79). The
+  catalogue adds the `binary_sensor` device class `glass_break`; no entity
+  of this bridge carries it, and no published payload changes.
+
 ### Fixed
 
 - **`hc-util` usage line for `connection-test`** now names its real
