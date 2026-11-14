@@ -811,7 +811,7 @@ func TestDeviceClassTableLoads(t *testing.T) {
 		t.Fatal("go-ha-catalog's device-class table failed to decode; deviceClassAllowed is failing closed")
 	}
 	want := map[string]int{
-		platformSensor: 62, platformNumber: 58, platformBinarySensor: 28,
+		platformSensor: 62, platformNumber: 58, platformBinarySensor: 29,
 		platformSwitch: 2, platformButton: 3, platformSelect: 0,
 	}
 	for platform, n := range want {
@@ -851,11 +851,23 @@ func TestTableDrivenAllowanceMatchesTheSetsItReplaced(t *testing.T) {
 		platformSwitch: {"outlet", "switch"},
 		platformButton: {"identify", "restart", "update"},
 	}
+	// Classes the catalogue gained after the swap, per snapshot bump. The
+	// sets above stay as transcribed; a bump that adds a class lands here,
+	// named, so the table is still pinned exactly and the growth is visible.
+	addedSince := map[string][]string{
+		// go-ha-catalog 0.3.1 (Home Assistant 2026.10.0), data/device_classes.json.
+		platformBinarySensor: {"glass_break"},
+	}
 	tbl := deviceClasses()
 	for platform, classes := range previous {
-		if len(tbl[platform]) != len(classes) {
-			t.Errorf("%s: table has %d classes, the set it replaced had %d",
-				platform, len(tbl[platform]), len(classes))
+		if want := len(classes) + len(addedSince[platform]); len(tbl[platform]) != want {
+			t.Errorf("%s: table has %d classes, the set it replaced had %d plus %d added since",
+				platform, len(tbl[platform]), len(classes), len(addedSince[platform]))
+		}
+		for _, dc := range addedSince[platform] {
+			if !deviceClassAllowed(platform, dc) {
+				t.Errorf("%s: %q is listed as added since the swap but the table refuses it", platform, dc)
+			}
 		}
 		for _, dc := range classes {
 			if !deviceClassAllowed(platform, dc) {
