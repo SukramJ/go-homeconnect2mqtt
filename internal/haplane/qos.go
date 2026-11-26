@@ -6,7 +6,7 @@ package haplane
 import (
 	"strconv"
 
-	"github.com/SukramJ/go-hamqtt/publisher"
+	"sukramj.dev/go-hamqtt/publisher"
 )
 
 // QoS translates the operator's MQTT_QOS into the publisher vocabulary.

@@ -13,9 +13,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/SukramJ/go-hamqtt/discovery"
-	"github.com/SukramJ/go-hamqtt/publisher"
-	hatopic "github.com/SukramJ/go-hamqtt/topic"
+	"sukramj.dev/go-hamqtt/discovery"
+	"sukramj.dev/go-hamqtt/publisher"
+	hatopic "sukramj.dev/go-hamqtt/topic"
 )
 
 // capture is a publisher.Transport that records what crossed it. Every

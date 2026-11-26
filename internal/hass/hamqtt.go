@@ -9,11 +9,11 @@ import (
 	"sort"
 	"strings"
 
-	hacatalog "github.com/SukramJ/go-ha-catalog"
-	"github.com/SukramJ/go-hamqtt/discovery"
-	"github.com/SukramJ/go-hamqtt/model"
-	"github.com/SukramJ/go-hamqtt/publisher"
-	hatopic "github.com/SukramJ/go-hamqtt/topic"
+	hacatalog "sukramj.dev/go-ha-catalog"
+	"sukramj.dev/go-hamqtt/discovery"
+	"sukramj.dev/go-hamqtt/model"
+	"sukramj.dev/go-hamqtt/publisher"
+	hatopic "sukramj.dev/go-hamqtt/topic"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"
@@ -22,7 +22,7 @@ import (
 )
 
 // This file was ADR 0070 phase 7, step 4: a SECOND rendering path, built on
-// github.com/SukramJ/go-hamqtt, that produces the same bytes the hand-built
+// sukramj.dev/go-hamqtt, that produces the same bytes the hand-built
 // map[string]any path in payload.go and discovery.go produces — and
 // published none of them. At step 6 one of its two entry points became the
 // production one: BundleFor renders the device document this daemon now

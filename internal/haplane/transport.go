@@ -3,7 +3,7 @@
 
 // Package haplane is this daemon's go-hamqtt publish runtime: the
 // discovery, state and availability planes expressed as
-// github.com/SukramJ/go-hamqtt/publisher types, plus the two pieces of
+// sukramj.dev/go-hamqtt/publisher types, plus the two pieces of
 // plumbing a consumer has to supply itself.
 //
 // It exists as its own package for a layering reason rather than a
@@ -40,7 +40,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/SukramJ/go-hamqtt/publisher"
+	"sukramj.dev/go-hamqtt/publisher"
 )
 
 // ErrTransportNotWired is reported by a [Transport] used before its

@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
-	hagomqtt "github.com/SukramJ/go-hamqtt/publisher/gomqtt"
+	hagomqtt "sukramj.dev/go-hamqtt/publisher/gomqtt"
 
-	"github.com/SukramJ/go-mqtt"
+	"sukramj.dev/go-mqtt"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/hass"
@@ -140,7 +140,7 @@ type filterQoS struct {
 
 // optionNames maps subscribe options back to the exported constructors
 // that produced them, via the closure's own symbol name
-// ("github.com/SukramJ/go-mqtt.WithNoLocal.func1").
+// ("sukramj.dev/go-mqtt.WithNoLocal.func1").
 func optionNames(opts []mqtt.SubscribeOption) []string {
 	if len(opts) == 0 {
 		return nil
