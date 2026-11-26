@@ -15,9 +15,9 @@ import (
 	"sync"
 	"testing"
 
-	hacatalog "github.com/SukramJ/go-ha-catalog"
-	"github.com/SukramJ/go-hamqtt/discovery"
-	"github.com/SukramJ/go-hamqtt/model"
+	hacatalog "sukramj.dev/go-ha-catalog"
+	"sukramj.dev/go-hamqtt/discovery"
+	"sukramj.dev/go-hamqtt/model"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/pincatalog"

@@ -23,10 +23,10 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/SukramJ/go-hamqtt/publisher"
-	hagomqtt "github.com/SukramJ/go-hamqtt/publisher/gomqtt"
+	"sukramj.dev/go-hamqtt/publisher"
+	hagomqtt "sukramj.dev/go-hamqtt/publisher/gomqtt"
 
-	"github.com/SukramJ/go-mqtt"
+	"sukramj.dev/go-mqtt"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/bridge"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"

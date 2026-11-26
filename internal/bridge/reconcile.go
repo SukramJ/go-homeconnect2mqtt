@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/SukramJ/go-hamqtt/publisher"
+	"sukramj.dev/go-hamqtt/publisher"
 )
 
 // tunable is a duration the pins can shorten while sweeps are running.

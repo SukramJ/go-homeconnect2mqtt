@@ -8,8 +8,8 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/SukramJ/go-hamqtt/discovery"
-	"github.com/SukramJ/go-hamqtt/publisher"
+	"sukramj.dev/go-hamqtt/discovery"
+	"sukramj.dev/go-hamqtt/publisher"
 )
 
 // priorDocuments is what the retained device documents declared BEFORE

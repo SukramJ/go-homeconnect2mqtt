@@ -7,6 +7,7 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ### Changed
 
+- Dependencies moved to their vanity import paths: `sukramj.dev/go-ha-catalog` v0.4.0, `sukramj.dev/go-hamqtt` v0.41.0, `sukramj.dev/go-mqtt` v1.8.0.
 - go-ha-catalog 0.3.0 -> 0.3.1 (Home Assistant 2026.10.0), go-hamqtt
   0.38.0 -> 0.39.0, golang.org/x/sync 0.23.0 -> 0.25.0 (#79). The
   catalogue adds the `binary_sensor` device class `glass_break`; no entity

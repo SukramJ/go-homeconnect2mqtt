@@ -13,9 +13,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/SukramJ/go-hamqtt/discovery"
-	"github.com/SukramJ/go-hamqtt/publisher"
-	hatopic "github.com/SukramJ/go-hamqtt/topic"
+	"sukramj.dev/go-hamqtt/discovery"
+	"sukramj.dev/go-hamqtt/publisher"
+	hatopic "sukramj.dev/go-hamqtt/topic"
 )
 
 // ErrDocumentTooLarge is reported by [Plane.PublishBundle] when the device

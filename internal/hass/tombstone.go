@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"sort"
 
-	"github.com/SukramJ/go-hamqtt/discovery"
+	"sukramj.dev/go-hamqtt/discovery"
 )
 
 // This file is the half of the device-document migration ADR 0070 phase 7

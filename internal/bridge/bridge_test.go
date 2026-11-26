@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	hagomqtt "github.com/SukramJ/go-hamqtt/publisher/gomqtt"
+	hagomqtt "sukramj.dev/go-hamqtt/publisher/gomqtt"
 
-	"github.com/SukramJ/go-mqtt"
+	"sukramj.dev/go-mqtt"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/config"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/haplane"

@@ -56,7 +56,7 @@ import (
 	"strconv"
 	"strings"
 
-	hatopic "github.com/SukramJ/go-hamqtt/topic"
+	hatopic "sukramj.dev/go-hamqtt/topic"
 )
 
 // Synthetic program-control keys. They back no appliance feature: the

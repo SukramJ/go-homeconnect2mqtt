@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SukramJ/go-hamqtt/publisher"
-	"github.com/SukramJ/go-hamqtt/publisher/gomqtt"
+	"sukramj.dev/go-hamqtt/publisher"
+	"sukramj.dev/go-hamqtt/publisher/gomqtt"
 
-	"github.com/SukramJ/go-mqtt"
+	"sukramj.dev/go-mqtt"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/homeconnect"
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/i18n"

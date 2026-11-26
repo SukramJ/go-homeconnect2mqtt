@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SukramJ/go-hamqtt/publisher"
+	"sukramj.dev/go-hamqtt/publisher"
 )
 
 // shortSweepWindow shrinks the migration sweep's window for one test. The

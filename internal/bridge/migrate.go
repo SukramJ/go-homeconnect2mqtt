@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	hatopic "github.com/SukramJ/go-hamqtt/topic"
+	hatopic "sukramj.dev/go-hamqtt/topic"
 
 	"github.com/SukramJ/go-homeconnect2mqtt/internal/layout"
 )
