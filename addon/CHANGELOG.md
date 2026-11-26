@@ -7,6 +7,7 @@ follows Keep a Changelog; versions track `internal/version/version.go`.
 
 ### Changed
 
+- Dependencies moved to their vanity import paths: `sukramj.dev/go-ha-catalog` v0.4.0, `sukramj.dev/go-hamqtt` v0.41.0, `sukramj.dev/go-mqtt` v1.8.0.
 - go-ha-catalog 0.3.0 -> 0.3.1 (Home Assistant 2026.10.0), go-hamqtt
   0.38.0 -> 0.39.0, golang.org/x/sync 0.23.0 -> 0.25.0 (#79). The
   catalogue adds the `binary_sensor` device class `glass_break`; no entity
@@ -455,7 +456,7 @@ new topics side by side.
     believes the broker holds.** Previously only the first connect did, so a
     reconnected daemon could sit "offline" in Home Assistant while happily
     publishing state nobody displayed.
-- Bump [`sukramj.dev/go-mqtt`](https://github.com/SukramJ/go-mqtt)
+- Bump [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt)
   v1.3.0 -> v1.5.1. Two minors, both relevant. v1.4.0 adds
   `mqtt.SplitClient`, which makes this daemon's hand-rolled `mqttSession`
   redundant (not yet removed). v1.5.1 fixes a double-dispatch defect: through
@@ -618,7 +619,7 @@ new topics side by side.
 ## [0.12.0] - 2026-08-16
 
 ### Changed
-- Bump [`sukramj.dev/go-mqtt`](https://github.com/SukramJ/go-mqtt)
+- Bump [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt)
   v1.2.0 -> v1.3.0, an audit release with 42 findings fixed. No source
   changes were needed on our side — the new API surface
   (`LifecycleConfig.FlapWindow`, `ConnectResult.ServerKeepAliveSet`) is
@@ -716,7 +717,7 @@ fixed, each fix covered by tests.
   shutdown error is logged + force-closed instead of discarded.
 
 ### Changed
-- Adopt [`sukramj.dev/go-mqtt`](https://github.com/SukramJ/go-mqtt)
+- Adopt [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt)
   v1.2.0 (up from v1.1.0): the client's own hardening release (28 verified
   findings — serialized connect/disconnect, cross-epoch quota/packet-id
   protection, typed ack waiters against forged acknowledgements, decoder
@@ -753,7 +754,7 @@ fixed, each fix covered by tests.
 
 ### Added
 - Adopt the circuit breaker shipped with
-  [`sukramj.dev/go-mqtt`](https://github.com/SukramJ/go-mqtt) v1.1.0
+  [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt) v1.1.0
   (up from v1.0.0, additive release): the bridge's publish path (device
   state, discovery configs, orphan-reconcile cleanups) now fails fast with
   `ErrCircuitOpen` during a degraded-broker phase (TCP link up, acks
@@ -767,7 +768,7 @@ fixed, each fix covered by tests.
 ## [0.9.0] - 2026-07-04
 
 ### Changed
-- Adopt [`sukramj.dev/go-mqtt`](https://github.com/SukramJ/go-mqtt)
+- Adopt [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt)
   v1.0.0 (up from v0.2.0). **MQTT 5.0 is now the default wire protocol**
   (3.1.1 remains selectable via `ProtocolVersion`); no bridge doc promises
   MQTT 3.1.1-only broker support, and Home Assistant's bundled Mosquitto
@@ -801,13 +802,13 @@ fixed, each fix covered by tests.
 ### Docs
 - Retargeted stale `internal/mqtt` documentation references (`NOTICE.md`,
   `docs/06-architecture.md`, `docs/09-implementation-plan.md`) to the
-  extracted `sukramj.dev/go-mqtt` module. No functional change.
+  extracted `github.com/SukramJ/go-mqtt` module. No functional change.
 
 ## [0.8.0] - 2026-07-02
 
 ### Changed
 - The MQTT client is now sourced from the shared
-  [`sukramj.dev/go-mqtt`](https://github.com/SukramJ/go-mqtt) module
+  [`github.com/SukramJ/go-mqtt`](https://github.com/SukramJ/go-mqtt) module
   (v0.1.0) instead of the locally vendored `internal/mqtt`. The client used to
   be duplicated four times over across the `go-*2mqtt` bridges
   (`go-mtec2mqtt`, `go-daikin2mqtt`, `go-homeconnect2mqtt`, `go-zendure2mqtt`);
